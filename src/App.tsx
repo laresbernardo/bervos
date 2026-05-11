@@ -1,4 +1,4 @@
-import { ExternalLink, Package, Star, Users, ArrowUpRight } from 'lucide-react';
+import { ExternalLink, Star, Users, ArrowUpRight } from 'lucide-react';
 import { FaGithub, FaLinkedin } from 'react-icons/fa';
 
 const projects = [
@@ -6,25 +6,29 @@ const projects = [
     title: 'Billio',
     description: 'Advanced financial management and projection system.',
     link: 'https://mybillio.web.app/',
-    tags: ['Next.js', 'Firebase', 'Finance']
+    tags: ['Finance', 'Travel', 'Collaboration'],
+    logo: '/billio-logo.png'
   },
   {
     title: 'Chessverse',
     description: 'A modern platform for chess enthusiasts and professionals.',
     link: 'https://chessverse-demo.web.app/',
-    tags: ['React', 'WebSockets', 'Game']
+    tags: ['Chess', 'Puzzles', 'Openings'],
+    logo: '/chessverse-logo.png'
   },
   {
     title: 'tripitdown',
     description: 'Precision-focused travel itinerary and log management.',
     link: 'https://tripitdown.web.app/',
-    tags: ['Tailwind', 'Maps', 'Travel']
+    tags: ['Tailwind', 'Maps', 'Travel'],
+    logo: '/tripitdown-logo.png'
   },
   {
     title: 'Scribo',
     description: 'Minimalist writing environment for elite engineers.',
     link: 'https://scribo-demo.web.app/mastery',
-    tags: ['Markdown', 'Focus', 'Writers']
+    tags: ['Markdown', 'Focus', 'Writers'],
+    logo: '/scribo-logo.png'
   }
 ];
 
@@ -57,7 +61,7 @@ function App() {
             </div>
             <span className="text-xl font-bold tracking-tighter text-white">BERVOS</span>
           </div>
-          
+
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
             <a href="#projects" className="hover:text-white transition-colors">Projects</a>
             <a href="#opensource" className="hover:text-colors">Open Source</a>
@@ -85,7 +89,7 @@ function App() {
             Building tools for a <br />fuller experience
           </h1>
           <p className="text-lg md:text-xl text-white/60 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Building premium digital experiences through innovative and robust tools.
+            Premium digital experiences through innovative and robust tools.
           </p>
           <div className="flex items-center justify-center gap-4">
             <a href="#projects" className="px-8 py-4 bg-white text-black font-semibold rounded-xl hover:bg-white/90 transition-all active:scale-95 shadow-xl shadow-white/5">
@@ -117,8 +121,12 @@ function App() {
                 className="group relative glass p-8 glass-hover glow overflow-hidden border-white/5 hover:border-white/10"
               >
                 <div className="flex justify-between items-start mb-6">
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                    <Package className="text-white/60" size={24} />
+                  <div className="p-2 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
+                    <img
+                      src={project.logo}
+                      alt={project.title}
+                      className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-500"
+                    />
                   </div>
                   <ArrowUpRight className="text-white/20 group-hover:text-white group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" size={20} />
                 </div>
