@@ -1,4 +1,5 @@
-import { ExternalLink, Star, Users, ArrowUpRight } from 'lucide-react';
+import { useState } from 'react';
+import { ExternalLink, Star, Users, ArrowUpRight, X } from 'lucide-react';
 import { FaGithub, FaLinkedin } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
@@ -50,7 +51,200 @@ const openSource = [
   }
 ];
 
+const Modal = ({ 
+  type, 
+  onClose, 
+  status, 
+  data, 
+  setData, 
+  resetForm,
+  onSubmit
+}: { 
+  type: 'privacy' | 'terms' | 'contact', 
+  onClose: () => void,
+  status: 'idle' | 'sending' | 'success' | 'error',
+  data: any,
+  setData: (data: any) => void,
+  resetForm: () => void,
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
+}) => {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm" onClick={onClose}>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="glass p-8 max-w-2xl w-full relative overflow-hidden"
+      >
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors z-10"
+        >
+          <X size={20} />
+        </button>
+        <h2 className="text-3xl font-bold mb-6">
+          {type === 'privacy' ? 'Privacy Policy' : type === 'terms' ? 'Terms of Service' : status === 'success' ? 'Message Sent' : 'Get in Touch'}
+        </h2>
+        <div className="text-white/60 leading-relaxed space-y-4 max-h-[70vh] overflow-y-auto pr-4 scrollbar-thin">
+          {status === 'success' ? (
+            <div className="py-12 text-center space-y-6">
+              <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto text-green-400">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 10 }}
+                >
+                  <Star size={40} fill="currentColor" />
+                </motion.div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xl font-bold text-white">Thank you for reaching out!</p>
+                <p className="text-sm">Your message has been delivered directly to my inbox. <br />I'll get back to you as soon as possible.</p>
+              </div>
+              <button 
+                onClick={() => {
+                  resetForm();
+                  onClose();
+                }}
+                className="px-8 py-3 bg-white text-black font-bold rounded-xl hover:bg-white/90 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-white/10"
+              >
+                Return to Site
+              </button>
+            </div>
+          ) : type === 'privacy' ? (
+            <>
+              <p>At BERVOS, we respect your privacy. This website is a showcase of digital solutions and craftsmanship.</p>
+              <p><strong>Data Collection:</strong> We do not collect personal data from visitors unless you explicitly contact us via email. Any information provided is used solely to respond to your inquiries.</p>
+              <p><strong>Cookies:</strong> We use minimal cookies for site performance and analytics to improve your experience.</p>
+              <p><strong>Security:</strong> We implement standard security measures to protect the integrity of our digital showcase.</p>
+              <p>By using this site, you agree to the terms outlined in this policy.</p>
+            </>
+          ) : type === 'terms' ? (
+            <>
+              <p>Welcome to BERVOS. By accessing this website, you agree to comply with and be bound by the following terms of use.</p>
+              <p><strong>Intellectual Property:</strong> All content, including logos, text, and code, is the property of BERVOS and protected by intellectual property laws. You may not reproduce or distribute any content without prior written permission.</p>
+              <p><strong>Use of Tools:</strong> Our projects (Billio, Chessverse, tripitdown, Scribo) are provided for demonstration and individual use according to their respective licenses.</p>
+              <p><strong>Liability:</strong> We provide our tools and information "as is" without warranties of any kind. BERVOS is not liable for any damages arising from the use of this site or its projects.</p>
+              <p><strong>Changes:</strong> We reserve the right to modify these terms at any time without notice.</p>
+            </>
+          ) : (
+            <form 
+              onSubmit={onSubmit}
+              className="space-y-6 pt-2"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-widest text-white/40">Full Name</label>
+                  <input 
+                    name="name"
+                    required
+                    type="text" 
+                    placeholder="John Doe"
+                    value={data.name}
+                    onChange={(e) => setData({ ...data, name: e.target.value })}
+                    disabled={status === 'sending'}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/20 transition-colors disabled:opacity-50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-widest text-white/40">Email Address</label>
+                  <input 
+                    name="email"
+                    required
+                    type="email"
+                    placeholder="john@example.com"
+                    value={data.email}
+                    onChange={(e) => setData({ ...data, email: e.target.value })}
+                    disabled={status === 'sending'}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/20 transition-colors disabled:opacity-50"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-black uppercase tracking-widest text-white/40">Subject</label>
+                  <input 
+                    name="subject"
+                    required
+                    type="text" 
+                    placeholder="Project Inquiry"
+                    value={data.subject}
+                    onChange={(e) => setData({ ...data, subject: e.target.value })}
+                    disabled={status === 'sending'}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/20 transition-colors disabled:opacity-50"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase tracking-widest text-white/40">Message</label>
+                <textarea 
+                  name="message"
+                  required
+                  rows={4}
+                  placeholder="How can we help you?"
+                  value={data.message}
+                  onChange={(e) => setData({ ...data, message: e.target.value })}
+                  disabled={status === 'sending'}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/20 transition-colors resize-none disabled:opacity-50"
+                />
+              </div>
+              {status === 'error' && (
+                <p className="text-red-400 text-xs font-bold text-center">Something went wrong. Please try again or email directly.</p>
+              )}
+              <button 
+                type="submit"
+                disabled={status === 'sending'}
+                className="w-full py-4 bg-white text-black font-black rounded-xl hover:bg-white/90 transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-white/5 disabled:opacity-50 disabled:cursor-wait"
+              >
+                {status === 'sending' ? 'Sending...' : 'Send Message'}
+              </button>
+            </form>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 function App() {
+  const [modalType, setModalType] = useState<'privacy' | 'terms' | 'contact' | null>(null);
+  const [contactStatus, setContactStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [contactData, setContactData] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
+
+  const resetContactForm = () => {
+    setContactData({ name: '', email: '', subject: '', message: '' });
+    setContactStatus('idle');
+  };
+
+  const handleContactSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setContactStatus('sending');
+    const formData = new FormData();
+    formData.append('name', contactData.name);
+    formData.append('email', contactData.email);
+    formData.append('subject', contactData.subject);
+    formData.append('message', contactData.message);
+    
+    try {
+      const response = await fetch('https://formspree.io/f/xwvyyebo', {
+        method: 'POST',
+        body: formData,
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      if (response.ok) {
+        setContactStatus('success');
+      } else {
+        setContactStatus('error');
+      }
+    } catch (err) {
+      setContactStatus('error');
+    }
+  };
+
   return (
     <div className="min-h-screen selection:bg-white/20">
       {/* Navigation */}
@@ -158,6 +352,8 @@ function App() {
               <motion.a
                 key={project.title}
                 href={project.link}
+                target="_blank"
+                rel="noopener noreferrer"
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -257,13 +453,13 @@ function App() {
       </section>
 
       {/* Connect Footer */}
-      <footer id="connect" className="py-40 px-6">
+      <footer id="connect" className="py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="glass p-16 flex flex-col md:flex-row items-center justify-between gap-16 relative overflow-hidden"
+            className="glass p-12 flex flex-col md:flex-row items-center justify-between gap-12 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 blur-[100px] rounded-full -mr-48 -mt-48" />
 
@@ -294,18 +490,29 @@ function App() {
             </div>
           </motion.div>
 
-          <div className="mt-32 pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-10 text-sm text-white/20">
+          <div className="mt-16 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-10 text-sm text-white/20">
             <div className="flex items-center gap-4">
               <img src="/bervos-logo.png" alt="BERVOS" className="w-6 h-6 opacity-40 invert" />
-              <span className="font-medium tracking-wide">&copy; {new Date().getFullYear()} BERVOS. Digital Craftsmanship.</span>
+              <span className="font-medium tracking-wide">&copy; {new Date().getFullYear()} BERVOS</span>
             </div>
             <div className="flex gap-12 font-bold uppercase tracking-widest text-[10px]">
-              <a href="#" className="hover:text-white transition-colors">Privacy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms</a>
-              <a href="mailto:laresbernardo@gmail.com" className="hover:text-white transition-colors">Contact</a>
+              <button onClick={() => setModalType('privacy')} className="hover:text-white transition-colors cursor-pointer">Privacy</button>
+              <button onClick={() => setModalType('terms')} className="hover:text-white transition-colors cursor-pointer">Terms</button>
+              <button onClick={() => setModalType('contact')} className="hover:text-white transition-colors cursor-pointer">Contact</button>
             </div>
           </div>
         </div>
+        {modalType && (
+          <Modal 
+            type={modalType} 
+            onClose={() => setModalType(null)}
+            status={contactStatus}
+            data={contactData}
+            setData={setContactData}
+            resetForm={resetContactForm}
+            onSubmit={handleContactSubmit}
+          />
+        )}
       </footer>
     </div>
   );
