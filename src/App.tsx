@@ -7,7 +7,7 @@ const projects = [
     description: 'Advanced financial management and projection system.',
     link: 'https://mybillio.web.app/',
     tags: ['Finance', 'Travel', 'Collaboration'],
-    logo: '/billio-logo.png'
+    logo: '/billio-logo.jpg'
   },
   {
     title: 'Chessverse',
@@ -28,7 +28,7 @@ const projects = [
     description: 'Minimalist writing environment for elite engineers.',
     link: 'https://scribo-demo.web.app/mastery',
     tags: ['Markdown', 'Focus', 'Writers'],
-    logo: '/scribo-logo.png'
+    logo: '/scribo-logo.jpg'
   }
 ];
 
@@ -56,15 +56,15 @@ function App() {
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/20 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 group cursor-pointer">
-            <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center group-hover:bg-white/20 transition-all duration-300">
-              <img src="/logo.svg" alt="BERVOS" className="w-5 h-5" />
+            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center group-hover:bg-white/10 transition-all duration-300 overflow-hidden p-1.5">
+              <img src="/bervos-logo.png" alt="BERVOS" className="w-full h-full object-contain invert brightness-200" />
             </div>
             <span className="text-xl font-bold tracking-tighter text-white">BERVOS</span>
           </div>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
             <a href="#projects" className="hover:text-white transition-colors">Projects</a>
-            <a href="#opensource" className="hover:text-colors">Open Source</a>
+            <a href="#opensource" className="hover:text-white transition-colors">Open Source</a>
             <a href="#connect" className="hover:text-white transition-colors">Connect</a>
           </nav>
         </div>
@@ -224,7 +224,7 @@ function App() {
           </div>
           <div className="mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between gap-8 text-sm text-white/20">
             <div className="flex items-center gap-3">
-              <img src="/logo.svg" alt="BERVOS" className="w-5 h-5 opacity-20" />
+              <img src="/bervos-logo.png" alt="BERVOS" className="w-5 h-5 opacity-20 invert" />
               <span>&copy; {new Date().getFullYear()} BERVOS. All rights reserved.</span>
             </div>
             <div className="flex gap-8">
