@@ -51,33 +51,52 @@ function App() {
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/20 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/logo.svg" alt="BERVOS Logo" className="w-10 h-10" />
-            <span className="text-xl font-bold tracking-widest uppercase">BERVOS</span>
+          <div className="flex items-center gap-2 group cursor-pointer">
+            <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center group-hover:bg-white/20 transition-all duration-300">
+              <img src="/logo.svg" alt="BERVOS" className="w-5 h-5" />
+            </div>
+            <span className="text-xl font-bold tracking-tighter text-white">BERVOS</span>
           </div>
-          <div className="flex gap-8 text-sm font-medium text-white/60">
+          
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
             <a href="#projects" className="hover:text-white transition-colors">Projects</a>
-            <a href="#open-source" className="hover:text-white transition-colors">Open Source</a>
+            <a href="#opensource" className="hover:text-colors">Open Source</a>
             <a href="#connect" className="hover:text-white transition-colors">Connect</a>
-          </div>
+          </nav>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-48 pb-32 px-6">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/60 text-xs font-medium mb-12 animate-fade-in">
-            <Code2 size={14} />
-            <span>Building tools for a fuller experience</span>
+      <header className="relative pt-32 pb-20 px-6 overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-full pointer-events-none opacity-20">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500/20 blur-[120px] rounded-full" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/20 blur-[120px] rounded-full" />
+        </div>
+
+        <div className="max-w-4xl mx-auto text-center relative">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/80 text-xs font-medium mb-8">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+            </span>
+            Available for new ventures
           </div>
-          <h1 className="text-7xl md:text-9xl font-bold tracking-tighter mb-8 bg-gradient-to-b from-white to-white/40 bg-clip-text text-transparent">
-            BERVOS
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">
+            Building tools for a <br />fuller experience
           </h1>
-          <p className="max-w-2xl mx-auto text-xl text-white/40 leading-relaxed">
+          <p className="text-lg md:text-xl text-white/60 mb-10 max-w-2xl mx-auto leading-relaxed">
             Building premium digital experiences through innovative and robust tools.
           </p>
+          <div className="flex items-center justify-center gap-4">
+            <a href="#projects" className="px-8 py-4 bg-white text-black font-semibold rounded-xl hover:bg-white/90 transition-all active:scale-95 shadow-xl shadow-white/5">
+              Explore Projects
+            </a>
+            <a href="https://github.com/laresbernardo" target="_blank" rel="noopener noreferrer" className="px-8 py-4 bg-white/5 border border-white/10 text-white font-semibold rounded-xl hover:bg-white/10 transition-all active:scale-95">
+              GitHub
+            </a>
+          </div>
         </div>
-      </section>
+      </header>
 
       {/* Projects Section */}
       <section id="projects" className="py-32 px-6">
@@ -89,10 +108,10 @@ function App() {
             </div>
             <div className="text-white/20 hidden md:block">01</div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {projects.map((project) => (
-              <a 
+              <a
                 key={project.title}
                 href={project.link}
                 className="group relative glass p-8 glass-hover overflow-hidden"
@@ -139,7 +158,7 @@ function App() {
                   </div>
                   <p className="text-white/40 mb-8 leading-relaxed">{pkg.description}</p>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex gap-6">
                     <div className="flex items-center gap-2 text-xs text-white/60">
@@ -151,7 +170,7 @@ function App() {
                       <span>{pkg.contributors}</span>
                     </div>
                   </div>
-                  <a 
+                  <a
                     href={pkg.link}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -175,8 +194,8 @@ function App() {
               <p className="text-white/40">Open for collaborations and technical discussions.</p>
             </div>
             <div className="flex gap-4">
-              <a 
-                href="https://github.com/laresbernardo" 
+              <a
+                href="https://github.com/laresbernardo"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 px-8 py-4 rounded-xl bg-white text-black font-bold hover:bg-white/90 transition-all"
@@ -184,8 +203,8 @@ function App() {
                 <FaGithub size={20} />
                 GitHub
               </a>
-              <a 
-                href="https://linkedin.com/in/laresbernardo" 
+              <a
+                href="https://linkedin.com/in/laresbernardo"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 px-8 py-4 rounded-xl border border-white/10 hover:bg-white/5 transition-all font-bold"
