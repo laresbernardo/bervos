@@ -101,7 +101,7 @@ function App() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
             </span>
-            Engineering Excellence & Innovation
+            Innovation & Practicity
           </motion.div>
 
           <motion.h1
@@ -110,7 +110,7 @@ function App() {
             transition={{ delay: 0.1 }}
             className="text-6xl md:text-8xl font-bold tracking-tight mb-8 bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent leading-[1.1]"
           >
-            Building tools for <br />a fuller experience
+            Digital solutions for <br />fuller experiences
           </motion.h1>
 
           <motion.p
@@ -119,7 +119,7 @@ function App() {
             transition={{ delay: 0.2 }}
             className="text-lg md:text-2xl text-white/50 mb-12 max-w-2xl mx-auto leading-relaxed font-light"
           >
-            Crafting premium digital environments through <br className="hidden md:block" /> focused engineering and elegant design.
+            Family of premium useful tools <br className="hidden md:block" /> landed as practical robust solutions.
           </motion.p>
 
           <motion.div
@@ -269,7 +269,7 @@ function App() {
 
             <div className="relative">
               <h2 className="text-5xl font-bold mb-6">Let's build <br />something great.</h2>
-              <p className="text-white/40 text-xl max-w-md">Open for high-impact collaborations and technical partnerships.</p>
+              <p className="text-white/40 text-xl max-w-md">Open for high-impact collaborations and partnerships.</p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-6 relative">
