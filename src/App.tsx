@@ -1,4 +1,4 @@
-import { ExternalLink, Package, Star, Users, ArrowUpRight, Code2 } from 'lucide-react';
+import { ExternalLink, Package, Star, Users, ArrowUpRight } from 'lucide-react';
 import { FaGithub, FaLinkedin } from 'react-icons/fa';
 
 const projects = [
@@ -114,7 +114,7 @@ function App() {
               <a
                 key={project.title}
                 href={project.link}
-                className="group relative glass p-8 glass-hover overflow-hidden"
+                className="group relative glass p-8 glass-hover glow overflow-hidden border-white/5 hover:border-white/10"
               >
                 <div className="flex justify-between items-start mb-6">
                   <div className="p-3 rounded-xl bg-white/5 border border-white/10">
