@@ -7,7 +7,7 @@ const projects = [
     description: 'Advanced financial management and projection system.',
     link: 'https://mybillio.web.app/',
     tags: ['Finance', 'Travel', 'Collaboration'],
-    logo: '/billio-logo.jpg'
+    logo: '/billio-logo.png'
   },
   {
     title: 'Chessverse',
@@ -25,10 +25,10 @@ const projects = [
   },
   {
     title: 'Scribo',
-    description: 'Minimalist writing environment for elite engineers.',
+    description: 'Master Arabic and Japanese characters through immersive practice.',
     link: 'https://scribo-demo.web.app/mastery',
     tags: ['Markdown', 'Focus', 'Writers'],
-    logo: '/scribo-logo.jpg'
+    logo: '/scribo-logo.png'
   }
 ];
 
@@ -56,10 +56,9 @@ function App() {
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/20 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 group cursor-pointer">
-            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center group-hover:bg-white/10 transition-all duration-300 overflow-hidden p-1.5">
-              <img src="/bervos-logo.png" alt="BERVOS" className="w-full h-full object-contain invert brightness-200" />
+            <div className="h-12 flex items-center justify-center transition-all duration-300">
+              <img src="/bervos-logo.png" alt="BERVOS" className="h-full w-auto object-contain invert brightness-200" />
             </div>
-            <span className="text-xl font-bold tracking-tighter text-white">BERVOS</span>
           </div>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
@@ -121,11 +120,11 @@ function App() {
                 className="group relative glass p-8 glass-hover glow overflow-hidden border-white/5 hover:border-white/10"
               >
                 <div className="flex justify-between items-start mb-6">
-                  <div className="p-2 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
+                  <div className="w-16 h-16 rounded-[22.5%] bg-white/5 border border-white/10 overflow-hidden">
                     <img
                       src={project.logo}
                       alt={project.title}
-                      className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-500"
+                      className="w-full h-full object-cover"
                     />
                   </div>
                   <ArrowUpRight className="text-white/20 group-hover:text-white group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" size={20} />
