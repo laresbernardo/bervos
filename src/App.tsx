@@ -1,28 +1,29 @@
-import { Github, Linkedin, ExternalLink, Package, Star, Users, ArrowUpRight, Code2 } from 'lucide-react';
+import { ExternalLink, Package, Star, Users, ArrowUpRight, Code2 } from 'lucide-react';
+import { FaGithub, FaLinkedin } from 'react-icons/fa';
 
 const projects = [
   {
     title: 'Billio',
     description: 'Advanced financial management and projection system.',
-    link: '#',
+    link: 'https://mybillio.web.app/',
     tags: ['Next.js', 'Firebase', 'Finance']
   },
   {
     title: 'Chessverse',
     description: 'A modern platform for chess enthusiasts and professionals.',
-    link: '#',
+    link: 'https://chessverse-demo.web.app/',
     tags: ['React', 'WebSockets', 'Game']
   },
   {
     title: 'tripitdown',
     description: 'Precision-focused travel itinerary and log management.',
-    link: '#',
+    link: 'https://tripitdown.web.app/',
     tags: ['Tailwind', 'Maps', 'Travel']
   },
   {
     title: 'Scribo',
     description: 'Minimalist writing environment for elite engineers.',
-    link: '#',
+    link: 'https://scribo-demo.web.app/mastery',
     tags: ['Markdown', 'Focus', 'Writers']
   }
 ];
@@ -67,13 +68,13 @@ function App() {
         <div className="max-w-7xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/60 text-xs font-medium mb-12 animate-fade-in">
             <Code2 size={14} />
-            <span>ELITE ENGINEER MEETS CLEAN AESTHETIC</span>
+            <span>Building tools for a fuller experience</span>
           </div>
           <h1 className="text-7xl md:text-9xl font-bold tracking-tighter mb-8 bg-gradient-to-b from-white to-white/40 bg-clip-text text-transparent">
             BERVOS
           </h1>
           <p className="max-w-2xl mx-auto text-xl text-white/40 leading-relaxed">
-            Personal tech brand dedicated to building premium digital experiences through minimal design and robust engineering.
+            Building premium digital experiences through innovative and robust tools.
           </p>
         </div>
       </section>
@@ -133,7 +134,7 @@ function App() {
               <div key={pkg.name} className="glass border-white/5 p-8 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center gap-3 mb-6">
-                    <Github size={20} className="text-white/60" />
+                    <FaGithub size={20} className="text-white/60" />
                     <h3 className="text-xl font-bold">{pkg.name}</h3>
                   </div>
                   <p className="text-white/40 mb-8 leading-relaxed">{pkg.description}</p>
@@ -180,7 +181,7 @@ function App() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 px-8 py-4 rounded-xl bg-white text-black font-bold hover:bg-white/90 transition-all"
               >
-                <Github size={20} />
+                <FaGithub size={20} />
                 GitHub
               </a>
               <a 
@@ -189,7 +190,7 @@ function App() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 px-8 py-4 rounded-xl border border-white/10 hover:bg-white/5 transition-all font-bold"
               >
-                <Linkedin size={20} />
+                <FaLinkedin size={20} />
                 LinkedIn
               </a>
             </div>
