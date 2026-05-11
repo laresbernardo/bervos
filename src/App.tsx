@@ -6,7 +6,7 @@ const projects = [
   {
     title: 'Billio',
     description: 'Advanced financial management and projection system.',
-    link: 'https://mybillio.web.app/',
+    link: 'https://billio.bervos.org/',
     tags: ['Finance', 'Travel', 'Collaboration'],
     logo: '/billio-logo.png'
   },
@@ -56,7 +56,7 @@ function App() {
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/20 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-2 group cursor-pointer"
@@ -92,7 +92,7 @@ function App() {
         </div>
 
         <div className="max-w-4xl mx-auto text-center relative">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/80 text-xs font-medium mb-10"
@@ -103,8 +103,8 @@ function App() {
             </span>
             Engineering Excellence & Innovation
           </motion.div>
-          
-          <motion.h1 
+
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
@@ -113,7 +113,7 @@ function App() {
             Building tools for <br />a fuller experience
           </motion.h1>
 
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -122,7 +122,7 @@ function App() {
             Crafting premium digital environments through <br className="hidden md:block" /> focused engineering and elegant design.
           </motion.p>
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
@@ -212,7 +212,7 @@ function App() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             {openSource.map((pkg, i) => (
-              <motion.div 
+              <motion.div
                 key={pkg.name}
                 initial={{ opacity: 0, scale: 0.95 }}
                 whileInView={{ opacity: 1, scale: 1 }}
@@ -259,19 +259,19 @@ function App() {
       {/* Connect Footer */}
       <footer id="connect" className="py-40 px-6">
         <div className="max-w-7xl mx-auto">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="glass p-16 flex flex-col md:flex-row items-center justify-between gap-16 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 blur-[100px] rounded-full -mr-48 -mt-48" />
-            
+
             <div className="relative">
               <h2 className="text-5xl font-bold mb-6">Let's build <br />something great.</h2>
               <p className="text-white/40 text-xl max-w-md">Open for high-impact collaborations and technical partnerships.</p>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-6 relative">
               <a
                 href="https://github.com/laresbernardo"
