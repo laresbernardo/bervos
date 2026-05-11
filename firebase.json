@@ -1,6 +1,5 @@
 {
   "hosting": {
-    "site": "bervos-official",
     "public": "dist",
     "ignore": [
       "firebase.json",

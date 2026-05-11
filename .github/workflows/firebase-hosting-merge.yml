@@ -15,7 +15,6 @@ jobs:
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BILIO_C70AF }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BERVOS_OFFICIAL }}
           channelId: live
-          projectId: bilio-c70af
-          target: bervos-official
+          projectId: bervos-official

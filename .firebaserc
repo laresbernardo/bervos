@@ -1,15 +1,5 @@
 {
   "projects": {
-    "default": "bilio-c70af"
-  },
-  "targets": {
-    "bilio-c70af": {
-      "hosting": {
-        "bervos-official": [
-          "bervos-official"
-        ]
-      }
-    }
-  },
-  "etags": {}
+    "default": "bervos-official"
+  }
 }
