@@ -329,7 +329,7 @@ function App() {
     <div className="min-h-screen selection:bg-indigo-500/30 overflow-x-hidden">
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-[60] border-b border-white/5 bg-[#080b12]/40 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -339,7 +339,7 @@ function App() {
             <img src="/logo.svg" alt="BERVOS" className="h-8 w-auto brightness-200" />
           </motion.div>
 
-          <nav className="flex items-center gap-2 sm:gap-6">
+          <nav className="flex items-center gap-1 sm:gap-6">
             {['Projects', 'Open Source', 'Connect'].map((item, i) => (
               <motion.a
                 key={item}
@@ -347,7 +347,7 @@ function App() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
                 href={`#${item.toLowerCase().replace(' ', '-')}`}
-                className="px-4 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-transparent hover:border-white/10"
+                className="px-2 sm:px-4 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-transparent hover:border-white/10"
               >
                 {item}
               </motion.a>
@@ -357,7 +357,7 @@ function App() {
       </nav>
 
       {/* Hero Section */}
-      <header className="relative pt-40 pb-20 px-6 overflow-hidden min-h-[90vh] flex items-center">
+      <header className="relative pt-32 md:pt-40 pb-20 px-6 overflow-hidden min-h-[90vh] flex items-center">
         <HeroGraphic />
 
         <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-12 relative z-10">
@@ -375,7 +375,7 @@ function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] glow-text uppercase"
+              className="text-5xl md:text-8xl font-black tracking-tighter mb-8 leading-[1.1] md:leading-[0.9] glow-text uppercase py-2"
             >
               Building <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">fuller</span> <br />
@@ -455,7 +455,7 @@ function App() {
 
                 <div className="space-y-4">
                   <h3 className="text-3xl font-black group-hover:text-indigo-400 transition-colors tracking-tight">{project.title}</h3>
-                  <p className="text-slate-400 mb-10 text-lg leading-relaxed h-20 group-hover:text-slate-300 transition-colors">{project.description}</p>
+                  <p className="text-slate-400 mb-10 text-lg leading-relaxed min-h-[5rem] group-hover:text-slate-300 transition-colors">{project.description}</p>
                 </div>
 
                 <div className="flex flex-wrap gap-2 mt-8">
@@ -582,7 +582,7 @@ function App() {
                 <span className="mono-label !text-slate-500 tracking-widest text-[11px]">&copy; {new Date().getFullYear()} BERVOS</span>
               </div>
             </div>
-            <div className="flex gap-8">
+            <div className="flex gap-4 sm:gap-8">
               {['Concept', 'Privacy', 'Terms', 'Contact'].map(item => (
                 <button
                   key={item}
