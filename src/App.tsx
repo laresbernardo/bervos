@@ -114,7 +114,7 @@ const Modal = ({
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="tech-card p-6 md:p-8 max-w-2xl w-full relative"
+        className="tech-card p-8 max-w-2xl w-full relative"
       >
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
         <button
@@ -302,7 +302,7 @@ function App() {
             <img src="/logo.svg" alt="BERVOS" className="h-8 w-auto brightness-200" />
           </motion.div>
 
-          <nav className="flex items-center gap-1 sm:gap-6">
+          <nav className="flex items-center gap-2 sm:gap-6">
             {['Projects', 'Open Source', 'Connect'].map((item, i) => (
               <motion.a
                 key={item}
@@ -310,7 +310,7 @@ function App() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
                 href={`#${item.toLowerCase().replace(' ', '-')}`}
-                className="px-2 sm:px-4 py-2 text-[9px] sm:text-xs font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-transparent hover:border-white/10"
+                className="px-4 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-transparent hover:border-white/10"
               >
                 {item}
               </motion.a>
@@ -338,7 +338,7 @@ function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-5xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] glow-text uppercase"
+              className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] glow-text uppercase"
             >
               Digital solutions for <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">fuller</span> <br />
@@ -349,7 +349,7 @@ function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-lg md:text-2xl text-slate-400 mb-12 max-w-2xl leading-relaxed font-medium border-l-2 border-indigo-500/30 pl-6"
+              className="text-xl md:text-2xl text-slate-400 mb-12 max-w-2xl leading-relaxed font-medium border-l-2 border-indigo-500/30 pl-6"
             >
               Family of premium useful tools landed as practical robust and flexible solutions.
             </motion.p>
@@ -447,7 +447,7 @@ function App() {
             >
               <span className="mono-label !text-cyan-400 mb-2 block">Index_02 // Shared_Intelligence</span>
               <h2 className="text-5xl font-black mb-4 glow-text uppercase tracking-tighter">Open Source</h2>
-              <p className="text-slate-400 text-lg max-w-md border-l border-cyan-500/30 pl-4">Contributions to open collaborative solutions.</p>
+              <p className="text-slate-400 text-lg max-w-md border-l border-cyan-500/30 pl-4">Contributions to open sourced solutions.</p>
             </motion.div>
             <div className="text-cyan-500/10 text-8xl font-black hidden md:block select-none leading-none tracking-tighter">OSS_LIB_02</div>
           </div>
@@ -511,8 +511,8 @@ function App() {
           >
             <div className="relative">
               <span className="mono-label !text-indigo-400 mb-2 block">Command_Output // Next_Steps</span>
-              <h2 className="text-4xl md:text-5xl font-black mb-6 uppercase tracking-tighter glow-text">Let's build <br />something great.</h2>
-              <p className="text-slate-400 text-lg md:text-xl max-w-md border-l border-indigo-500/30 pl-6">Open for high-impact collaborations and partnerships. Also, feedback is welcome!</p>
+              <h2 className="text-5xl font-black mb-6 uppercase tracking-tighter glow-text">Let's build <br />something great.</h2>
+              <p className="text-slate-400 text-xl max-w-md border-l border-indigo-500/30 pl-6">Open for high-impact collaborations and partnerships. Also, feedback is welcome!</p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 relative">
