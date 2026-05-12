@@ -416,7 +416,7 @@ function App() {
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-3xl font-black group-hover:text-indigo-400 transition-colors uppercase tracking-tight">{project.title}</h3>
+                  <h3 className="text-3xl font-black group-hover:text-indigo-400 transition-colors tracking-tight">{project.title}</h3>
                   <p className="text-slate-400 mb-10 text-lg leading-relaxed h-20 group-hover:text-slate-300 transition-colors">{project.description}</p>
                 </div>
 
@@ -468,7 +468,7 @@ function App() {
                       <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-indigo-400">
                         <FaGithub size={24} />
                       </div>
-                      <h3 className="text-2xl font-black uppercase tracking-tight">{pkg.name}</h3>
+                      <h3 className="text-2xl font-black tracking-tight">{pkg.name}</h3>
                     </div>
 
                   </div>
