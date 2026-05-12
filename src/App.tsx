@@ -3,6 +3,22 @@ import { Star, Users, ArrowUpRight, X } from 'lucide-react';
 import { FaGithub, FaLinkedin } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
+declare global {
+  interface Window {
+    gtag: (command: string, action: string, params?: any) => void;
+  }
+}
+
+// GA Event Tracking Helper
+const trackEvent = (action: string, category: string, label: string) => {
+  if (typeof window.gtag !== 'undefined') {
+    window.gtag('event', action, {
+      'event_category': category,
+      'event_label': label
+    });
+  }
+};
+
 const projects = [
   {
     title: 'Billio',
@@ -281,6 +297,7 @@ function App() {
 
       if (response.ok) {
         setContactStatus('success');
+        trackEvent('contact_form_success', 'engagement', 'Message Sent');
       } else {
         setContactStatus('error');
       }
@@ -399,6 +416,7 @@ function App() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
+                onClick={() => trackEvent('project_click', 'engagement', project.title)}
                 className="group relative bg-[#080b12] p-10 hover:bg-[#0c121d] transition-all duration-500 overflow-hidden"
               >
                 <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
