@@ -116,7 +116,7 @@ const Modal = ({
   resetForm,
   onSubmit
 }: {
-  type: 'privacy' | 'terms' | 'contact',
+  type: 'privacy' | 'terms' | 'contact' | 'concept',
   onClose: () => void,
   status: 'idle' | 'sending' | 'success' | 'error',
   data: any,
@@ -142,7 +142,7 @@ const Modal = ({
         <div className="mb-6">
           <span className="mono-label block mb-1">System_Dialog // {type.toUpperCase()}</span>
           <h2 className="text-3xl font-bold glow-text">
-            {type === 'privacy' ? 'Privacy Policy' : type === 'terms' ? 'Terms of Service' : status === 'success' ? 'Message Sent' : 'Get in Touch'}
+            {type === 'privacy' ? 'Privacy Policy' : type === 'terms' ? 'Terms of Service' : type === 'concept' ? 'The BERVOS Concept' : status === 'success' ? 'Message Sent' : 'Get in Touch'}
           </h2>
         </div>
         <div className="text-slate-400 leading-relaxed space-y-4 max-h-[70vh] overflow-y-auto pr-4 scrollbar-thin">
@@ -187,6 +187,21 @@ const Modal = ({
               <p><strong>Liability:</strong> We provide our tools and information "as is" without warranties of any kind. BERVOS is not liable for any damages arising from the use of this site or its projects.</p>
               <p><strong>Changes:</strong> We reserve the right to modify these terms at any time without notice.</p>
             </>
+          ) : type === 'concept' ? (
+            <div className="space-y-8 py-4">
+              <div className="border-l-2 border-indigo-500/30 pl-6">
+                <h3 className="text-white font-bold mb-2 uppercase tracking-wider text-sm">Action Angle // Ber + Verbos</h3>
+                <p className="text-sm">In Spanish, <em>verbos</em> are the engines of action. BERVOS signifies tools built to execute, optimize, and move the needle, not just passive reports.</p>
+              </div>
+              <div className="border-l-2 border-cyan-500/30 pl-6">
+                <h3 className="text-white font-bold mb-2 uppercase tracking-wider text-sm">Enterprise System // B.E.R.V.O.S.</h3>
+                <p className="text-sm">Business Effectiveness & Resource Visualization Optimization System. Personal framework to measure impact and drive growth.</p>
+              </div>
+              <div className="border-l-2 border-indigo-500/30 pl-6">
+                <h3 className="text-white font-bold mb-2 uppercase tracking-wider text-sm">Client-Centric // Ber-Vos</h3>
+                <p className="text-sm">"Ber for You." A linguistic nod to <em>vos</em>, signaling highly personalized solutions designed specifically for the end user.</p>
+              </div>
+            </div>
           ) : (
             <form
               onSubmit={onSubmit}
@@ -265,7 +280,7 @@ const Modal = ({
 };
 
 function App() {
-  const [modalType, setModalType] = useState<'privacy' | 'terms' | 'contact' | null>(null);
+  const [modalType, setModalType] = useState<'privacy' | 'terms' | 'contact' | 'concept' | null>(null);
   const [contactStatus, setContactStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [contactData, setContactData] = useState({
     name: '',
@@ -277,6 +292,10 @@ function App() {
   const resetContactForm = () => {
     setContactData({ name: '', email: '', subject: '', message: '' });
     setContactStatus('idle');
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleContactSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -314,6 +333,7 @@ function App() {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
+            onClick={scrollToTop}
             className="flex items-center gap-3 group cursor-pointer"
           >
             <img src="/logo.svg" alt="BERVOS" className="h-8 w-auto brightness-200" />
@@ -368,7 +388,7 @@ function App() {
               transition={{ delay: 0.2 }}
               className="text-xl md:text-2xl text-slate-400 mb-12 max-w-2xl leading-relaxed font-medium border-l-2 border-indigo-500/30 pl-6"
             >
-              Family of premium useful tools landed as practical robust and flexible solutions.
+              BERVOS. A family of flexible digital solutions engineered to drive true action.
             </motion.p>
           </div>
 
@@ -557,13 +577,18 @@ function App() {
 
           <div className="mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-10">
             <div className="flex items-center gap-6">
-              <div className="flex items-center gap-3">
-                <img src="/logo.svg" alt="BERVOS" className="w-8 h-8 opacity-60" />
-                <span className="mono-label !text-slate-500 tracking-widest text-[11px]">&copy; {new Date().getFullYear()} BERVOS</span>
+              <div className="flex items-center gap-3 cursor-pointer group" onClick={scrollToTop}>
+                <img src="/logo.svg" alt="BERVOS" className="w-8 h-8 opacity-60 group-hover:opacity-100 transition-opacity" />
+                <span
+                  onClick={() => setModalType('concept')}
+                  className="mono-label !text-slate-500 tracking-widest text-[11px] hover:!text-indigo-400 transition-colors cursor-pointer"
+                >
+                  &copy; {new Date().getFullYear()} BERVOS
+                </span>
               </div>
             </div>
             <div className="flex gap-8">
-              {['Privacy', 'Terms', 'Contact'].map(item => (
+              {['Concept', 'Privacy', 'Terms', 'Contact'].map(item => (
                 <button
                   key={item}
                   onClick={() => setModalType(item.toLowerCase() as any)}
