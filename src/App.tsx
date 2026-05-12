@@ -1,35 +1,35 @@
 import { useState } from 'react';
-import { ExternalLink, Star, Users, ArrowUpRight, X } from 'lucide-react';
+import { Star, Users, ArrowUpRight, X } from 'lucide-react';
 import { FaGithub, FaLinkedin } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
 const projects = [
   {
     title: 'Billio',
-    description: 'Advanced financial management and projection system.',
+    description: 'Collaborative multi-currency and AI-powered Financial Management operating system for families.',
     link: 'https://billio.bervos.org/',
-    tags: ['Finance', 'Travel', 'Collaboration'],
+    tags: ['Finance', 'Travel', 'Collaboration', 'Investment'],
     logo: '/billio-logo.png'
   },
   {
     title: 'Chessverse',
-    description: 'A modern platform for chess enthusiasts and professionals.',
+    description: 'Modern platform to practice chess openings and thousands of puzzles, tracking performance, and available offline.',
     link: 'https://chessverse-demo.web.app/',
-    tags: ['Chess', 'Puzzles', 'Openings'],
+    tags: ['Chess', 'Puzzles', 'Openings', 'Practice', 'PWA'],
     logo: '/chessverse-logo.png'
   },
   {
     title: 'tripitdown',
-    description: 'Precision-focused travel itinerary and log management.',
+    description: 'Precision-focused and customizable travel itinerary tool powered by local-guides AI Agents with versions management.',
     link: 'https://tripitdown.web.app/',
-    tags: ['Tailwind', 'Maps', 'Travel'],
+    tags: ['Itinerary', 'Travel', 'Maps', 'Collaboration', 'PWA'],
     logo: '/tripitdown-logo.png'
   },
   {
     title: 'Scribo',
-    description: 'Master Arabic and Japanese characters through immersive practice.',
+    description: 'Master Arabic and Japanese characters and kanas through immersive practice and historical accuracy results.',
     link: 'https://scribo-demo.web.app/mastery',
-    tags: ['Markdown', 'Focus', 'Writers'],
+    tags: ['Languages', 'Practice', 'PWA'],
     logo: '/scribo-logo.png'
   }
 ];
@@ -51,16 +51,56 @@ const openSource = [
   }
 ];
 
-const Modal = ({ 
-  type, 
-  onClose, 
-  status, 
-  data, 
-  setData, 
+const HeroGraphic = () => {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-20">
+      <svg className="w-full h-full" viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <motion.path
+          d="M500 100 L900 500 L500 900 L100 500 Z"
+          stroke="currentColor"
+          strokeWidth="0.5"
+          className="text-indigo-500"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: 1 }}
+          transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+        />
+        <motion.path
+          d="M500 200 L800 500 L500 800 L200 500 Z"
+          stroke="currentColor"
+          strokeWidth="0.5"
+          className="text-cyan-500"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: 1 }}
+          transition={{ duration: 4, repeat: Infinity, ease: "linear", delay: 1 }}
+        />
+        <g className="text-indigo-500/30">
+          {[...Array(10)].map((_, i) => (
+            <motion.line
+              key={i}
+              x1="0" y1={i * 100} x2="1000" y2={i * 100}
+              stroke="currentColor"
+              strokeWidth="0.2"
+              initial={{ x: -1000 }}
+              animate={{ x: 0 }}
+              transition={{ duration: 10 + i, repeat: Infinity, ease: "linear" }}
+            />
+          ))}
+        </g>
+      </svg>
+    </div>
+  );
+};
+
+const Modal = ({
+  type,
+  onClose,
+  status,
+  data,
+  setData,
   resetForm,
   onSubmit
-}: { 
-  type: 'privacy' | 'terms' | 'contact', 
+}: {
+  type: 'privacy' | 'terms' | 'contact',
   onClose: () => void,
   status: 'idle' | 'sending' | 'success' | 'error',
   data: any,
@@ -69,26 +109,30 @@ const Modal = ({
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
 }) => {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm" onClick={onClose}>
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#080b12]/90 backdrop-blur-md" onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="glass p-8 max-w-2xl w-full relative overflow-hidden"
+        className="tech-card p-6 md:p-8 max-w-2xl w-full relative"
       >
-        <button 
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
+        <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors z-10"
+          className="absolute top-4 right-4 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors z-10"
         >
           <X size={20} />
         </button>
-        <h2 className="text-3xl font-bold mb-6">
-          {type === 'privacy' ? 'Privacy Policy' : type === 'terms' ? 'Terms of Service' : status === 'success' ? 'Message Sent' : 'Get in Touch'}
-        </h2>
-        <div className="text-white/60 leading-relaxed space-y-4 max-h-[70vh] overflow-y-auto pr-4 scrollbar-thin">
+        <div className="mb-6">
+          <span className="mono-label block mb-1">System_Dialog // {type.toUpperCase()}</span>
+          <h2 className="text-3xl font-bold glow-text">
+            {type === 'privacy' ? 'Privacy Policy' : type === 'terms' ? 'Terms of Service' : status === 'success' ? 'Message Sent' : 'Get in Touch'}
+          </h2>
+        </div>
+        <div className="text-slate-400 leading-relaxed space-y-4 max-h-[70vh] overflow-y-auto pr-4 scrollbar-thin">
           {status === 'success' ? (
             <div className="py-12 text-center space-y-6">
-              <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto text-green-400">
+              <div className="w-20 h-20 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto text-indigo-400">
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -98,15 +142,15 @@ const Modal = ({
                 </motion.div>
               </div>
               <div className="space-y-2">
-                <p className="text-xl font-bold text-white">Thank you for reaching out!</p>
-                <p className="text-sm">Your message has been delivered directly to my inbox. <br />I'll get back to you as soon as possible.</p>
+                <p className="text-xl font-bold text-white">Transmission Received</p>
+                <p className="text-sm">Your message has been delivered directly to my inbox. <br />Expected response time: &lt; 24 hours.</p>
               </div>
-              <button 
+              <button
                 onClick={() => {
                   resetForm();
                   onClose();
                 }}
-                className="px-8 py-3 bg-white text-black font-bold rounded-xl hover:bg-white/90 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-white/10"
+                className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-indigo-500/20"
               >
                 Return to Site
               </button>
@@ -128,27 +172,27 @@ const Modal = ({
               <p><strong>Changes:</strong> We reserve the right to modify these terms at any time without notice.</p>
             </>
           ) : (
-            <form 
+            <form
               onSubmit={onSubmit}
               className="space-y-6 pt-2"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-black uppercase tracking-widest text-white/40">Full Name</label>
-                  <input 
+                  <label className="mono-label">Full Name</label>
+                  <input
                     name="name"
                     required
-                    type="text" 
+                    type="text"
                     placeholder="John Doe"
                     value={data.name}
                     onChange={(e) => setData({ ...data, name: e.target.value })}
                     disabled={status === 'sending'}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/20 transition-colors disabled:opacity-50"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500/50 transition-colors disabled:opacity-50 font-mono text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-black uppercase tracking-widest text-white/40">Email Address</label>
-                  <input 
+                  <label className="mono-label">Email Address</label>
+                  <input
                     name="email"
                     required
                     type="email"
@@ -156,26 +200,26 @@ const Modal = ({
                     value={data.email}
                     onChange={(e) => setData({ ...data, email: e.target.value })}
                     disabled={status === 'sending'}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/20 transition-colors disabled:opacity-50"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500/50 transition-colors disabled:opacity-50 font-mono text-sm"
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-black uppercase tracking-widest text-white/40">Subject</label>
-                  <input 
+                  <label className="mono-label">Subject</label>
+                  <input
                     name="subject"
                     required
-                    type="text" 
+                    type="text"
                     placeholder="Project Inquiry"
                     value={data.subject}
                     onChange={(e) => setData({ ...data, subject: e.target.value })}
                     disabled={status === 'sending'}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/20 transition-colors disabled:opacity-50"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500/50 transition-colors disabled:opacity-50 font-mono text-sm"
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-widest text-white/40">Message</label>
-                <textarea 
+                <label className="mono-label">Message</label>
+                <textarea
                   name="message"
                   required
                   rows={4}
@@ -183,18 +227,18 @@ const Modal = ({
                   value={data.message}
                   onChange={(e) => setData({ ...data, message: e.target.value })}
                   disabled={status === 'sending'}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/20 transition-colors resize-none disabled:opacity-50"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500/50 transition-colors resize-none disabled:opacity-50 font-mono text-sm"
                 />
               </div>
               {status === 'error' && (
-                <p className="text-red-400 text-xs font-bold text-center">Something went wrong. Please try again or email directly.</p>
+                <p className="text-red-400 text-xs font-bold text-center">Transmission Error. Please retry or contact via LinkedIn.</p>
               )}
-              <button 
+              <button
                 type="submit"
                 disabled={status === 'sending'}
-                className="w-full py-4 bg-white text-black font-black rounded-xl hover:bg-white/90 transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-white/5 disabled:opacity-50 disabled:cursor-wait"
+                className="w-full py-4 bg-indigo-600 text-white font-black rounded-xl hover:bg-indigo-500 transition-all hover:scale-[1.01] active:scale-95 shadow-xl shadow-indigo-500/10 disabled:opacity-50 disabled:cursor-wait"
               >
-                {status === 'sending' ? 'Sending...' : 'Send Message'}
+                {status === 'sending' ? 'TRANSMITTING...' : 'SEND MESSAGE'}
               </button>
             </form>
           )}
@@ -227,14 +271,14 @@ function App() {
     formData.append('email', contactData.email);
     formData.append('subject', contactData.subject);
     formData.append('message', contactData.message);
-    
+
     try {
       const response = await fetch('https://formspree.io/f/xwvyyebo', {
         method: 'POST',
         body: formData,
         headers: { 'Accept': 'application/json' }
       });
-      
+
       if (response.ok) {
         setContactStatus('success');
       } else {
@@ -246,21 +290,19 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen selection:bg-white/20">
+    <div className="min-h-screen selection:bg-indigo-500/30 overflow-x-hidden">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/20 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <nav className="fixed top-0 w-full z-[60] border-b border-white/5 bg-[#080b12]/40 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-2 group cursor-pointer"
+            className="flex items-center gap-3 group cursor-pointer"
           >
-            <div className="h-10 flex items-center justify-center transition-all duration-300">
-              <img src="/bervos-logo.png" alt="BERVOS" className="h-full w-auto object-contain invert brightness-200" />
-            </div>
+            <img src="/logo.svg" alt="BERVOS" className="h-8 w-auto brightness-200" />
           </motion.div>
 
-          <nav className="hidden md:flex items-center gap-10 text-sm font-medium">
+          <nav className="flex items-center gap-1 sm:gap-6">
             {['Projects', 'Open Source', 'Connect'].map((item, i) => (
               <motion.a
                 key={item}
@@ -268,10 +310,9 @@ function App() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
                 href={`#${item.toLowerCase().replace(' ', '-')}`}
-                className="text-white/50 hover:text-white transition-colors relative group"
+                className="px-2 sm:px-4 py-2 text-[9px] sm:text-xs font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-transparent hover:border-white/10"
               >
                 {item}
-                <span className="absolute -bottom-1 left-0 w-0 h-px bg-white transition-all group-hover:w-full" />
               </motion.a>
             ))}
           </nav>
@@ -279,75 +320,75 @@ function App() {
       </nav>
 
       {/* Hero Section */}
-      <header className="relative pt-48 pb-32 px-6 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-full pointer-events-none opacity-25">
-          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/20 blur-[120px] rounded-full animate-pulse" />
-          <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-500/20 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+      <header className="relative pt-40 pb-20 px-6 overflow-hidden min-h-[90vh] flex items-center">
+        <HeroGraphic />
+
+        <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-12 relative z-10">
+          <div className="lg:col-span-8 text-left">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="inline-flex items-center gap-3 px-3 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/20 mb-8"
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+              <span className="mono-label !text-indigo-400">Innovation & Practicity</span>
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-5xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] glow-text uppercase"
+            >
+              Digital solutions for <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">fuller</span> <br />
+              experiences.
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-lg md:text-2xl text-slate-400 mb-12 max-w-2xl leading-relaxed font-medium border-l-2 border-indigo-500/30 pl-6"
+            >
+              Family of premium useful tools landed as practical robust and flexible solutions.
+            </motion.p>
+          </div>
+
+          <div className="hidden lg:block lg:col-span-4 relative">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4, duration: 1 }}
+              className="relative aspect-square"
+            >
+              <div className="absolute inset-0 border border-indigo-500/20 rounded-full animate-[spin_20s_linear_infinite]" />
+              <div className="absolute inset-8 border border-cyan-500/20 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <img src="/logo.svg" alt="Logo" className="w-32 h-32 opacity-40 blur-sm absolute" />
+                <img src="/logo.svg" alt="Logo" className="w-32 h-32" />
+              </div>
+            </motion.div>
+          </div>
         </div>
-
-        <div className="max-w-4xl mx-auto text-center relative">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/80 text-xs font-medium mb-10"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-            </span>
-            Innovation & Practicity
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-6xl md:text-8xl font-bold tracking-tight mb-8 bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent leading-[1.1]"
-          >
-            Digital solutions for <br />fuller experiences
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-lg md:text-2xl text-white/50 mb-12 max-w-2xl mx-auto leading-relaxed font-light"
-          >
-            Family of premium useful tools <br className="hidden md:block" /> landed as practical robust solutions.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex items-center justify-center gap-6"
-          >
-            <a href="#projects" className="px-10 py-5 bg-white text-black font-bold rounded-2xl hover:bg-white/90 transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-white/10">
-              Explore Projects
-            </a>
-            <a href="https://github.com/laresbernardo" target="_blank" rel="noopener noreferrer" className="px-10 py-5 bg-white/5 border border-white/10 text-white font-bold rounded-2xl hover:bg-white/10 transition-all hover:scale-105 active:scale-95">
-              GitHub
-            </a>
-          </motion.div>
-        </div>
-      </header>
-
-      {/* Projects Section */}
-      <section id="projects" className="py-40 px-6">
+      </header>      {/* Projects Section */}
+      <section id="projects" className="py-40 px-6 relative">
+        <div className="absolute top-0 right-0 w-px h-full bg-gradient-to-b from-transparent via-indigo-500/20 to-transparent" />
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-end justify-between mb-20">
+          <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-20 gap-6">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-5xl font-bold mb-4">Core Ecosystem</h2>
-              <p className="text-white/40 text-lg">Specialized tools built for high-performance domains.</p>
+              <span className="mono-label !text-indigo-400 mb-2 block">Index_01 // Projects</span>
+              <h2 className="text-5xl font-black mb-4 glow-text uppercase tracking-tighter">Bervos Ecosystem</h2>
+              <p className="text-slate-400 text-lg max-w-md border-l border-indigo-500/30 pl-4">Specialized tools for various domains.</p>
             </motion.div>
-            <div className="text-white/10 text-2xl font-black hidden md:block select-none">01</div>
+            <div className="text-indigo-500/10 text-8xl font-black hidden md:block select-none leading-none tracking-tighter">PROJECTS_01</div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-white/5 border border-white/5">
             {projects.map((project, i) => (
               <motion.a
                 key={project.title}
@@ -358,92 +399,100 @@ function App() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="group relative glass p-10 glass-hover glow overflow-hidden"
+                className="group relative bg-[#080b12] p-10 hover:bg-[#0c121d] transition-all duration-500 overflow-hidden"
               >
-                <div className="flex justify-between items-start mb-8">
-                  <div className="w-20 h-20 rounded-[22.5%] bg-white/5 border border-white/10 overflow-hidden shadow-2xl transition-transform duration-500 group-hover:scale-105">
+                <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ArrowUpRight size={20} className="text-indigo-400" />
+                </div>
+
+                <div className="flex justify-between items-start mb-12">
+                  <div className="w-16 h-16 rounded-xl bg-white/5 border border-white/10 overflow-hidden shadow-2xl transition-transform duration-500 group-hover:scale-105 group-hover:border-indigo-500/50">
                     <img
                       src={project.logo}
                       alt={project.title}
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <motion.div
-                    whileHover={{ x: 5, y: -5 }}
-                    className="p-3 rounded-full bg-white/5 border border-white/10 text-white/40 group-hover:text-white transition-colors"
-                  >
-                    <ArrowUpRight size={24} />
-                  </motion.div>
                 </div>
-                <h3 className="text-3xl font-bold mb-4">{project.title}</h3>
-                <p className="text-white/40 mb-10 text-lg leading-relaxed h-20">{project.description}</p>
-                <div className="flex flex-wrap gap-3">
+
+                <div className="space-y-4">
+                  <h3 className="text-3xl font-black group-hover:text-indigo-400 transition-colors uppercase tracking-tight">{project.title}</h3>
+                  <p className="text-slate-400 mb-10 text-lg leading-relaxed h-20 group-hover:text-slate-300 transition-colors">{project.description}</p>
+                </div>
+
+                <div className="flex flex-wrap gap-2 mt-8">
                   {project.tags.map(tag => (
-                    <span key={tag} className="text-[11px] uppercase tracking-widest font-black px-4 py-2 rounded-full bg-white/5 text-white/30 border border-white/10 group-hover:border-white/20 transition-colors">
+                    <span key={tag} className="text-[9px] font-mono uppercase tracking-tighter px-3 py-1 bg-white/5 text-slate-500 border border-white/5 group-hover:border-indigo-500/20 group-hover:text-indigo-400/70 transition-all">
                       {tag}
                     </span>
                   ))}
                 </div>
+
+                {/* Decorative blueprint elements */}
+                <div className="absolute bottom-0 left-0 w-20 h-px bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
+                <div className="absolute bottom-0 left-0 w-px h-20 bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
               </motion.a>
             ))}
           </div>
         </div>
       </section>
-
       {/* Open Source Section */}
-      <section id="open-source" className="py-40 px-6 relative">
-        <div className="absolute inset-0 bg-white/[0.01] -skew-y-3 pointer-events-none" />
+      <section id="open-source" className="py-40 px-6 relative bg-white/[0.01]">
         <div className="max-w-7xl mx-auto relative">
-          <div className="flex items-end justify-between mb-20">
+          <div className="flex items-start md:items-end justify-between mb-20 gap-6">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-5xl font-bold mb-4">Open Source</h2>
-              <p className="text-white/40 text-lg">Contributions to the global engineering stack.</p>
+              <span className="mono-label !text-cyan-400 mb-2 block">Index_02 // Shared_Intelligence</span>
+              <h2 className="text-5xl font-black mb-4 glow-text uppercase tracking-tighter">Open Source</h2>
+              <p className="text-slate-400 text-lg max-w-md border-l border-cyan-500/30 pl-4">Contributions to open collaborative solutions.</p>
             </motion.div>
-            <div className="text-white/10 text-2xl font-black hidden md:block select-none">02</div>
+            <div className="text-cyan-500/10 text-8xl font-black hidden md:block select-none leading-none tracking-tighter">OSS_LIB_02</div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
             {openSource.map((pkg, i) => (
               <motion.div
                 key={pkg.name}
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.98 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="glass border-white/5 p-10 flex flex-col justify-between hover:border-white/20 transition-all duration-500"
+                className="tech-card p-10 flex flex-col justify-between"
               >
                 <div>
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                      <FaGithub size={24} className="text-white/80" />
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-indigo-400">
+                        <FaGithub size={24} />
+                      </div>
+                      <h3 className="text-2xl font-black uppercase tracking-tight">{pkg.name}</h3>
                     </div>
-                    <h3 className="text-2xl font-bold">{pkg.name}</h3>
+
                   </div>
-                  <p className="text-white/40 mb-10 text-lg leading-relaxed">{pkg.description}</p>
+                  <p className="text-slate-400 mb-10 text-lg leading-relaxed">{pkg.description}</p>
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between pt-8 border-t border-white/5">
                   <div className="flex gap-8">
-                    <div className="flex items-center gap-2.5 text-sm text-white/60">
-                      <Star size={18} className="text-yellow-500/60" />
-                      <span>{pkg.stars}</span>
+                    <div className="flex items-center gap-2.5">
+                      <Star size={16} className="text-yellow-500/40" />
+                      <span className="mono-label !text-slate-400">{pkg.stars}</span>
                     </div>
-                    <div className="flex items-center gap-2.5 text-sm text-white/60">
-                      <Users size={18} className="text-blue-500/60" />
-                      <span>{pkg.contributors}</span>
+                    <div className="flex items-center gap-2.5">
+                      <Users size={16} className="text-blue-500/40" />
+                      <span className="mono-label !text-slate-400">{pkg.contributors}</span>
                     </div>
                   </div>
                   <a
                     href={pkg.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-white/30 hover:text-white transition-colors"
+                    className="group flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 transition-colors"
                   >
-                    Repository <ExternalLink size={14} className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                    ACCESS_REPO <ArrowUpRight size={14} className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                   </a>
                 </div>
               </motion.div>
@@ -451,60 +500,66 @@ function App() {
           </div>
         </div>
       </section>
-
       {/* Connect Footer */}
-      <footer id="connect" className="py-20 px-6">
+      <footer id="connect" className="py-20 px-6 relative border-t border-white/5">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="glass p-12 flex flex-col md:flex-row items-center justify-between gap-12 relative overflow-hidden"
+            className="tech-card p-12 flex flex-col md:flex-row items-center justify-between gap-12"
           >
-            <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 blur-[100px] rounded-full -mr-48 -mt-48" />
-
             <div className="relative">
-              <h2 className="text-5xl font-bold mb-6">Let's build <br />something great.</h2>
-              <p className="text-white/40 text-xl max-w-md">Open for high-impact collaborations and partnerships.</p>
+              <span className="mono-label !text-indigo-400 mb-2 block">Command_Output // Next_Steps</span>
+              <h2 className="text-4xl md:text-5xl font-black mb-6 uppercase tracking-tighter glow-text">Let's build <br />something great.</h2>
+              <p className="text-slate-400 text-lg md:text-xl max-w-md border-l border-indigo-500/30 pl-6">Open for high-impact collaborations and partnerships. Also, feedback is welcome!</p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-6 relative">
+            <div className="flex flex-col sm:flex-row gap-4 relative">
               <a
                 href="https://github.com/laresbernardo"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-4 px-10 py-5 rounded-2xl bg-white text-black font-black hover:bg-white/90 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-white/5"
+                className="flex items-center justify-center gap-4 px-10 py-5 rounded-xl bg-white text-black font-black hover:bg-slate-200 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-white/5"
               >
-                <FaGithub size={24} />
-                GitHub
+                <FaGithub size={20} />
+                GITHUB
               </a>
               <a
                 href="https://linkedin.com/in/laresbernardo"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-4 px-10 py-5 rounded-2xl border border-white/10 hover:bg-white/5 transition-all font-black hover:scale-105 active:scale-95"
+                className="flex items-center justify-center gap-4 px-10 py-5 rounded-xl border border-white/10 hover:bg-white/5 transition-all font-black hover:scale-105 active:scale-95"
               >
-                <FaLinkedin size={24} />
-                LinkedIn
+                <FaLinkedin size={20} />
+                LINKEDIN
               </a>
             </div>
           </motion.div>
 
-          <div className="mt-16 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-10 text-sm text-white/20">
-            <div className="flex items-center gap-4">
-              <img src="/bervos-logo.png" alt="BERVOS" className="w-6 h-6 opacity-40 invert" />
-              <span className="font-medium tracking-wide">&copy; {new Date().getFullYear()} BERVOS</span>
+          <div className="mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-10">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3">
+                <img src="/logo.svg" alt="BERVOS" className="w-8 h-8 opacity-60" />
+                <span className="mono-label !text-slate-500 tracking-widest text-[11px]">&copy; {new Date().getFullYear()} BERVOS</span>
+              </div>
             </div>
-            <div className="flex gap-12 font-bold uppercase tracking-widest text-[10px]">
-              <button onClick={() => setModalType('privacy')} className="hover:text-white transition-colors cursor-pointer">Privacy</button>
-              <button onClick={() => setModalType('terms')} className="hover:text-white transition-colors cursor-pointer">Terms</button>
-              <button onClick={() => setModalType('contact')} className="hover:text-white transition-colors cursor-pointer">Contact</button>
+            <div className="flex gap-8">
+              {['Privacy', 'Terms', 'Contact'].map(item => (
+                <button
+                  key={item}
+                  onClick={() => setModalType(item.toLowerCase() as any)}
+                  className="mono-label !text-slate-500 hover:!text-indigo-400 transition-colors cursor-pointer"
+                >
+                  [{item.toUpperCase()}]
+                </button>
+              ))}
             </div>
           </div>
         </div>
         {modalType && (
-          <Modal 
-            type={modalType} 
+          <Modal
+            type={modalType}
             onClose={() => setModalType(null)}
             status={contactStatus}
             data={contactData}
