@@ -388,7 +388,7 @@ function App() {
               transition={{ delay: 0.2 }}
               className="text-xl md:text-2xl text-slate-400 mb-12 max-w-2xl leading-relaxed font-medium border-l-2 border-indigo-500/30 pl-6"
             >
-              BERVOS. A family of flexible digital solutions engineered to drive true action.
+              BERVOS. A family of flexible digital solutions engineered to learn and drive true action.
             </motion.p>
           </div>
 
