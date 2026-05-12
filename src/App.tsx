@@ -368,7 +368,7 @@ function App() {
               className="inline-flex items-center gap-3 px-3 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/20 mb-8"
             >
               <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-              <span className="mono-label !text-indigo-400">Innovation & Practicity</span>
+              <span className="mono-label !text-indigo-400">Innovation & Practicality</span>
             </motion.div>
 
             <motion.h1
@@ -377,7 +377,7 @@ function App() {
               transition={{ delay: 0.1 }}
               className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] glow-text uppercase"
             >
-              Digital solutions for <br />
+              Building <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">fuller</span> <br />
               experiences.
             </motion.h1>
@@ -579,12 +579,7 @@ function App() {
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3 cursor-pointer group" onClick={scrollToTop}>
                 <img src="/logo.svg" alt="BERVOS" className="w-8 h-8 opacity-60 group-hover:opacity-100 transition-opacity" />
-                <span
-                  onClick={() => setModalType('concept')}
-                  className="mono-label !text-slate-500 tracking-widest text-[11px] hover:!text-indigo-400 transition-colors cursor-pointer"
-                >
-                  &copy; {new Date().getFullYear()} BERVOS
-                </span>
+                <span className="mono-label !text-slate-500 tracking-widest text-[11px]">&copy; {new Date().getFullYear()} BERVOS</span>
               </div>
             </div>
             <div className="flex gap-8">
