@@ -590,8 +590,8 @@ function App() {
                   <p className="text-slate-400 mb-10 text-lg leading-relaxed">{pkg.description}</p>
                 </div>
 
-                <div className="flex items-center justify-between pt-8 border-t border-white/5">
-                  <div className="flex gap-4 sm:gap-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-8 border-t border-white/5 gap-6">
+                  <div className="flex flex-wrap gap-x-4 gap-y-3 sm:gap-6">
                     <div className="flex items-center gap-2.5" title="Stars">
                       <Star size={16} className="text-yellow-500/40" />
                       <span className="mono-label !text-slate-400">{repoStats[pkg.name]?.stars || pkg.stars}</span>
