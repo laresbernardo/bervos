@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Star, Users, ArrowUpRight, X, GitFork } from 'lucide-react';
+import { Star, Users, ArrowUpRight, X, GitFork, Download } from 'lucide-react';
 import { FaGithub, FaLinkedin } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
@@ -54,15 +54,19 @@ const openSource = [
   {
     name: 'Robyn',
     description: 'Marketing Mix Modeling (MMM) by Meta Marketing Science.',
-    stars: '1.2k',
-    contributors: '45',
+    stars: '1.5k',
+    forks: '430',
+    downloads: '137k',
+    contributors: '33',
     link: 'https://github.com/facebookexperimental/Robyn'
   },
   {
     name: 'lares',
     description: 'R package for data science, analytics, and business intelligence.',
-    stars: '500+',
-    contributors: '12',
+    stars: '240',
+    forks: '50',
+    downloads: '213k',
+    contributors: '6',
     link: 'https://github.com/laresbernardo/lares'
   }
 ];
@@ -288,13 +292,16 @@ function App() {
     subject: '',
     message: ''
   });
-  const [repoStats, setRepoStats] = useState<Record<string, { stars: string, forks: string, contributors: string }>>({});
+  const [repoStats, setRepoStats] = useState<Record<string, { stars: string, forks: string, contributors: string, downloads: string }>>({});
 
   useEffect(() => {
     const fetchStats = async () => {
       const stats: Record<string, { stars: string, forks: string, contributors: string }> = {};
       
       const formatNumber = (num: number) => {
+        if (num >= 100000) {
+          return Math.round(num / 1000) + 'k';
+        }
         if (num >= 1000) {
           return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
         }
@@ -304,38 +311,52 @@ function App() {
       for (const repo of openSource) {
         try {
           const repoPath = repo.link.replace('https://github.com/', '');
-          const [repoRes, contribRes] = await Promise.all([
+          const results = await Promise.allSettled([
             fetch(`https://api.github.com/repos/${repoPath}`),
-            fetch(`https://api.github.com/repos/${repoPath}/contributors?per_page=1`)
+            fetch(`https://api.github.com/repos/${repoPath}/contributors?per_page=1`),
+            fetch(`https://cranlogs.r-pkg.org/downloads/total/2012-10-01:2030-01-01/${repo.name}`)
           ]);
 
-          const repoData = await repoRes.json();
-          
-          let contributorsCount = repo.contributors;
-          if (contribRes.ok) {
-            const linkHeader = contribRes.headers.get('Link');
+          let stars = repo.stars;
+          let forks = repo.forks;
+          let contributors = repo.contributors;
+          let downloads = repo.downloads;
+
+          // GitHub Repo Data
+          if (results[0].status === 'fulfilled' && results[0].value.ok) {
+            const data = await results[0].value.json();
+            if (data.stargazers_count !== undefined) stars = formatNumber(data.stargazers_count);
+            if (data.forks_count !== undefined) forks = formatNumber(data.forks_count);
+          }
+
+          // GitHub Contributors
+          if (results[1].status === 'fulfilled' && results[1].value.ok) {
+            const linkHeader = results[1].value.headers.get('Link');
             if (linkHeader) {
               const match = linkHeader.match(/page=(\d+)>; rel="last"/);
-              if (match) {
-                contributorsCount = match[1];
-              }
+              if (match) contributors = match[1];
             } else {
-              const contribData = await contribRes.json();
-              contributorsCount = Array.isArray(contribData) ? contribData.length.toString() : repo.contributors;
+              const data = await results[1].value.json();
+              if (Array.isArray(data)) contributors = data.length.toString();
             }
           }
 
-          stats[repo.name] = {
-            stars: repoData.stargazers_count !== undefined ? formatNumber(repoData.stargazers_count) : repo.stars,
-            forks: repoData.forks_count !== undefined ? formatNumber(repoData.forks_count) : '...',
-            contributors: contributorsCount
-          };
+          // CRAN Downloads
+          if (results[2].status === 'fulfilled' && results[2].value.ok) {
+            const data = await results[2].value.json();
+            if (Array.isArray(data) && data[0]?.downloads) {
+              downloads = formatNumber(data[0].downloads);
+            }
+          }
+
+          stats[repo.name] = { stars, forks, contributors, downloads };
         } catch (e) {
           console.error(`Failed to fetch stats for ${repo.name}`, e);
           stats[repo.name] = {
             stars: repo.stars,
-            forks: '...',
-            contributors: repo.contributors
+            forks: repo.forks,
+            contributors: repo.contributors,
+            downloads: repo.downloads
           };
         }
       }
@@ -577,7 +598,11 @@ function App() {
                     </div>
                     <div className="flex items-center gap-2.5" title="Forks">
                       <GitFork size={16} className="text-green-500/40" />
-                      <span className="mono-label !text-slate-400">{repoStats[pkg.name]?.forks || '...'}</span>
+                      <span className="mono-label !text-slate-400">{repoStats[pkg.name]?.forks || pkg.forks}</span>
+                    </div>
+                    <div className="flex items-center gap-2.5" title="Downloads">
+                      <Download size={16} className="text-indigo-500/40" />
+                      <span className="mono-label !text-slate-400">{repoStats[pkg.name]?.downloads || pkg.downloads}</span>
                     </div>
                     <div className="flex items-center gap-2.5" title="Collaborators">
                       <Users size={16} className="text-blue-500/40" />
