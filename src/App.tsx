@@ -600,10 +600,16 @@ function App() {
                       <GitFork size={16} className="text-green-500/40" />
                       <span className="mono-label !text-slate-400">{repoStats[pkg.name]?.forks || pkg.forks}</span>
                     </div>
-                    <div className="flex items-center gap-2.5" title="Downloads">
+                    <a 
+                      href={`https://cran.r-project.org/web/packages/${pkg.name}/index.html`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2.5 hover:text-indigo-400 transition-colors" 
+                      title="CRAN Downloads"
+                    >
                       <Download size={16} className="text-indigo-500/40" />
                       <span className="mono-label !text-slate-400">{repoStats[pkg.name]?.downloads || pkg.downloads}</span>
-                    </div>
+                    </a>
                     <div className="flex items-center gap-2.5" title="Collaborators">
                       <Users size={16} className="text-blue-500/40" />
                       <span className="mono-label !text-slate-400">{repoStats[pkg.name]?.contributors || pkg.contributors}</span>
