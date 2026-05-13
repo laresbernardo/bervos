@@ -296,7 +296,7 @@ function App() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const stats: Record<string, { stars: string, forks: string, contributors: string }> = {};
+      const stats: Record<string, { stars: string, forks: string, contributors: string, downloads: string }> = {};
       
       const formatNumber = (num: number) => {
         if (num >= 100000) {
