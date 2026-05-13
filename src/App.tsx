@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Star, Users, ArrowUpRight, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Star, Users, ArrowUpRight, X, GitFork } from 'lucide-react';
 import { FaGithub, FaLinkedin } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
@@ -288,6 +288,62 @@ function App() {
     subject: '',
     message: ''
   });
+  const [repoStats, setRepoStats] = useState<Record<string, { stars: string, forks: string, contributors: string }>>({});
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const stats: Record<string, { stars: string, forks: string, contributors: string }> = {};
+      
+      const formatNumber = (num: number) => {
+        if (num >= 1000) {
+          return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+        }
+        return num.toString();
+      };
+
+      for (const repo of openSource) {
+        try {
+          const repoPath = repo.link.replace('https://github.com/', '');
+          const [repoRes, contribRes] = await Promise.all([
+            fetch(`https://api.github.com/repos/${repoPath}`),
+            fetch(`https://api.github.com/repos/${repoPath}/contributors?per_page=1`)
+          ]);
+
+          const repoData = await repoRes.json();
+          
+          let contributorsCount = repo.contributors;
+          if (contribRes.ok) {
+            const linkHeader = contribRes.headers.get('Link');
+            if (linkHeader) {
+              const match = linkHeader.match(/page=(\d+)>; rel="last"/);
+              if (match) {
+                contributorsCount = match[1];
+              }
+            } else {
+              const contribData = await contribRes.json();
+              contributorsCount = Array.isArray(contribData) ? contribData.length.toString() : repo.contributors;
+            }
+          }
+
+          stats[repo.name] = {
+            stars: repoData.stargazers_count !== undefined ? formatNumber(repoData.stargazers_count) : repo.stars,
+            forks: repoData.forks_count !== undefined ? formatNumber(repoData.forks_count) : '...',
+            contributors: contributorsCount
+          };
+        } catch (e) {
+          console.error(`Failed to fetch stats for ${repo.name}`, e);
+          stats[repo.name] = {
+            stars: repo.stars,
+            forks: '...',
+            contributors: repo.contributors
+          };
+        }
+      }
+      setRepoStats(stats);
+    };
+
+    fetchStats();
+  }, []);
 
   const resetContactForm = () => {
     setContactData({ name: '', email: '', subject: '', message: '' });
@@ -514,14 +570,18 @@ function App() {
                 </div>
 
                 <div className="flex items-center justify-between pt-8 border-t border-white/5">
-                  <div className="flex gap-8">
-                    <div className="flex items-center gap-2.5">
+                  <div className="flex gap-4 sm:gap-6">
+                    <div className="flex items-center gap-2.5" title="Stars">
                       <Star size={16} className="text-yellow-500/40" />
-                      <span className="mono-label !text-slate-400">{pkg.stars}</span>
+                      <span className="mono-label !text-slate-400">{repoStats[pkg.name]?.stars || pkg.stars}</span>
                     </div>
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5" title="Forks">
+                      <GitFork size={16} className="text-green-500/40" />
+                      <span className="mono-label !text-slate-400">{repoStats[pkg.name]?.forks || '...'}</span>
+                    </div>
+                    <div className="flex items-center gap-2.5" title="Collaborators">
                       <Users size={16} className="text-blue-500/40" />
-                      <span className="mono-label !text-slate-400">{pkg.contributors}</span>
+                      <span className="mono-label !text-slate-400">{repoStats[pkg.name]?.contributors || pkg.contributors}</span>
                     </div>
                   </div>
                   <a
