@@ -25,28 +25,40 @@ const projects = [
     description: 'Collaborative multi-currency and AI-powered Financial Management operating system for families.',
     link: 'https://billio.bervos.org/',
     tags: ['Finance', 'Travel', 'Collaboration', 'Investment'],
-    logo: '/billio-logo.png'
+    logo: '/billio-logo.png',
+    category: 'productivity'
   },
   {
     title: 'Chessverse',
     description: 'Modern platform to practice chess openings and thousands of puzzles, tracking performance, and available offline.',
     link: 'https://chessverse-demo.web.app/',
     tags: ['Chess', 'Puzzles', 'Openings', 'Practice', 'PWA'],
-    logo: '/chessverse-logo.png'
+    logo: '/chessverse-logo.png',
+    category: 'leisure'
   },
   {
     title: 'tripitdown',
     description: 'Precision-focused and customizable travel itinerary tool powered by local-guides AI Agents with versions management.',
-    link: 'https://tripitdown.web.app/',
+    link: 'https://tripitdown.bervos.org/',
     tags: ['Itinerary', 'Travel', 'Maps', 'Collaboration', 'PWA'],
-    logo: '/tripitdown-logo.png'
+    logo: '/tripitdown-logo.png',
+    category: 'productivity'
   },
   {
     title: 'Scribo',
     description: 'Master Arabic and Japanese characters and kanas through immersive practice and historical accuracy results.',
     link: 'https://scribo-demo.web.app/mastery',
     tags: ['Languages', 'Practice', 'PWA'],
-    logo: '/scribo-logo.png'
+    logo: '/scribo-logo.png',
+    category: 'leisure'
+  },
+  {
+    title: 'LaresDJ',
+    description: 'The ultimate virtual community and resource hub for DJs and music producers, offering tutorials, community forums, equipment maps, custom skins, and curated download packs.',
+    link: 'https://laresdj.bervos.org/',
+    tags: ['DJ', 'Production', 'Music', 'Community'],
+    logo: '/laresdj-logo.png',
+    category: 'leisure'
   }
 ];
 
@@ -293,11 +305,13 @@ function App() {
     message: ''
   });
   const [repoStats, setRepoStats] = useState<Record<string, { stars: string, forks: string, contributors: string, downloads: string }>>({});
+  const [activeFilter, setActiveFilter] = useState<'all' | 'productivity' | 'leisure'>('all');
+  const [visibleCount, setVisibleCount] = useState(3);
 
   useEffect(() => {
     const fetchStats = async () => {
       const stats: Record<string, { stars: string, forks: string, contributors: string, downloads: string }> = {};
-      
+
       const formatNumber = (num: number) => {
         if (num >= 100000) {
           return Math.round(num / 1000) + 'k';
@@ -502,53 +516,269 @@ function App() {
             <div className="text-indigo-500/10 text-8xl font-black hidden md:block select-none leading-none tracking-tighter">PROJECTS_01</div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-white/5 border border-white/5">
-            {projects.map((project, i) => (
-              <motion.a
-                key={project.title}
-                href={project.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                onClick={() => trackEvent('project_click', 'engagement', project.title)}
-                className="group relative bg-[#080b12] p-10 hover:bg-[#0c121d] transition-all duration-500 overflow-hidden"
+          {/* High-Tech Category Filter HUD */}
+          <div className="flex flex-wrap items-center gap-3 mb-12 border-b border-white/5 pb-6">
+            <span className="mono-label !text-slate-500 mr-4 hidden sm:inline">[SELECT_FILTER] //</span>
+            {(['all', 'productivity', 'leisure'] as const).map((filter) => (
+              <button
+                key={filter}
+                onClick={() => {
+                  setActiveFilter(filter);
+                  setVisibleCount(3); // Reset visible count when filter changes
+                  trackEvent('filter_change', 'engagement', filter);
+                }}
+                className={`relative px-4 py-2 font-mono text-xs uppercase tracking-widest rounded-lg border transition-all duration-300 cursor-pointer ${activeFilter === filter
+                  ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30 glow-text'
+                  : 'text-slate-400 border-transparent hover:text-white hover:bg-white/5'
+                  }`}
               >
-                <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ArrowUpRight size={20} className="text-indigo-400" />
-                </div>
-
-                <div className="flex justify-between items-start mb-12">
-                  <div className="w-16 h-16 rounded-xl bg-white/5 border border-white/10 overflow-hidden shadow-2xl transition-transform duration-500 group-hover:scale-105 group-hover:border-indigo-500/50">
-                    <img
-                      src={project.logo}
-                      alt={project.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-3xl font-black group-hover:text-indigo-400 transition-colors tracking-tight">{project.title}</h3>
-                  <p className="text-slate-400 mb-10 text-lg leading-relaxed min-h-[5rem] group-hover:text-slate-300 transition-colors">{project.description}</p>
-                </div>
-
-                <div className="flex flex-wrap gap-2 mt-8">
-                  {project.tags.map(tag => (
-                    <span key={tag} className="text-[9px] font-mono uppercase tracking-tighter px-3 py-1 bg-white/5 text-slate-500 border border-white/5 group-hover:border-indigo-500/20 group-hover:text-indigo-400/70 transition-all">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Decorative blueprint elements */}
-                <div className="absolute bottom-0 left-0 w-20 h-px bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
-                <div className="absolute bottom-0 left-0 w-px h-20 bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
-              </motion.a>
+                {filter === 'all' ? '00 // Show_All' : filter === 'productivity' ? '01 // Productivity' : '02 // Leisure_Creative'}
+                {activeFilter === filter && (
+                  <motion.div
+                    layoutId="activeFilterOutline"
+                    className="absolute inset-0 border border-indigo-500/50 rounded-lg pointer-events-none"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+              </button>
             ))}
           </div>
+
+          {/* Expandable Project Grid */}
+          <motion.div
+            layout
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
+          >
+            {(() => {
+              const filteredProjects = projects.filter(
+                (p) => activeFilter === 'all' || p.category === activeFilter
+              );
+
+              const displayProjects = filteredProjects.slice(0, visibleCount);
+
+              const cards = displayProjects.map((project, i) => (
+                <motion.a
+                  layout
+                  key={project.title}
+                  href={project.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  onClick={() => trackEvent('project_click', 'engagement', project.title)}
+                  className="group relative bg-[#080b12] p-6 sm:p-10 hover:bg-[#0c121d] transition-all duration-500 overflow-hidden flex flex-col justify-between min-h-[340px] sm:min-h-[380px] border border-white/5 hover:border-indigo-500/30 rounded-2xl"
+                >
+                  <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ArrowUpRight size={20} className="text-indigo-400" />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-start mb-8 sm:mb-12">
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white/5 border border-white/10 overflow-hidden shadow-2xl transition-transform duration-500 group-hover:scale-105 group-hover:border-indigo-500/50">
+                        <img
+                          src={project.logo}
+                          alt={project.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 sm:space-y-4">
+                      <h3 className="text-2xl sm:text-3xl font-black group-hover:text-indigo-400 transition-colors tracking-tight">{project.title}</h3>
+                      <p className="text-slate-400 mb-6 sm:mb-10 text-base sm:text-lg leading-relaxed group-hover:text-slate-300 transition-colors">{project.description}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex flex-wrap gap-2 mt-6 sm:mt-8">
+                      {project.tags.map(tag => (
+                        <span key={tag} className="text-[9px] font-mono uppercase tracking-tighter px-3 py-1 bg-white/5 text-slate-400 border border-white/10 group-hover:border-indigo-500/20 group-hover:text-indigo-400 transition-all">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Decorative blueprint elements */}
+                  <div className="absolute bottom-0 left-0 w-20 h-px bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
+                  <div className="absolute bottom-0 left-0 w-px h-20 bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
+                </motion.a>
+              ));
+
+              // If there's an empty slot in the row (length % 3 === 2), render a custom CTA card
+              if (displayProjects.length % 3 === 2) {
+                cards.push(
+                  <motion.button
+                    layout
+                    key="cta-project"
+                    onClick={() => {
+                      setModalType('contact');
+                      trackEvent('cta_click', 'engagement', 'Your Project');
+                    }}
+                    className="group relative bg-[#080b12] p-6 sm:p-10 hover:bg-[#0c121d] transition-all duration-500 overflow-hidden flex flex-col justify-between min-h-[340px] sm:min-h-[380px] border border-white/5 hover:border-indigo-500/30 rounded-2xl cursor-pointer text-left w-full"
+                  >
+                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ArrowUpRight size={20} className="text-indigo-400" />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-start mb-8 sm:mb-12">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-indigo-400 group-hover:border-indigo-500/50 transition-colors">
+                          <Star size={28} className="animate-pulse" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 sm:space-y-4">
+                        <h3 className="text-2xl sm:text-3xl font-black group-hover:text-indigo-400 transition-colors tracking-tight">Your Project Next?</h3>
+                        <p className="text-slate-400 mb-6 sm:mb-10 text-base sm:text-lg leading-relaxed group-hover:text-slate-300 transition-colors">
+                          Have an innovative idea, tool, or collaboration in mind? Let's build it together.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex flex-wrap gap-2 mt-6 sm:mt-8">
+                        {['Collab', 'AI', 'Fullstack', 'Design'].map(tag => (
+                          <span key={tag} className="text-[9px] font-mono uppercase tracking-tighter px-3 py-1 bg-white/5 text-slate-400 border border-white/10 group-hover:border-indigo-500/20 group-hover:text-indigo-400 transition-all">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Decorative blueprint elements */}
+                    <div className="absolute bottom-0 left-0 w-20 h-px bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
+                    <div className="absolute bottom-0 left-0 w-px h-20 bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
+                  </motion.button>
+                );
+              } else if (displayProjects.length % 3 === 1) {
+                // If there are 2 empty slots in a row (length % 3 === 1), render both a CTA card and a beautiful System Tech card
+                cards.push(
+                  <motion.button
+                    layout
+                    key="cta-project"
+                    onClick={() => {
+                      setModalType('contact');
+                      trackEvent('cta_click', 'engagement', 'Your Project');
+                    }}
+                    className="group relative bg-[#080b12] p-6 sm:p-10 hover:bg-[#0c121d] transition-all duration-500 overflow-hidden flex flex-col justify-between min-h-[340px] sm:min-h-[380px] border border-white/5 hover:border-indigo-500/30 rounded-2xl cursor-pointer text-left w-full"
+                  >
+                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ArrowUpRight size={20} className="text-indigo-400" />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-start mb-8 sm:mb-12">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-indigo-400 group-hover:border-indigo-500/50 transition-colors">
+                          <Star size={28} className="animate-pulse" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 sm:space-y-4">
+                        <h3 className="text-2xl sm:text-3xl font-black group-hover:text-indigo-400 transition-colors tracking-tight">Your Project Next?</h3>
+                        <p className="text-slate-400 mb-6 sm:mb-10 text-base sm:text-lg leading-relaxed group-hover:text-slate-300 transition-colors">
+                          Have an innovative idea, tool, or collaboration in mind? Let's build it together.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex flex-wrap gap-2 mt-6 sm:mt-8">
+                        {['Collab', 'AI', 'Fullstack', 'Design'].map(tag => (
+                          <span key={tag} className="text-[9px] font-mono uppercase tracking-tighter px-3 py-1 bg-white/5 text-slate-400 border border-white/10 group-hover:border-indigo-500/20 group-hover:text-indigo-400 transition-all">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Decorative blueprint elements */}
+                    <div className="absolute bottom-0 left-0 w-20 h-px bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
+                    <div className="absolute bottom-0 left-0 w-px h-20 bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
+                  </motion.button>,
+
+                  <motion.div
+                    layout
+                    key="cta-tech"
+                    className="group relative bg-[#080b12] p-6 sm:p-10 hover:bg-[#0c121d] transition-all duration-500 overflow-hidden flex flex-col justify-between min-h-[340px] sm:min-h-[380px] border border-white/5 hover:border-cyan-500/30 rounded-2xl text-left w-full"
+                  >
+                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-start mb-8 sm:mb-12">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-cyan-400 group-hover:border-cyan-500/50 transition-colors">
+                          <div className="flex gap-1">
+                            <span className="w-1.5 h-3 bg-cyan-500/50 rounded-sm animate-[pulse_1s_infinite]" />
+                            <span className="w-1.5 h-5 bg-cyan-500 rounded-sm animate-[pulse_1s_infinite_0.2s]" />
+                            <span className="w-1.5 h-4 bg-cyan-500/70 rounded-sm animate-[pulse_1s_infinite_0.4s]" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 sm:space-y-4">
+                        <span className="mono-label !text-cyan-400">System_Diagnostics // ONLINE</span>
+                        <h3 className="text-2xl sm:text-3xl font-black group-hover:text-cyan-400 transition-colors tracking-tight">Core Architecture</h3>
+                        <p className="text-slate-400 mb-6 sm:mb-10 text-base sm:text-lg leading-relaxed group-hover:text-slate-300 transition-colors">
+                          Engineered for extreme responsiveness, strict type safety, and seamless micro-animations. Ready to deploy.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex flex-wrap gap-2 mt-6 sm:mt-8">
+                        {['React 19', 'TypeScript', 'Tailwind', 'Vite'].map(tag => (
+                          <span key={tag} className="text-[9px] font-mono uppercase tracking-tighter px-3 py-1 bg-white/5 text-slate-400 border border-white/10 group-hover:border-cyan-500/20 group-hover:text-cyan-400 transition-all">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Decorative blueprint elements */}
+                    <div className="absolute bottom-0 left-0 w-20 h-px bg-cyan-500/0 group-hover:bg-cyan-500/40 transition-all duration-700" />
+                    <div className="absolute bottom-0 left-0 w-px h-20 bg-cyan-500/0 group-hover:bg-cyan-500/40 transition-all duration-700" />
+                  </motion.div>
+                );
+              }
+
+              return cards;
+            })()}
+          </motion.div>
+
+          {/* Interactive Expand Workspace Button */}
+          {(() => {
+            const filteredProjects = projects.filter(
+              (p) => activeFilter === 'all' || p.category === activeFilter
+            );
+
+            const hasMore = filteredProjects.length > visibleCount;
+            const canCollapse = filteredProjects.length > 3 && visibleCount >= filteredProjects.length;
+
+            if (!hasMore && !canCollapse) return null;
+
+            return (
+              <div className="flex justify-center mt-12">
+                <button
+                  onClick={() => {
+                    if (hasMore) {
+                      setVisibleCount(prev => prev + 3); // Load one additional row (3 columns) at a time
+                      trackEvent('expand_workspace', 'engagement', 'Load More');
+                    } else {
+                      setVisibleCount(3); // Reset to first row
+                      trackEvent('expand_workspace', 'engagement', 'Collapse');
+                    }
+                  }}
+                  className="group flex items-center gap-3 px-8 py-4 bg-white/5 hover:bg-indigo-500/10 border border-white/10 hover:border-indigo-500/30 rounded-xl font-mono text-[11px] uppercase tracking-widest text-slate-400 hover:text-indigo-400 transition-all duration-300 shadow-lg cursor-pointer"
+                >
+                  <div className={`w-2 h-2 rounded-full bg-indigo-500 ${hasMore ? 'animate-pulse' : 'animate-none'}`} />
+                  {hasMore ? '[+ RENDER NEXT BLOCK // LOAD MORE]' : '[- COLLAPSE EXTENDED DIRECTORY]'}
+                </button>
+              </div>
+            );
+          })()}
         </div>
       </section>
       {/* Open Source Section */}
@@ -600,11 +830,11 @@ function App() {
                       <GitFork size={16} className="text-green-500/40" />
                       <span className="mono-label !text-slate-400">{repoStats[pkg.name]?.forks || pkg.forks}</span>
                     </div>
-                    <a 
+                    <a
                       href={`https://cran.r-project.org/web/packages/${pkg.name}/index.html`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2.5 hover:text-indigo-400 transition-colors" 
+                      className="flex items-center gap-2.5 hover:text-indigo-400 transition-colors"
                       title="CRAN Downloads"
                     >
                       <Download size={16} className="text-indigo-500/40" />
