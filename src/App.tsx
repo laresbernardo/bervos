@@ -31,7 +31,7 @@ const projects = [
   {
     title: 'Chessverse',
     description: 'Modern platform to practice chess openings and thousands of puzzles, tracking performance, and available offline.',
-    link: 'https://chessverse-demo.web.app/',
+    link: 'https://chessverse.bervos.org/',
     tags: ['Chess', 'Puzzles', 'Openings', 'Practice', 'PWA'],
     logo: '/chessverse-logo.png',
     category: 'leisure'
