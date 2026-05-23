@@ -580,6 +580,7 @@ function App() {
                           src={project.logo}
                           alt={project.title}
                           className="w-full h-full object-cover"
+                          loading="lazy"
                         />
                       </div>
                     </div>
