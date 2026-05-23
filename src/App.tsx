@@ -47,7 +47,7 @@ const projects = [
   {
     title: 'Scribo',
     description: 'Master Arabic and Japanese characters and kanas through immersive practice and historical accuracy results.',
-    link: 'https://scribo-demo.web.app/mastery',
+    link: 'https://scribo.bervos.org/',
     tags: ['Languages', 'Practice', 'PWA'],
     logo: '/scribo-logo.png',
     category: 'leisure'
