@@ -45,6 +45,14 @@ const projects = [
     category: 'productivity'
   },
   {
+    title: 'Aura',
+    description: 'Beautiful free macOS dashboard app turning your Music and Photos libraries into offline, private visual analytics.',
+    link: 'https://aura.bervos.org/',
+    tags: ['macOS', 'SwiftUI', 'Music', 'Photos', 'Analytics'],
+    logo: '/aura-logo.png',
+    category: 'productivity'
+  },
+  {
     title: 'Scribo',
     description: 'Master Arabic and Japanese characters and kanas through immersive practice and historical accuracy results.',
     link: 'https://scribo.bervos.org/',
