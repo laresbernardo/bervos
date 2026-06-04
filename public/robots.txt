@@ -1,4 +1,8 @@
 User-agent: *
 Allow: /
 
+# LLM Crawler Discovery
+# llms.txt: https://bervos.org/llms.txt
+# llms-full.txt: https://bervos.org/llms-full.txt
+
 Sitemap: https://bervos.org/sitemap.xml

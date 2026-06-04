@@ -1,0 +1,23 @@
+# BERVOS
+
+> A family of flexible digital solutions, systems, and open-source packages designed to learn, drive true action, and optimize growth.
+
+## Ecosystem Projects
+
+- [Billio](https://billio.bervos.org/): Collaborative multi-currency and AI-powered Financial Management operating system for families.
+- [Chessverse](https://chessverse.bervos.org/): Modern platform to practice chess openings and thousands of puzzles, tracking performance, and available offline.
+- [tripitdown](https://tripitdown.bervos.org/): Precision-focused and customizable travel itinerary tool powered by local-guides AI Agents with versions management.
+- [Aura](https://aura.bervos.org/): Beautiful free macOS dashboard app turning your Music and Photos libraries into offline, private visual analytics.
+- [Scribo](https://scribo.bervos.org/): Master Arabic and Japanese characters and kanas through immersive practice and historical accuracy results.
+- [LaresDJ](https://laresdj.bervos.org/): The ultimate virtual community and resource hub for DJs and music producers, offering tutorials, community forums, equipment maps, custom skins, and curated download packs.
+
+## Open Source Libraries
+
+- [Robyn](https://github.com/facebookexperimental/Robyn): Marketing Mix Modeling (MMM) by Meta Marketing Science.
+- [lares](https://github.com/laresbernardo/lares): R package for data science, analytics, and business intelligence.
+
+## Core Information
+
+- [Full LLM Dossier](/llms-full.txt): Deep developer-oriented resource on architecture, philosophy, and detailed project outlines.
+- [GitHub Profile](https://github.com/laresbernardo)
+- [LinkedIn Profile](https://linkedin.com/in/laresbernardo)

@@ -1,0 +1,72 @@
+# BERVOS - Full Ecosystem Reference
+
+> This document provides complete structured information about BERVOS, its projects, and open source packages for AI agents and LLMs.
+
+## Creator Profile
+- **Name**: Bernardo Lares
+- **Role**: Software Engineer, Data Scientist, and Digital Architect
+- **GitHub**: https://github.com/laresbernardo
+- **LinkedIn**: https://linkedin.com/in/laresbernardo
+- **Email**: laresbernardo@gmail.com
+
+## Brand Philosophy & Naming
+The name **BERVOS** represents three distinct architectural layers of the ecosystem:
+1. **Action Angle (Ber + Verbos)**: In Spanish, *verbos* means verbs (actions). BERVOS signifies digital tools engineered to execute, optimize, and drive tangible results rather than serve as passive portfolios.
+2. **Enterprise System (B.E.R.V.O.S.)**: Business Effectiveness & Resource Visualization Optimization System. An analytical blueprint for structuring high-impact assets.
+3. **Client-Centric (Ber-Vos)**: Derived from the Spanish pronoun *vos* (you), meaning 'Ber for You'—indicating hyper-personalized solutions tailored to the end-user.
+
+## Ecosystem Projects (Production Apps)
+
+### Billio
+- **Deployment URL**: [https://billio.bervos.org/](https://billio.bervos.org/)
+- **Category**: Productivity (FinanceApplication)
+- **Tags**: Finance, Travel, Collaboration, Investment
+- **Description**: Collaborative multi-currency and AI-powered Financial Management operating system for families.
+
+### Chessverse
+- **Deployment URL**: [https://chessverse.bervos.org/](https://chessverse.bervos.org/)
+- **Category**: Leisure (GameApplication)
+- **Tags**: Chess, Puzzles, Openings, Practice, PWA
+- **Description**: Modern platform to practice chess openings and thousands of puzzles, tracking performance, and available offline.
+
+### tripitdown
+- **Deployment URL**: [https://tripitdown.bervos.org/](https://tripitdown.bervos.org/)
+- **Category**: Productivity (TravelApplication)
+- **Tags**: Itinerary, Travel, Maps, Collaboration, PWA
+- **Description**: Precision-focused and customizable travel itinerary tool powered by local-guides AI Agents with versions management.
+
+### Aura
+- **Deployment URL**: [https://aura.bervos.org/](https://aura.bervos.org/)
+- **Category**: Productivity (UtilitiesApplication)
+- **Tags**: macOS, SwiftUI, Music, Photos, Analytics
+- **Description**: Beautiful free macOS dashboard app turning your Music and Photos libraries into offline, private visual analytics.
+
+### Scribo
+- **Deployment URL**: [https://scribo.bervos.org/](https://scribo.bervos.org/)
+- **Category**: Leisure (EducationalApplication)
+- **Tags**: Languages, Practice, PWA
+- **Description**: Master Arabic and Japanese characters and kanas through immersive practice and historical accuracy results.
+
+### LaresDJ
+- **Deployment URL**: [https://laresdj.bervos.org/](https://laresdj.bervos.org/)
+- **Category**: Leisure (SocialNetworkingApplication)
+- **Tags**: DJ, Production, Music, Community
+- **Description**: The ultimate virtual community and resource hub for DJs and music producers, offering tutorials, community forums, equipment maps, custom skins, and curated download packs.
+
+## Open Source Software
+### Robyn
+- **Repository**: [https://github.com/facebookexperimental/Robyn](https://github.com/facebookexperimental/Robyn)
+- **Description**: Marketing Mix Modeling (MMM) by Meta Marketing Science.
+- **Initial Metrics**: Stars: 1.5k, Forks: 430, Downloads: 137k, Contributors: 33
+
+### lares
+- **Repository**: [https://github.com/laresbernardo/lares](https://github.com/laresbernardo/lares)
+- **Description**: R package for data science, analytics, and business intelligence.
+- **Initial Metrics**: Stars: 240, Forks: 50, Downloads: 213k, Contributors: 6
+
+## Technology Stack & Infrastructure
+- **Frontend**: React 19, TypeScript, Tailwind CSS, Vite
+- **Motion**: Framer Motion
+- **Icons**: Lucide React & React Icons
+- **Hosting & Analytics**: Firebase, Google Analytics (GTag), Formspree for forms
+

@@ -19,77 +19,9 @@ const trackEvent = (action: string, category: string, label: string) => {
   }
 };
 
-const projects = [
-  {
-    title: 'Billio',
-    description: 'Collaborative multi-currency and AI-powered Financial Management operating system for families.',
-    link: 'https://billio.bervos.org/',
-    tags: ['Finance', 'Travel', 'Collaboration', 'Investment'],
-    logo: '/billio-logo.png',
-    category: 'productivity'
-  },
-  {
-    title: 'Chessverse',
-    description: 'Modern platform to practice chess openings and thousands of puzzles, tracking performance, and available offline.',
-    link: 'https://chessverse.bervos.org/',
-    tags: ['Chess', 'Puzzles', 'Openings', 'Practice', 'PWA'],
-    logo: '/chessverse-logo.png',
-    category: 'leisure'
-  },
-  {
-    title: 'tripitdown',
-    description: 'Precision-focused and customizable travel itinerary tool powered by local-guides AI Agents with versions management.',
-    link: 'https://tripitdown.bervos.org/',
-    tags: ['Itinerary', 'Travel', 'Maps', 'Collaboration', 'PWA'],
-    logo: '/tripitdown-logo.png',
-    category: 'productivity'
-  },
-  {
-    title: 'Aura',
-    description: 'Beautiful free macOS dashboard app turning your Music and Photos libraries into offline, private visual analytics.',
-    link: 'https://aura.bervos.org/',
-    tags: ['macOS', 'SwiftUI', 'Music', 'Photos', 'Analytics'],
-    logo: '/aura-logo.png',
-    category: 'productivity'
-  },
-  {
-    title: 'Scribo',
-    description: 'Master Arabic and Japanese characters and kanas through immersive practice and historical accuracy results.',
-    link: 'https://scribo.bervos.org/',
-    tags: ['Languages', 'Practice', 'PWA'],
-    logo: '/scribo-logo.png',
-    category: 'leisure'
-  },
-  {
-    title: 'LaresDJ',
-    description: 'The ultimate virtual community and resource hub for DJs and music producers, offering tutorials, community forums, equipment maps, custom skins, and curated download packs.',
-    link: 'https://laresdj.bervos.org/',
-    tags: ['DJ', 'Production', 'Music', 'Community'],
-    logo: '/laresdj-logo.png',
-    category: 'leisure'
-  }
-];
+import ecosystem from './data/ecosystem.json';
 
-const openSource = [
-  {
-    name: 'Robyn',
-    description: 'Marketing Mix Modeling (MMM) by Meta Marketing Science.',
-    stars: '1.5k',
-    forks: '430',
-    downloads: '137k',
-    contributors: '33',
-    link: 'https://github.com/facebookexperimental/Robyn'
-  },
-  {
-    name: 'lares',
-    description: 'R package for data science, analytics, and business intelligence.',
-    stars: '240',
-    forks: '50',
-    downloads: '213k',
-    contributors: '6',
-    link: 'https://github.com/laresbernardo/lares'
-  }
-];
+const { projects, openSource } = ecosystem;
 
 const HeroGraphic = () => {
   return (
