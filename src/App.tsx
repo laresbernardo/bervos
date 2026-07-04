@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Star, Users, ArrowUpRight, X, GitFork, Download, Search } from 'lucide-react';
 import { FaGithub, FaLinkedin } from 'react-icons/fa';
 import { motion } from 'framer-motion';
+import DecryptedText from './components/DecryptedText';
 
 declare global {
   interface Window {
@@ -451,7 +452,14 @@ function App() {
               viewport={{ once: true }}
             >
               <span className="mono-label !text-indigo-400 mb-2 block">Index_01 // Projects</span>
-              <h2 className="text-5xl font-black mb-4 glow-text uppercase tracking-tighter">Bervos Ecosystem</h2>
+              <h2 className="text-5xl font-black mb-4 glow-text uppercase tracking-tighter">
+                <DecryptedText
+                  text="Bervos Ecosystem"
+                  speed={40}
+                  maxIterations={30}
+                  animateOn="inViewHover"
+                />
+              </h2>
               <p className="text-slate-400 text-lg max-w-md border-l border-indigo-500/30 pl-4">Specialized tools for various domains.</p>
             </motion.div>
             <div className="text-indigo-500/10 text-8xl font-black hidden md:block select-none leading-none tracking-tighter">PROJECTS_01</div>
@@ -593,8 +601,8 @@ function App() {
                 </motion.a>
               ));
 
-              // If there's an empty slot in the row (length % 3 === 2), render a custom CTA card
-              if (displayProjects.length % 3 === 2) {
+              // If there's an empty slot in the row (length % 3 !== 0), render a custom CTA card
+              if (displayProjects.length % 3 !== 0) {
                 cards.push(
                   <motion.button
                     layout
@@ -638,96 +646,6 @@ function App() {
                     <div className="absolute bottom-0 left-0 w-20 h-px bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
                     <div className="absolute bottom-0 left-0 w-px h-20 bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
                   </motion.button>
-                );
-              } else if (displayProjects.length % 3 === 1) {
-                // If there are 2 empty slots in a row (length % 3 === 1), render both a CTA card and a beautiful System Tech card
-                cards.push(
-                  <motion.button
-                    layout
-                    key="cta-project"
-                    onClick={() => {
-                      setModalType('contact');
-                      trackEvent('cta_click', 'engagement', 'Your Project');
-                    }}
-                    className="group relative bg-[#080b12] p-6 sm:p-10 hover:bg-[#0c121d] transition-all duration-500 overflow-hidden flex flex-col justify-between min-h-[340px] sm:min-h-[380px] border border-white/5 hover:border-indigo-500/30 rounded-2xl cursor-pointer text-left w-full"
-                  >
-                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <ArrowUpRight size={20} className="text-indigo-400" />
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between items-start mb-8 sm:mb-12">
-                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-indigo-400 group-hover:border-indigo-500/50 transition-colors">
-                          <Star size={28} className="animate-pulse" />
-                        </div>
-                      </div>
-
-                      <div className="space-y-3 sm:space-y-4">
-                        <h3 className="text-2xl sm:text-3xl font-black group-hover:text-indigo-400 transition-colors tracking-tight">Your Project Next?</h3>
-                        <p className="text-slate-400 mb-6 sm:mb-10 text-base sm:text-lg leading-relaxed group-hover:text-slate-300 transition-colors">
-                          Have an innovative idea, tool, or collaboration in mind? Let's build it together.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex flex-wrap gap-2 mt-6 sm:mt-8">
-                        {['Collab', 'AI', 'Fullstack', 'Design'].map(tag => (
-                          <span key={tag} className="text-[9px] font-mono uppercase tracking-tighter px-3 py-1 bg-white/5 text-slate-400 border border-white/10 group-hover:border-indigo-500/20 group-hover:text-indigo-400 transition-all">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Decorative blueprint elements */}
-                    <div className="absolute bottom-0 left-0 w-20 h-px bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
-                    <div className="absolute bottom-0 left-0 w-px h-20 bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
-                  </motion.button>,
-
-                  <motion.div
-                    layout
-                    key="cta-tech"
-                    className="group relative bg-[#080b12] p-6 sm:p-10 hover:bg-[#0c121d] transition-all duration-500 overflow-hidden flex flex-col justify-between min-h-[340px] sm:min-h-[380px] border border-white/5 hover:border-cyan-500/30 rounded-2xl text-left w-full"
-                  >
-                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between items-start mb-8 sm:mb-12">
-                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-cyan-400 group-hover:border-cyan-500/50 transition-colors">
-                          <div className="flex gap-1">
-                            <span className="w-1.5 h-3 bg-cyan-500/50 rounded-sm animate-[pulse_1s_infinite]" />
-                            <span className="w-1.5 h-5 bg-cyan-500 rounded-sm animate-[pulse_1s_infinite_0.2s]" />
-                            <span className="w-1.5 h-4 bg-cyan-500/70 rounded-sm animate-[pulse_1s_infinite_0.4s]" />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3 sm:space-y-4">
-                        <span className="mono-label !text-cyan-400">System_Diagnostics // ONLINE</span>
-                        <h3 className="text-2xl sm:text-3xl font-black group-hover:text-cyan-400 transition-colors tracking-tight">Core Architecture</h3>
-                        <p className="text-slate-400 mb-6 sm:mb-10 text-base sm:text-lg leading-relaxed group-hover:text-slate-300 transition-colors">
-                          Engineered for extreme responsiveness, strict type safety, and seamless micro-animations. Ready to deploy.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex flex-wrap gap-2 mt-6 sm:mt-8">
-                        {['React 19', 'TypeScript', 'Tailwind', 'Vite'].map(tag => (
-                          <span key={tag} className="text-[9px] font-mono uppercase tracking-tighter px-3 py-1 bg-white/5 text-slate-400 border border-white/10 group-hover:border-cyan-500/20 group-hover:text-cyan-400 transition-all">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Decorative blueprint elements */}
-                    <div className="absolute bottom-0 left-0 w-20 h-px bg-cyan-500/0 group-hover:bg-cyan-500/40 transition-all duration-700" />
-                    <div className="absolute bottom-0 left-0 w-px h-20 bg-cyan-500/0 group-hover:bg-cyan-500/40 transition-all duration-700" />
-                  </motion.div>
                 );
               }
 
@@ -783,7 +701,14 @@ function App() {
               viewport={{ once: true }}
             >
               <span className="mono-label !text-cyan-400 mb-2 block">Index_02 // Shared_Intelligence</span>
-              <h2 className="text-5xl font-black mb-4 glow-text uppercase tracking-tighter">Open Source</h2>
+              <h2 className="text-5xl font-black mb-4 glow-text uppercase tracking-tighter">
+                <DecryptedText
+                  text="Open Source"
+                  speed={40}
+                  maxIterations={30}
+                  animateOn="inViewHover"
+                />
+              </h2>
               <p className="text-slate-400 text-lg max-w-md border-l border-cyan-500/30 pl-4">Contributions to open sourced solutions.</p>
             </motion.div>
             <div className="text-cyan-500/10 text-8xl font-black hidden md:block select-none leading-none tracking-tighter">OSS_LIB_02</div>
