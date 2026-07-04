@@ -17,7 +17,12 @@
       "title": "Billio",
       "description": "Collaborative multi-currency and AI-powered Financial Management operating system for families.",
       "link": "https://billio.bervos.org/",
-      "tags": ["Finance", "Travel", "Collaboration", "Investment"],
+      "tags": [
+        "Finance",
+        "Travel",
+        "Collaboration",
+        "Investment"
+      ],
       "logo": "/billio-logo.png",
       "category": "productivity",
       "applicationCategory": "FinanceApplication"
@@ -26,7 +31,13 @@
       "title": "Chessverse",
       "description": "Modern platform to practice chess openings and thousands of puzzles, tracking performance, and available offline.",
       "link": "https://chessverse.bervos.org/",
-      "tags": ["Chess", "Puzzles", "Openings", "Practice", "PWA"],
+      "tags": [
+        "Chess",
+        "Puzzles",
+        "Openings",
+        "Practice",
+        "PWA"
+      ],
       "logo": "/chessverse-logo.png",
       "category": "leisure",
       "applicationCategory": "GameApplication"
@@ -35,7 +46,13 @@
       "title": "tripitdown",
       "description": "Precision-focused and customizable travel itinerary tool powered by local-guides AI Agents with versions management.",
       "link": "https://tripitdown.bervos.org/",
-      "tags": ["Itinerary", "Travel", "Maps", "Collaboration", "PWA"],
+      "tags": [
+        "Itinerary",
+        "Travel",
+        "Maps",
+        "Collaboration",
+        "PWA"
+      ],
       "logo": "/tripitdown-logo.png",
       "category": "productivity",
       "applicationCategory": "TravelApplication"
@@ -44,7 +61,13 @@
       "title": "Aura",
       "description": "Beautiful free macOS dashboard app turning your Music and Photos libraries into offline, private visual analytics.",
       "link": "https://aura.bervos.org/",
-      "tags": ["macOS", "SwiftUI", "Music", "Photos", "Analytics"],
+      "tags": [
+        "macOS",
+        "SwiftUI",
+        "Music",
+        "Photos",
+        "Analytics"
+      ],
       "logo": "/aura-logo.png",
       "category": "productivity",
       "applicationCategory": "UtilitiesApplication"
@@ -53,7 +76,11 @@
       "title": "Scribo",
       "description": "Master Arabic and Japanese characters and kanas through immersive practice and historical accuracy results.",
       "link": "https://scribo.bervos.org/",
-      "tags": ["Languages", "Practice", "PWA"],
+      "tags": [
+        "Languages",
+        "Practice",
+        "PWA"
+      ],
       "logo": "/scribo-logo.png",
       "category": "leisure",
       "applicationCategory": "EducationalApplication"
@@ -62,10 +89,30 @@
       "title": "LaresDJ",
       "description": "The ultimate virtual community and resource hub for DJs and music producers, offering tutorials, community forums, equipment maps, custom skins, and curated download packs.",
       "link": "https://laresdj.bervos.org/",
-      "tags": ["DJ", "Production", "Music", "Community"],
+      "tags": [
+        "DJ",
+        "Production",
+        "Music",
+        "Community"
+      ],
       "logo": "/laresdj-logo.png",
       "category": "leisure",
       "applicationCategory": "SocialNetworkingApplication"
+    },
+    {
+      "title": "Pinmage",
+      "description": "Analyzes scanned photo albums or individual photos using AI to deduce dates and places, writing them directly into native EXIF & GPS image metadata.",
+      "link": "https://pinmage.bervos.org/",
+      "tags": [
+        "AI",
+        "Photos",
+        "Metadata",
+        "EXIF",
+        "macOS"
+      ],
+      "logo": "/pinmage-logo.png",
+      "category": "productivity",
+      "applicationCategory": "UtilitiesApplication"
     }
   ],
   "openSource": [

@@ -139,7 +139,7 @@ const Modal = ({
             <>
               <p>Welcome to BERVOS. By accessing this website, you agree to comply with and be bound by the following terms of use.</p>
               <p><strong>Intellectual Property:</strong> All content, including logos, text, and code, is the property of BERVOS and protected by intellectual property laws. You may not reproduce or distribute any content without prior written permission.</p>
-              <p><strong>Use of Tools:</strong> Our projects (Billio, Chessverse, tripitdown, Scribo) are provided for demonstration and individual use according to their respective licenses.</p>
+              <p><strong>Use of Tools:</strong> Our projects (Billio, Chessverse, tripitdown, Aura, Scribo, Pinmage) are provided for demonstration and individual use according to their respective licenses.</p>
               <p><strong>Liability:</strong> We provide our tools and information "as is" without warranties of any kind. BERVOS is not liable for any damages arising from the use of this site or its projects.</p>
               <p><strong>Changes:</strong> We reserve the right to modify these terms at any time without notice.</p>
             </>

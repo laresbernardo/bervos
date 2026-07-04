@@ -53,6 +53,12 @@ The name **BERVOS** represents three distinct architectural layers of the ecosys
 - **Tags**: DJ, Production, Music, Community
 - **Description**: The ultimate virtual community and resource hub for DJs and music producers, offering tutorials, community forums, equipment maps, custom skins, and curated download packs.
 
+### Pinmage
+- **Deployment URL**: [https://pinmage.bervos.org/](https://pinmage.bervos.org/)
+- **Category**: Productivity (UtilitiesApplication)
+- **Tags**: AI, Photos, Metadata, EXIF, macOS
+- **Description**: Automatically analyzes scanned photo albums or individual photos using AI to deduce dates and places, writing them directly into native EXIF & GPS image metadata.
+
 ## Open Source Software
 ### Robyn
 - **Repository**: [https://github.com/facebookexperimental/Robyn](https://github.com/facebookexperimental/Robyn)
