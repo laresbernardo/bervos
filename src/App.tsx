@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Star, Users, ArrowUpRight, X, GitFork, Download } from 'lucide-react';
+import { Star, Users, ArrowUpRight, X, GitFork, Download, Search } from 'lucide-react';
 import { FaGithub, FaLinkedin } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
@@ -246,6 +246,7 @@ function App() {
   });
   const [repoStats, setRepoStats] = useState<Record<string, { stars: string, forks: string, contributors: string, downloads: string }>>({});
   const [activeFilter, setActiveFilter] = useState<'all' | 'productivity' | 'leisure'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(3);
 
   useEffect(() => {
@@ -456,32 +457,62 @@ function App() {
             <div className="text-indigo-500/10 text-8xl font-black hidden md:block select-none leading-none tracking-tighter">PROJECTS_01</div>
           </div>
 
-          {/* High-Tech Category Filter HUD */}
-          <div className="flex flex-wrap items-center gap-3 mb-12 border-b border-white/5 pb-6">
-            <span className="mono-label !text-slate-500 mr-4 hidden sm:inline">[SELECT_FILTER] //</span>
-            {(['all', 'productivity', 'leisure'] as const).map((filter) => (
-              <button
-                key={filter}
-                onClick={() => {
-                  setActiveFilter(filter);
-                  setVisibleCount(3); // Reset visible count when filter changes
-                  trackEvent('filter_change', 'engagement', filter);
+          {/* High-Tech Search & Category Filter HUD */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
+            {/* Search Input */}
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setVisibleCount(3); // Reset pagination count on search
+                  trackEvent('project_search', 'engagement', e.target.value);
                 }}
-                className={`relative px-4 py-2 font-mono text-xs uppercase tracking-widest rounded-lg border transition-all duration-300 cursor-pointer ${activeFilter === filter
-                  ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30 glow-text'
-                  : 'text-slate-400 border-transparent hover:text-white hover:bg-white/5'
-                  }`}
-              >
-                {filter === 'all' ? '00 // Show_All' : filter === 'productivity' ? '01 // Productivity' : '02 // Leisure_Creative'}
-                {activeFilter === filter && (
-                  <motion.div
-                    layoutId="activeFilterOutline"
-                    className="absolute inset-0 border border-indigo-500/50 rounded-lg pointer-events-none"
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                  />
-                )}
-              </button>
-            ))}
+                placeholder="SEARCH_PROJECTS // (e.g. Chess, Finance, Go...)"
+                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-10 py-3 text-white focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition-all font-mono text-xs placeholder-slate-500 uppercase tracking-wider"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setVisibleCount(3);
+                  }}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Category Filter Buttons */}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="mono-label !text-slate-500 mr-2 hidden lg:inline">[SELECT_FILTER] //</span>
+              {(['all', 'productivity', 'leisure'] as const).map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => {
+                    setActiveFilter(filter);
+                    setVisibleCount(3); // Reset visible count when filter changes
+                    trackEvent('filter_change', 'engagement', filter);
+                  }}
+                  className={`relative px-4 py-2.5 font-mono text-xs uppercase tracking-widest rounded-lg border transition-all duration-300 cursor-pointer ${activeFilter === filter
+                    ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30 glow-text'
+                    : 'text-slate-400 border-transparent hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                  {filter === 'all' ? '00 // Show_All' : filter === 'productivity' ? '01 // Productivity' : '02 // Leisure_Creative'}
+                  {activeFilter === filter && (
+                    <motion.div
+                      layoutId="activeFilterOutline"
+                      className="absolute inset-0 border border-indigo-500/50 rounded-lg pointer-events-none"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Expandable Project Grid */}
@@ -490,9 +521,24 @@ function App() {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
           >
             {(() => {
-              const filteredProjects = projects.filter(
-                (p) => activeFilter === 'all' || p.category === activeFilter
-              );
+              const filteredProjects = projects.filter((p) => {
+                const categoryMatch = activeFilter === 'all' || p.category === activeFilter;
+                const searchMatch = !searchQuery ||
+                  p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  p.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+                return categoryMatch && searchMatch;
+              });
+
+              if (filteredProjects.length === 0) {
+                return (
+                  <div className="col-span-full py-16 text-center border border-dashed border-white/10 rounded-2xl bg-white/[0.01]">
+                    <span className="mono-label !text-slate-500 block mb-2">// ERROR: NO_RESULTS_FOUND</span>
+                    <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-2">No Projects Match Your Search</h3>
+                    <p className="text-slate-400 font-mono text-xs">Try searching for other terms or clearing the filter.</p>
+                  </div>
+                );
+              }
 
               const displayProjects = filteredProjects.slice(0, visibleCount);
 
@@ -691,9 +737,14 @@ function App() {
 
           {/* Interactive Expand Workspace Button */}
           {(() => {
-            const filteredProjects = projects.filter(
-              (p) => activeFilter === 'all' || p.category === activeFilter
-            );
+            const filteredProjects = projects.filter((p) => {
+              const categoryMatch = activeFilter === 'all' || p.category === activeFilter;
+              const searchMatch = !searchQuery ||
+                p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+              return categoryMatch && searchMatch;
+            });
 
             const hasMore = filteredProjects.length > visibleCount;
             const canCollapse = filteredProjects.length > 3 && visibleCount >= filteredProjects.length;
