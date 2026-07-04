@@ -458,7 +458,7 @@ function App() {
           </div>
 
           {/* High-Tech Search & Category Filter HUD */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-start gap-6 md:gap-8 mb-12 border-b border-white/5 pb-8">
             {/* Search Input */}
             <div className="relative w-full max-w-md">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
