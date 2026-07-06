@@ -26,10 +26,13 @@ jobs:
           channelId: live
           projectId: bervos-official
       
+      - name: Install Firebase CLI
+        run: npm i -g firebase-tools
+      
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_BERVOS_OFFICIAL }}'
       
       - name: Deploy Cloud Functions
-        run: npx firebase deploy --only functions --project bervos-official --non-interactive
+        run: firebase deploy --only functions --project bervos-official --non-interactive
