@@ -63,7 +63,7 @@ function getProjectApp(projectId) {
     if (initializedApps.has(projectId)) {
         return initializedApps.get(projectId);
     }
-    const projectsConfig = process.env.FIREBASE_PROJECTS_CONFIG;
+    const projectsConfig = process.env.PROJECTS_SERVICE_ACCOUNT_CONFIG;
     if (!projectsConfig) {
         console.warn(`[Config] FIREBASE_PROJECTS_CONFIG env variable not set. Using fallback for ${projectId}.`);
         return null;
@@ -732,9 +732,30 @@ async function fetchFreshMetrics() {
             const projectId = getProjectId(item);
             const isUtility = item.applicationCategory === 'UtilitiesApplication';
             metrics.applicationCategory = item.applicationCategory;
-            // Scan local filesystem for real project versions
+            // Version: prefer local filesystem, then GitHub, then fallback
             const localVersion = getLocalProjectVersion(name);
             metrics.version = localVersion || '1.0.0';
+            // Try GitHub for real version if local is unavailable
+            if (!localVersion) {
+                const repoUrl = item.codeRepository || '';
+                const repoMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+                if (repoMatch) {
+                    const owner = repoMatch[1];
+                    const repo = repoMatch[2];
+                    try {
+                        const repoMeta = await fetchRepoMetadata(owner, repo);
+                        if (repoMeta.version && repoMeta.version !== '0.0.0') {
+                            metrics.version = repoMeta.version;
+                            if (repoMeta.releaseDate) {
+                                metrics.lastUpdated = repoMeta.releaseDate;
+                            }
+                        }
+                    }
+                    catch (err) {
+                        console.error(`[GitHub] Error fetching repo metadata for ${name}:`, err);
+                    }
+                }
+            }
             const projectApp = getProjectApp(projectId);
             if (projectApp) {
                 if (isUtility) {
@@ -758,13 +779,14 @@ async function fetchFreshMetrics() {
                     metrics.totalUsers = userMetrics.totalUsers;
                     metrics.active30d = userMetrics.active30d;
                 }
-                if (!localVersion) {
+                if (!localVersion && !item.codeRepository) {
                     metrics.version = '0.0.0';
                 }
             }
         }
-        // Retrieve recent commits
-        metrics.commits = await getRepoCommits(name, url);
+        // Retrieve recent commits (prefer codeRepository for GitHub projects)
+        const commitUrl = item.codeRepository || url;
+        metrics.commits = await getRepoCommits(name, commitUrl);
         results.push(metrics);
     }
     return results;
