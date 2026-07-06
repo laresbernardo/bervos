@@ -10,7 +10,8 @@
 - [Aura](https://aura.bervos.org/): Beautiful free macOS dashboard app turning your Music and Photos libraries into offline, private visual analytics.
 - [Scribo](https://scribo.bervos.org/): Master Arabic and Japanese characters and kanas through immersive practice and historical accuracy results.
 - [LaresDJ](https://laresdj.bervos.org/): The ultimate virtual community and resource hub for DJs and music producers, offering tutorials, community forums, equipment maps, custom skins, and curated download packs.
-- [Pinmage](https://pinmage.bervos.org/): Automatically analyzes scanned photo albums or individual photos using AI to deduce dates and places, writing them directly into native EXIF & GPS image metadata.
+- [Pinmage](https://pinmage.bervos.org/): Analyzes scanned photo albums or individual photos using AI to deduce dates and places, writing them directly into native EXIF & GPS image metadata.
+- [Tonaly](https://tonaly.bervos.org/): Immersive ear training studio designed for musicians and audiophiles. Develop absolute note recognition, master relative intervals, and unlock deep performance insights.
 
 ## Open Source Libraries
 

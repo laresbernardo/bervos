@@ -113,6 +113,20 @@
       "logo": "/pinmage-logo.png",
       "category": "productivity",
       "applicationCategory": "UtilitiesApplication"
+    },
+    {
+      "title": "Tonaly",
+      "description": "Immersive ear training studio designed for musicians and audiophiles. Develop absolute note recognition, master relative intervals, and unlock deep performance insights.",
+      "link": "https://tonaly.bervos.org/",
+      "tags": [
+        "Music",
+        "Audio",
+        "Practice",
+        "PWA"
+      ],
+      "logo": "/tonaly-logo.png",
+      "category": "leisure",
+      "applicationCategory": "EducationalApplication"
     }
   ],
   "openSource": [

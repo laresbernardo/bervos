@@ -1,0 +1,37 @@
+{"users": [
+{
+  "localId": "E2cPsH9R4sTvvrL4ebVOS83e99I3",
+  "email": "laresbernardo@gmail.com",
+  "emailVerified": true,
+  "displayName": "Bernardo Lares",
+  "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocJS-8bpaEPNFAfJAo48xfMplt3J8ykkizdMIFvCcXZSOepi2qi6=s96-c",
+  "lastSignedInAt": "1783066070339",
+  "createdAt": "1775812519766",
+  "providerUserInfo": [
+    {
+      "providerId": "google.com",
+      "rawId": "115680079929641555592",
+      "email": "laresbernardo@gmail.com",
+      "displayName": "Bernardo Lares",
+      "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocJS-8bpaEPNFAfJAo48xfMplt3J8ykkizdMIFvCcXZSOepi2qi6=s96-c"
+    }
+  ]
+},
+{
+  "localId": "kBOKa8m2pMMMCXru9gK2aswm4MF3",
+  "email": "archie77@gmail.com",
+  "emailVerified": true,
+  "displayName": "Andrés Felipe Archila",
+  "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocJ8eNIQAvVJbZAHTZkAjP9RFA3mX024zlnXYgx1QoRa5TDzZlAI=s96-c",
+  "lastSignedInAt": "1777829673651",
+  "createdAt": "1777829673650",
+  "providerUserInfo": [
+    {
+      "providerId": "google.com",
+      "rawId": "107640765304855150585",
+      "email": "archie77@gmail.com",
+      "displayName": "Andrés Felipe Archila",
+      "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocJ8eNIQAvVJbZAHTZkAjP9RFA3mX024zlnXYgx1QoRa5TDzZlAI=s96-c"
+    }
+  ]
+}]}

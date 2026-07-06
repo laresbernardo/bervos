@@ -1,12 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Star, Users, ArrowUpRight, X, GitFork, Download, Search } from 'lucide-react';
+import { Star, Users, ArrowUpRight, X, GitFork, Download, Search, Loader2 } from 'lucide-react';
 import { FaGithub, FaLinkedin } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import DecryptedText from './components/DecryptedText';
 
+// Firebase & Hub Imports
+import { onAuthStateChanged } from 'firebase/auth';
+import type { User } from 'firebase/auth';
+import { auth } from './firebase';
+import { HubLogin } from './components/HubLogin';
+import { HubDashboard } from './components/HubDashboard';
+import { HubAccessDenied } from './components/HubAccessDenied';
+
 declare global {
   interface Window {
-    gtag: (command: string, action: string, params?: any) => void;
+    gtag: (command: string, action: string, params?: Record<string, string>) => void;
   }
 }
 
@@ -64,6 +72,13 @@ const HeroGraphic = () => {
   );
 };
 
+interface ContactData {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}
+
 const Modal = ({
   type,
   onClose,
@@ -76,8 +91,8 @@ const Modal = ({
   type: 'privacy' | 'terms' | 'contact' | 'concept',
   onClose: () => void,
   status: 'idle' | 'sending' | 'success' | 'error',
-  data: any,
-  setData: (data: any) => void,
+  data: ContactData,
+  setData: (data: ContactData) => void,
   resetForm: () => void,
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
 }) => {
@@ -236,10 +251,12 @@ const Modal = ({
   );
 };
 
-function App() {
+// ----- Home page extracted into its own component to satisfy Rules of Hooks -----
+
+function HomePage() {
   const [modalType, setModalType] = useState<'privacy' | 'terms' | 'contact' | 'concept' | null>(null);
   const [contactStatus, setContactStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
-  const [contactData, setContactData] = useState({
+  const [contactData, setContactData] = useState<ContactData>({
     name: '',
     email: '',
     subject: '',
@@ -353,7 +370,7 @@ function App() {
       } else {
         setContactStatus('error');
       }
-    } catch (err) {
+    } catch {
       setContactStatus('error');
     }
   };
@@ -824,7 +841,7 @@ function App() {
               {['Concept', 'Privacy', 'Terms', 'Contact'].map(item => (
                 <button
                   key={item}
-                  onClick={() => setModalType(item.toLowerCase() as any)}
+                  onClick={() => setModalType(item.toLowerCase() as 'privacy' | 'terms' | 'contact' | 'concept')}
                   className="mono-label !text-slate-500 hover:!text-indigo-400 transition-colors cursor-pointer"
                 >
                   [{item.toUpperCase()}]
@@ -847,6 +864,41 @@ function App() {
       </footer>
     </div>
   );
+}
+
+function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoadingAuth(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  const isHub = window.location.pathname === '/hub';
+
+  if (isHub) {
+    if (loadingAuth) {
+      return (
+        <div className="min-h-screen bg-[#080b12] flex flex-col items-center justify-center space-y-4">
+          <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+          <span className="mono-label !text-indigo-400">CONNECTING_SYSTEM_AUTH // LOADING</span>
+        </div>
+      );
+    }
+    if (!user) {
+      return <HubLogin onBackToHome={() => { window.location.href = '/'; }} />;
+    }
+    if (user.email !== 'laresbernardo@gmail.com') {
+      return <HubAccessDenied user={user} onBackToHome={() => { window.location.href = '/'; }} />;
+    }
+    return <HubDashboard user={user} />;
+  }
+
+  return <HomePage />;
 }
 
 export default App;

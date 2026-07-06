@@ -8,9 +8,18 @@
     ],
     "rewrites": [
       {
+        "source": "/api/**",
+        "function": "hubApi"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
     ]
+  },
+  "functions": {
+    "source": "functions",
+    "codeTransformTemplates": [],
+    "runtime": "nodejs18"
   }
 }

@@ -57,7 +57,13 @@ The name **BERVOS** represents three distinct architectural layers of the ecosys
 - **Deployment URL**: [https://pinmage.bervos.org/](https://pinmage.bervos.org/)
 - **Category**: Productivity (UtilitiesApplication)
 - **Tags**: AI, Photos, Metadata, EXIF, macOS
-- **Description**: Automatically analyzes scanned photo albums or individual photos using AI to deduce dates and places, writing them directly into native EXIF & GPS image metadata.
+- **Description**: Analyzes scanned photo albums or individual photos using AI to deduce dates and places, writing them directly into native EXIF & GPS image metadata.
+
+### Tonaly
+- **Deployment URL**: [https://tonaly.bervos.org/](https://tonaly.bervos.org/)
+- **Category**: Leisure (EducationalApplication)
+- **Tags**: Music, Audio, Practice, PWA
+- **Description**: Immersive ear training studio designed for musicians and audiophiles. Develop absolute note recognition, master relative intervals, and unlock deep performance insights.
 
 ## Open Source Software
 ### Robyn

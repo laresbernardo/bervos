@@ -1,0 +1,73 @@
+{"users": [
+{
+  "localId": "7f1M98M0R6Pbuv6hCaVCcvxbK3h1",
+  "email": "laresernesto@gmail.com",
+  "emailVerified": true,
+  "displayName": "Ernesto Lares",
+  "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocIAb5ReQHb4MyV9d1ouyaZ3mrTFLpKD-xWXBuuM-CQ_lJdsBA=s96-c",
+  "lastSignedInAt": "1777908192061",
+  "createdAt": "1777908192061",
+  "providerUserInfo": [
+    {
+      "providerId": "google.com",
+      "rawId": "108317425876204636340",
+      "email": "laresernesto@gmail.com",
+      "displayName": "Ernesto Lares",
+      "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocIAb5ReQHb4MyV9d1ouyaZ3mrTFLpKD-xWXBuuM-CQ_lJdsBA=s96-c"
+    }
+  ]
+},
+{
+  "localId": "VqOH7j32GITG5hBgQ78gM8WOxKt2",
+  "email": "blares@google.com",
+  "emailVerified": true,
+  "displayName": "Bernardo Lares",
+  "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocIVsgifF5i_1_lvFzoEtjSulLDdWHg7OkER7cozp6d4eyRHf1Jx=s96-c",
+  "lastSignedInAt": "1774350085787",
+  "createdAt": "1774350085786",
+  "providerUserInfo": [
+    {
+      "providerId": "google.com",
+      "rawId": "107900553149927726678",
+      "email": "blares@google.com",
+      "displayName": "Bernardo Lares",
+      "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocIVsgifF5i_1_lvFzoEtjSulLDdWHg7OkER7cozp6d4eyRHf1Jx=s96-c"
+    }
+  ]
+},
+{
+  "localId": "rvKzEe1tvORDQCaPlb83KFoOxuu2",
+  "email": "laresbernardo@gmail.com",
+  "emailVerified": true,
+  "displayName": "Bernardo Lares",
+  "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocJS-8bpaEPNFAfJAo48xfMplt3J8ykkizdMIFvCcXZSOepi2qi6=s96-c",
+  "lastSignedInAt": "1780674947711",
+  "createdAt": "1774120577904",
+  "providerUserInfo": [
+    {
+      "providerId": "google.com",
+      "rawId": "115680079929641555592",
+      "email": "laresbernardo@gmail.com",
+      "displayName": "Bernardo Lares",
+      "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocJS-8bpaEPNFAfJAo48xfMplt3J8ykkizdMIFvCcXZSOepi2qi6=s96-c"
+    }
+  ]
+},
+{
+  "localId": "tvQlsg7aXtZOc6UaP54GINieBTz1",
+  "email": "bernardolares212@gmail.com",
+  "emailVerified": true,
+  "displayName": "Bernardo Lares",
+  "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocIxR56Ao-iW3iltCwMwJqLn-Djhz2aH0dGSeblRaVX0Pgv2CQ=s96-c",
+  "lastSignedInAt": "1775471914908",
+  "createdAt": "1775471914907",
+  "providerUserInfo": [
+    {
+      "providerId": "google.com",
+      "rawId": "105537892698225568049",
+      "email": "bernardolares212@gmail.com",
+      "displayName": "Bernardo Lares",
+      "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocIxR56Ao-iW3iltCwMwJqLn-Djhz2aH0dGSeblRaVX0Pgv2CQ=s96-c"
+    }
+  ]
+}]}

@@ -1,0 +1,55 @@
+{"users": [
+{
+  "localId": "QosUHpNXYYOgncuX1fzVXSjDDrj1",
+  "email": "laresbernardo@gmail.com",
+  "emailVerified": true,
+  "displayName": "Bernardo Lares",
+  "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocJS-8bpaEPNFAfJAo48xfMplt3J8ykkizdMIFvCcXZSOepi2qi6=s96-c",
+  "lastSignedInAt": "1780320277262",
+  "createdAt": "1777460156090",
+  "providerUserInfo": [
+    {
+      "providerId": "google.com",
+      "rawId": "115680079929641555592",
+      "email": "laresbernardo@gmail.com",
+      "displayName": "Bernardo Lares",
+      "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocJS-8bpaEPNFAfJAo48xfMplt3J8ykkizdMIFvCcXZSOepi2qi6=s96-c"
+    }
+  ]
+},
+{
+  "localId": "eEDmt36ToCU8tDNxyVc9tKik4zi2",
+  "email": "maru.carbonell@gmail.com",
+  "emailVerified": true,
+  "displayName": "María Eugenia Carbonell",
+  "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocLYSxiwhfsyo_wPg1ezxqUB3dat19DGKIXnOhyz62QNpYhZUg=s96-c",
+  "lastSignedInAt": "1781954857979",
+  "createdAt": "1778436633030",
+  "providerUserInfo": [
+    {
+      "providerId": "google.com",
+      "rawId": "113447938859429056361",
+      "email": "maru.carbonell@gmail.com",
+      "displayName": "María Eugenia Carbonell",
+      "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocLYSxiwhfsyo_wPg1ezxqUB3dat19DGKIXnOhyz62QNpYhZUg=s96-c"
+    }
+  ]
+},
+{
+  "localId": "yk93IOEEsxOyxHjoGfzPBxxZcGi2",
+  "email": "isabela.eseverri@gmail.com",
+  "emailVerified": true,
+  "displayName": "Isabela Eseverri",
+  "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocIU2--PfjR-w-bLYKa8Lt9CAvzuP7h10QL4rDKtOXWXijJM_Q=s96-c",
+  "lastSignedInAt": "1780668163996",
+  "createdAt": "1779045427138",
+  "providerUserInfo": [
+    {
+      "providerId": "google.com",
+      "rawId": "117149159569883778302",
+      "email": "isabela.eseverri@gmail.com",
+      "displayName": "Isabela",
+      "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocIU2--PfjR-w-bLYKa8Lt9CAvzuP7h10QL4rDKtOXWXijJM_Q=s96-c"
+    }
+  ]
+}]}
