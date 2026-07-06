@@ -32,6 +32,6 @@ jobs:
       - name: Deploy Cloud Functions
         run: >-
           firebase deploy --only functions --project bervos-official
-          --non-interactive --token "$FIREBASE_TOKEN"
+          --non-interactive --force --token "$FIREBASE_TOKEN"
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
