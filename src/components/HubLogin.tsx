@@ -17,6 +17,9 @@ export const HubLogin: React.FC<HubLoginProps> = ({ onBackToHome }) => {
     setLoading(true);
     setError(null);
     try {
+      if (!auth || !googleProvider) {
+        throw new Error('Firebase Auth is not configured. Missing environment variables.');
+      }
       await signInWithPopup(auth, googleProvider);
     } catch (err) {
       console.error('Google Sign In Error:', err);

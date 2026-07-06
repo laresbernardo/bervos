@@ -12,7 +12,7 @@ interface HubAccessDeniedProps {
 
 export const HubAccessDenied: React.FC<HubAccessDeniedProps> = ({ user, onBackToHome }) => {
   const handleSignOut = () => {
-    signOut(auth);
+    if (auth) signOut(auth);
   };
 
   return (

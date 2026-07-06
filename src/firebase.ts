@@ -12,8 +12,17 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
-export const analytics = getAnalytics(app);
+const hasConfig = firebaseConfig.apiKey && firebaseConfig.projectId;
+
+const app = hasConfig ? initializeApp(firebaseConfig) : null as any;
+export const auth = app ? getAuth(app) : null as any;
+export const googleProvider = app ? new GoogleAuthProvider() : null as any;
+
+if (hasConfig) {
+  try {
+    getAnalytics(app);
+  } catch {
+    // Analytics unavailable in this environment
+  }
+}
 export { GoogleAuthProvider };

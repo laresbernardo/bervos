@@ -84,7 +84,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
   }, [fetchMetrics]);
 
   const handleSignOut = () => {
-    signOut(auth);
+    if (auth) signOut(auth);
   };
 
   const [search, setSearch] = useState('');
