@@ -383,7 +383,7 @@ function HomePage() {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            onClick={scrollToTop}
+            onClick={() => window.location.href = '/hub'}
             className="flex items-center gap-3 group cursor-pointer"
           >
             <img src="/logo.svg" alt="BERVOS" className="h-8 w-auto brightness-200" />
