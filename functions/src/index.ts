@@ -29,7 +29,7 @@ function getProjectApp(projectId: string): admin.app.App | null {
     return initializedApps.get(projectId)!;
   }
 
-  const projectsConfig = process.env.FIREBASE_PROJECTS_CONFIG;
+  const projectsConfig = process.env.PROJECTS_SERVICE_ACCOUNT_CONFIG;
   if (!projectsConfig) {
     console.warn(`[Config] FIREBASE_PROJECTS_CONFIG env variable not set. Using fallback for ${projectId}.`);
     return null;
