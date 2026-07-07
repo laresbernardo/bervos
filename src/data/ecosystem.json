@@ -25,7 +25,9 @@
       ],
       "logo": "/billio-logo.png",
       "category": "productivity",
-      "applicationCategory": "FinanceApplication"
+      "applicationCategory": "FinanceApplication",
+      "updated": "2026-07-06",
+      "version": "2.4.0"
     },
     {
       "title": "Chessverse",
@@ -40,7 +42,9 @@
       ],
       "logo": "/chessverse-logo.png",
       "category": "leisure",
-      "applicationCategory": "GameApplication"
+      "applicationCategory": "GameApplication",
+      "updated": "2026-05-13",
+      "version": "1.0.5"
     },
     {
       "title": "tripitdown",
@@ -55,7 +59,9 @@
       ],
       "logo": "/tripitdown-logo.png",
       "category": "productivity",
-      "applicationCategory": "TravelApplication"
+      "applicationCategory": "TravelApplication",
+      "updated": "2026-06-28",
+      "version": "0.1.90"
     },
     {
       "title": "Aura",
@@ -70,7 +76,9 @@
       ],
       "logo": "/aura-logo.png",
       "category": "productivity",
-      "applicationCategory": "UtilitiesApplication"
+      "applicationCategory": "UtilitiesApplication",
+      "updated": "2026-07-04",
+      "version": "1.3.0"
     },
     {
       "title": "Scribo",
@@ -83,7 +91,9 @@
       ],
       "logo": "/scribo-logo.png",
       "category": "leisure",
-      "applicationCategory": "EducationalApplication"
+      "applicationCategory": "EducationalApplication",
+      "updated": "2026-07-04",
+      "version": "0.0.0"
     },
     {
       "title": "LaresDJ",
@@ -97,7 +107,9 @@
       ],
       "logo": "/laresdj-logo.png",
       "category": "leisure",
-      "applicationCategory": "SocialNetworkingApplication"
+      "applicationCategory": "SocialNetworkingApplication",
+      "updated": "2026-05-23",
+      "version": "0.0.1"
     },
     {
       "title": "Pinmage",
@@ -112,7 +124,9 @@
       ],
       "logo": "/pinmage-logo.png",
       "category": "productivity",
-      "applicationCategory": "UtilitiesApplication"
+      "applicationCategory": "UtilitiesApplication",
+      "updated": "2026-07-04",
+      "version": "1.1.0"
     },
     {
       "title": "Tonaly",
@@ -126,7 +140,9 @@
       ],
       "logo": "/tonaly-logo.png",
       "category": "leisure",
-      "applicationCategory": "EducationalApplication"
+      "applicationCategory": "EducationalApplication",
+      "updated": "2026-06-11",
+      "version": "0.1.8"
     },
     {
       "title": "YT2MP3",
@@ -141,7 +157,9 @@
       ],
       "logo": "/yt2mp3-logo.png",
       "category": "productivity",
-      "applicationCategory": "UtilitiesApplication"
+      "applicationCategory": "UtilitiesApplication",
+      "updated": "2026-07-04",
+      "version": "2.1.1"
     }
   ],
   "openSource": [

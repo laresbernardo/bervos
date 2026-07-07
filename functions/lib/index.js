@@ -665,137 +665,143 @@ async function getRepoCommits(projectName, repoUrl) {
     return [];
 }
 /**
+ * Fetches metrics for a single initiative item.
+ */
+async function fetchInitiativeMetrics(item) {
+    const id = item['@id'];
+    const type = item['@type'];
+    const name = item.name;
+    const url = item.url || item.codeRepository;
+    console.log(`[Fetcher] Fetching metrics for: ${name} (${type})`);
+    const metrics = {
+        id,
+        name,
+        type,
+        url,
+        description: item.description,
+        timestamp: new Date().toISOString()
+    };
+    // Calculate Uptime & Latency for all
+    if (url) {
+        const ping = await pingServer(url);
+        metrics.uptime = ping.uptime;
+        metrics.latency = ping.latency;
+    }
+    else {
+        metrics.uptime = false;
+        metrics.latency = 0;
+    }
+    if (type === 'SoftwareSourceCode') {
+        // Open source repository
+        const repoUrl = item.codeRepository || '';
+        const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+        if (match && match[1] && match[2]) {
+            const owner = match[1];
+            const repo = match[2];
+            const headers = { 'User-Agent': 'bervos-hub' };
+            if (process.env.GITHUB_TOKEN) {
+                headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
+            }
+            try {
+                // Fetch repository statistics
+                const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
+                if (repoRes.ok) {
+                    const repoData = await repoRes.json();
+                    metrics.stars = repoData.stargazers_count || 0;
+                    metrics.openIssues = repoData.open_issues_count || 0;
+                    metrics.lastUpdated = repoData.pushed_at || repoData.updated_at || '';
+                }
+                else {
+                    metrics.stars = 0;
+                    metrics.openIssues = 0;
+                    metrics.lastUpdated = '';
+                }
+                // Fetch package version and release date from DESCRIPTION/package.json
+                const repoMeta = await fetchRepoMetadata(owner, repo);
+                metrics.version = repoMeta.version;
+                if (repoMeta.releaseDate) {
+                    metrics.lastUpdated = repoMeta.releaseDate;
+                }
+            }
+            catch (err) {
+                console.error(`[GitHub] Error fetching repo stats for ${name}:`, err);
+                metrics.stars = 0;
+                metrics.openIssues = 0;
+                metrics.version = '0.0.0';
+                metrics.lastUpdated = '';
+            }
+        }
+    }
+    else if (type === 'SoftwareApplication') {
+        // Firebase Web App or Utility/Desktop app
+        const projectId = getProjectId(item);
+        const isUtility = item.applicationCategory === 'UtilitiesApplication';
+        metrics.applicationCategory = item.applicationCategory;
+        // Version: prefer local filesystem, then GitHub, then fallback
+        const localVersion = getLocalProjectVersion(name);
+        metrics.version = localVersion || '1.0.0';
+        // Try GitHub for real version if local is unavailable
+        if (!localVersion) {
+            const repoUrl = item.codeRepository || '';
+            const repoMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+            if (repoMatch) {
+                const owner = repoMatch[1];
+                const repo = repoMatch[2];
+                try {
+                    const repoMeta = await fetchRepoMetadata(owner, repo);
+                    if (repoMeta.version && repoMeta.version !== '0.0.0') {
+                        metrics.version = repoMeta.version;
+                        if (repoMeta.releaseDate) {
+                            metrics.lastUpdated = repoMeta.releaseDate;
+                        }
+                    }
+                }
+                catch (err) {
+                    console.error(`[GitHub] Error fetching repo metadata for ${name}:`, err);
+                }
+            }
+        }
+        const projectApp = getProjectApp(projectId);
+        if (projectApp) {
+            if (isUtility) {
+                // Utility/Desktop App: Pull downloads/file hits
+                metrics.downloads = await getTelemetryHits(projectApp, projectId);
+            }
+            else {
+                // Web App with login: Pull MAU and unique users count
+                const userMetrics = await getAppUserMetrics(projectApp);
+                metrics.totalUsers = userMetrics.totalUsers;
+                metrics.active30d = userMetrics.active30d;
+            }
+        }
+        else {
+            // Local CLI/REST Development Fallbacks
+            if (isUtility) {
+                metrics.downloads = await getTelemetryHitsViaCli(projectId);
+            }
+            else {
+                const userMetrics = await getAppUserMetricsViaCli(projectId);
+                metrics.totalUsers = userMetrics.totalUsers;
+                metrics.active30d = userMetrics.active30d;
+            }
+            if (!localVersion && !item.codeRepository) {
+                metrics.version = '0.0.0';
+            }
+        }
+    }
+    // Retrieve recent commits (prefer codeRepository for GitHub projects)
+    const commitUrl = item.codeRepository || url;
+    metrics.commits = await getRepoCommits(name, commitUrl);
+    return metrics;
+}
+/**
  * Loops through initiatives and pulls real-time analytics
  */
 async function fetchFreshMetrics() {
     const initiatives = await getInitiativesFromSchema();
     const results = [];
     for (const item of initiatives) {
-        const id = item['@id'];
-        const type = item['@type'];
-        const name = item.name;
-        const url = item.url || item.codeRepository;
-        console.log(`[Fetcher] Fetching metrics for: ${name} (${type})`);
-        const metrics = {
-            id,
-            name,
-            type,
-            url,
-            description: item.description,
-            timestamp: new Date().toISOString()
-        };
-        // Calculate Uptime & Latency for all
-        if (url) {
-            const ping = await pingServer(url);
-            metrics.uptime = ping.uptime;
-            metrics.latency = ping.latency;
-        }
-        else {
-            metrics.uptime = false;
-            metrics.latency = 0;
-        }
-        if (type === 'SoftwareSourceCode') {
-            // Open source repository
-            const repoUrl = item.codeRepository || '';
-            const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
-            if (match && match[1] && match[2]) {
-                const owner = match[1];
-                const repo = match[2];
-                const headers = { 'User-Agent': 'bervos-hub' };
-                if (process.env.GITHUB_TOKEN) {
-                    headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
-                }
-                try {
-                    // Fetch repository statistics
-                    const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
-                    if (repoRes.ok) {
-                        const repoData = await repoRes.json();
-                        metrics.stars = repoData.stargazers_count || 0;
-                        metrics.openIssues = repoData.open_issues_count || 0;
-                        metrics.lastUpdated = repoData.pushed_at || repoData.updated_at || '';
-                    }
-                    else {
-                        metrics.stars = 0;
-                        metrics.openIssues = 0;
-                        metrics.lastUpdated = '';
-                    }
-                    // Fetch package version and release date from DESCRIPTION/package.json
-                    const repoMeta = await fetchRepoMetadata(owner, repo);
-                    metrics.version = repoMeta.version;
-                    if (repoMeta.releaseDate) {
-                        metrics.lastUpdated = repoMeta.releaseDate;
-                    }
-                }
-                catch (err) {
-                    console.error(`[GitHub] Error fetching repo stats for ${name}:`, err);
-                    metrics.stars = 0;
-                    metrics.openIssues = 0;
-                    metrics.version = '0.0.0';
-                    metrics.lastUpdated = '';
-                }
-            }
-        }
-        else if (type === 'SoftwareApplication') {
-            // Firebase Web App or Utility/Desktop app
-            const projectId = getProjectId(item);
-            const isUtility = item.applicationCategory === 'UtilitiesApplication';
-            metrics.applicationCategory = item.applicationCategory;
-            // Version: prefer local filesystem, then GitHub, then fallback
-            const localVersion = getLocalProjectVersion(name);
-            metrics.version = localVersion || '1.0.0';
-            // Try GitHub for real version if local is unavailable
-            if (!localVersion) {
-                const repoUrl = item.codeRepository || '';
-                const repoMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
-                if (repoMatch) {
-                    const owner = repoMatch[1];
-                    const repo = repoMatch[2];
-                    try {
-                        const repoMeta = await fetchRepoMetadata(owner, repo);
-                        if (repoMeta.version && repoMeta.version !== '0.0.0') {
-                            metrics.version = repoMeta.version;
-                            if (repoMeta.releaseDate) {
-                                metrics.lastUpdated = repoMeta.releaseDate;
-                            }
-                        }
-                    }
-                    catch (err) {
-                        console.error(`[GitHub] Error fetching repo metadata for ${name}:`, err);
-                    }
-                }
-            }
-            const projectApp = getProjectApp(projectId);
-            if (projectApp) {
-                if (isUtility) {
-                    // Utility/Desktop App: Pull downloads/file hits
-                    metrics.downloads = await getTelemetryHits(projectApp, projectId);
-                }
-                else {
-                    // Web App with login: Pull MAU and unique users count
-                    const userMetrics = await getAppUserMetrics(projectApp);
-                    metrics.totalUsers = userMetrics.totalUsers;
-                    metrics.active30d = userMetrics.active30d;
-                }
-            }
-            else {
-                // Local CLI/REST Development Fallbacks
-                if (isUtility) {
-                    metrics.downloads = await getTelemetryHitsViaCli(projectId);
-                }
-                else {
-                    const userMetrics = await getAppUserMetricsViaCli(projectId);
-                    metrics.totalUsers = userMetrics.totalUsers;
-                    metrics.active30d = userMetrics.active30d;
-                }
-                if (!localVersion && !item.codeRepository) {
-                    metrics.version = '0.0.0';
-                }
-            }
-        }
-        // Retrieve recent commits (prefer codeRepository for GitHub projects)
-        const commitUrl = item.codeRepository || url;
-        metrics.commits = await getRepoCommits(name, commitUrl);
-        results.push(metrics);
+        results.push(await fetchInitiativeMetrics(item));
     }
     return results;
 }
@@ -866,12 +872,40 @@ async function saveCache(data) {
         console.error('[Cache] Failed to write cache to Firestore:', err);
     }
 }
-/**
- * API handler to return metrics using SWR caching logic.
- */
 app.get(['/metrics', '/api/metrics'], authenticateAdmin, async (req, res) => {
     try {
         const isRefresh = req.query.refresh === 'true';
+        const projectQuery = req.query.project;
+        if (isRefresh && projectQuery) {
+            console.log(`[SWR] Single project refresh requested for: ${projectQuery}`);
+            const cached = await getCache();
+            if (cached) {
+                const initiatives = await getInitiativesFromSchema();
+                const matchedInitiative = initiatives.find(item => item.name.toLowerCase() === projectQuery.toLowerCase() ||
+                    item['@id'].toLowerCase() === projectQuery.toLowerCase() ||
+                    getProjectId(item).toLowerCase() === projectQuery.toLowerCase());
+                if (!matchedInitiative) {
+                    res.status(404).json({ error: `Project not found: ${projectQuery}` });
+                    return;
+                }
+                const freshProjectMetrics = await fetchInitiativeMetrics(matchedInitiative);
+                let updated = false;
+                const updatedData = cached.data.map((item) => {
+                    if (item.id === freshProjectMetrics.id || item.name.toLowerCase() === freshProjectMetrics.name.toLowerCase()) {
+                        updated = true;
+                        return freshProjectMetrics;
+                    }
+                    return item;
+                });
+                if (!updated) {
+                    updatedData.push(freshProjectMetrics);
+                }
+                await saveCache(updatedData);
+                res.setHeader('X-Cache-Status', 'MISS');
+                res.json(updatedData);
+                return;
+            }
+        }
         const cached = !isRefresh ? await getCache() : null;
         const oneHour = 60 * 60 * 1000;
         if (cached) {
@@ -907,6 +941,170 @@ app.get(['/metrics', '/api/metrics'], authenticateAdmin, async (req, res) => {
     }
     catch (err) {
         console.error('[API] Unexpected error in /metrics endpoint:', err);
+        res.status(500).json({ error: 'Internal Server Error', message: err instanceof Error ? err.message : String(err) });
+    }
+});
+app.get(['/public-metrics', '/api/public-metrics'], async (req, res) => {
+    try {
+        const cached = await getCache();
+        if (cached && cached.data && Array.isArray(cached.data)) {
+            const publicData = cached.data.map((m) => ({
+                name: m.name,
+                version: m.version || '1.0.0',
+                stars: m.stars || 0,
+                lastUpdated: m.lastUpdated || '',
+                uptime: m.uptime !== undefined ? m.uptime : true
+            }));
+            res.setHeader('X-Cache-Status', 'HIT');
+            res.json(publicData);
+            return;
+        }
+        res.json([]);
+    }
+    catch (err) {
+        console.error('[API] Unexpected error in /public-metrics endpoint:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+async function getAppUsers(app) {
+    const authInstance = admin.auth(app);
+    const users = [];
+    let pageToken = undefined;
+    try {
+        do {
+            const result = await authInstance.listUsers(1000, pageToken);
+            for (const user of result.users) {
+                users.push({
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: user.displayName,
+                    photoURL: user.photoURL,
+                    lastSignInTime: user.metadata.lastSignInTime || undefined,
+                    createdAt: user.metadata.creationTime || undefined,
+                });
+            }
+            pageToken = result.pageToken;
+        } while (pageToken);
+        return users;
+    }
+    catch (err) {
+        console.error('[Firebase] Failed to fetch users list for app:', err);
+        return [];
+    }
+}
+async function getAppUsersViaCli(projectId) {
+    const tempFile = path.join(os.tmpdir(), `users-${projectId}-${Date.now()}.json`);
+    try {
+        (0, child_process_1.execSync)(`npx firebase auth:export "${tempFile}" --format json --project ${projectId}`, { stdio: 'ignore', timeout: 8000 });
+        if (fs.existsSync(tempFile)) {
+            const content = fs.readFileSync(tempFile, 'utf8').trim();
+            try {
+                fs.unlinkSync(tempFile);
+            }
+            catch (e) { }
+            if (content) {
+                const parsed = JSON.parse(content);
+                const cliUsers = parsed.users || [];
+                return cliUsers.map((u) => ({
+                    uid: u.localId || u.uid,
+                    email: u.email,
+                    displayName: u.displayName,
+                    photoURL: u.photoUrl || u.photoURL,
+                    lastSignInTime: u.lastSignedInAt ? (isFinite(Number(u.lastSignedInAt)) ? new Date(parseInt(u.lastSignedInAt, 10)).toISOString() : u.lastSignedInAt) : undefined,
+                    createdAt: u.createdAt ? (isFinite(Number(u.createdAt)) ? new Date(parseInt(u.createdAt, 10)).toISOString() : u.createdAt) : undefined,
+                }));
+            }
+        }
+    }
+    catch (err) {
+        console.error(`[Local CLI Fallback] Failed to fetch users for project ${projectId}:`, err);
+    }
+    return [];
+}
+app.get(['/users', '/api/users'], authenticateAdmin, async (req, res) => {
+    try {
+        const initiatives = await getInitiativesFromSchema();
+        const allUsersMap = new Map();
+        for (const item of initiatives) {
+            const type = item['@type'];
+            const name = item.name;
+            if (type === 'SoftwareApplication' && item.applicationCategory !== 'UtilitiesApplication') {
+                const projectId = getProjectId(item);
+                const projectApp = getProjectApp(projectId);
+                let users = [];
+                if (projectApp) {
+                    users = await getAppUsers(projectApp);
+                }
+                else {
+                    users = await getAppUsersViaCli(projectId);
+                }
+                // Local workspace backup file fallback (e.g. chessverse-users.json, scribo-users.json, etc.)
+                if (users.length === 0) {
+                    const workspaceDir = path.join(__dirname, '..', '..');
+                    const normalizedName = name.toLowerCase();
+                    const backupFileName = `${normalizedName}-users.json`;
+                    const backupPath = path.join(workspaceDir, backupFileName);
+                    if (fs.existsSync(backupPath)) {
+                        try {
+                            const fileContent = fs.readFileSync(backupPath, 'utf8');
+                            const parsed = JSON.parse(fileContent);
+                            const backupUsers = parsed.users || [];
+                            users = backupUsers.map((u) => ({
+                                uid: u.localId || u.uid,
+                                email: u.email,
+                                displayName: u.displayName,
+                                photoURL: u.photoUrl || u.photoURL,
+                                lastSignInTime: u.lastSignedInAt ? (isFinite(Number(u.lastSignedInAt)) ? new Date(parseInt(u.lastSignedInAt, 10)).toISOString() : u.lastSignedInAt) : undefined,
+                                createdAt: u.createdAt ? (isFinite(Number(u.createdAt)) ? new Date(parseInt(u.createdAt, 10)).toISOString() : u.createdAt) : undefined,
+                            }));
+                        }
+                        catch (err) {
+                            console.error(`[Backup Fallback] Failed to read backup file for ${name}:`, err);
+                        }
+                    }
+                }
+                for (const user of users) {
+                    if (!user.email)
+                        continue;
+                    const key = user.email.toLowerCase();
+                    const existing = allUsersMap.get(key);
+                    const lastActive = user.lastSignInTime || user.createdAt || '';
+                    const firstActive = user.createdAt || user.lastSignInTime || '';
+                    if (existing) {
+                        if (!existing.projects.includes(name)) {
+                            existing.projects.push(name);
+                        }
+                        if (lastActive && (!existing.lastActive || lastActive > existing.lastActive)) {
+                            existing.lastActive = lastActive;
+                        }
+                        if (firstActive && (!existing.firstActive || firstActive < existing.firstActive)) {
+                            existing.firstActive = firstActive;
+                        }
+                        if (!existing.displayName && user.displayName) {
+                            existing.displayName = user.displayName;
+                        }
+                        if (!existing.photoURL && user.photoURL) {
+                            existing.photoURL = user.photoURL;
+                        }
+                    }
+                    else {
+                        allUsersMap.set(key, {
+                            email: user.email,
+                            displayName: user.displayName || user.email.split('@')[0],
+                            photoURL: user.photoURL || '',
+                            projects: [name],
+                            lastActive: lastActive,
+                            firstActive: firstActive
+                        });
+                    }
+                }
+            }
+        }
+        const aggregatedUsers = Array.from(allUsersMap.values()).sort((a, b) => b.lastActive.localeCompare(a.lastActive));
+        res.json(aggregatedUsers);
+    }
+    catch (err) {
+        console.error('[API] Unexpected error in /users endpoint:', err);
         res.status(500).json({ error: 'Internal Server Error', message: err instanceof Error ? err.message : String(err) });
     }
 });

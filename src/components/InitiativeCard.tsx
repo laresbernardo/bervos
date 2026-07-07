@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Star, GitFork, Clock, Users, Download, ArrowUpRight, Info } from 'lucide-react';
+import { Star, GitFork, Clock, Users, Download, ArrowUpRight, Info, RefreshCw } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa';
 
 export interface InitiativeMetric {
@@ -32,9 +32,12 @@ export interface InitiativeMetric {
 
 interface InitiativeCardProps {
   item: InitiativeMetric;
+  onUsersClick?: (projectName: string) => void;
+  onRefresh?: (projectId: string) => void;
+  isRefreshing?: boolean;
 }
 
-export const InitiativeCard: React.FC<InitiativeCardProps> = ({ item }) => {
+export const InitiativeCard: React.FC<InitiativeCardProps> = ({ item, onUsersClick, onRefresh, isRefreshing }) => {
   const isWebApp = item.type === 'SoftwareApplication' && item.applicationCategory !== 'UtilitiesApplication';
   const isDesktop = item.type === 'SoftwareApplication' && item.applicationCategory === 'UtilitiesApplication';
   const isOS = item.type === 'SoftwareSourceCode';
@@ -56,20 +59,36 @@ export const InitiativeCard: React.FC<InitiativeCardProps> = ({ item }) => {
             <h3 className="text-2xl font-black text-white tracking-tight mt-1">{item.name}</h3>
           </div>
 
-          {!isOS && item.uptime !== undefined && (
-            <div 
-              title={item.uptime ? "Uptime status: The deployment server is responding to network requests successfully." : "Uptime status: The deployment server is currently offline or unreachable."}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-mono tracking-tighter uppercase border cursor-help ${
-                item.uptime 
-                  ? 'bg-green-500/10 text-green-400 border-green-500/20' 
-                  : 'bg-red-500/10 text-red-400 border-red-500/20'
-              }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${item.uptime ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
-              {item.uptime ? 'ONLINE' : 'OFFLINE'}
-              <Info size={8} className="opacity-60 ml-0.5" />
-            </div>
-          )}
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            {!isOS && item.uptime !== undefined && (
+              <div 
+                title={item.uptime ? "Uptime status: The deployment server is responding to network requests successfully." : "Uptime status: The deployment server is currently offline or unreachable."}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-mono tracking-tighter uppercase border cursor-help ${
+                  item.uptime 
+                    ? 'bg-green-500/10 text-green-400 border-green-500/20' 
+                    : 'bg-red-500/10 text-red-400 border-red-500/20'
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${item.uptime ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                {item.uptime ? 'ONLINE' : 'OFFLINE'}
+                <Info size={8} className="opacity-60 ml-0.5" />
+              </div>
+            )}
+
+            {onRefresh && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRefresh(item.id);
+                }}
+                disabled={isRefreshing}
+                title="Refresh project metrics"
+                className="p-1.5 bg-white/5 border border-white/10 hover:border-indigo-500/40 hover:text-indigo-400 rounded-lg text-slate-400 transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center"
+              >
+                <RefreshCw size={11} className={isRefreshing ? 'animate-spin text-indigo-400' : ''} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -106,18 +125,23 @@ export const InitiativeCard: React.FC<InitiativeCardProps> = ({ item }) => {
 
           {isWebApp && (
             <>
-              <div className="space-y-1">
-                <span className="mono-label !text-slate-500 flex items-center gap-1">
+              <button
+                onClick={() => onUsersClick && onUsersClick(item.name)}
+                disabled={!onUsersClick}
+                type="button"
+                className={`space-y-1 text-left ${onUsersClick ? 'cursor-pointer group/btn select-none hover:opacity-85 transition-opacity' : ''}`}
+              >
+                <span className="mono-label !text-slate-500 flex items-center gap-1 group-hover/btn:text-indigo-400 transition-colors">
                   Users
                   <span title="Total users: Total number of registered users created inside the project database.">
                     <Info size={10} className="text-slate-500/80 cursor-help" />
                   </span>
                 </span>
                 <div className="flex items-center gap-1.5 text-white">
-                  <Users size={14} className="text-indigo-500/60" />
-                  <span className="font-mono text-sm font-bold">{item.totalUsers !== undefined ? item.totalUsers.toLocaleString() : '0'}</span>
+                  <Users size={14} className="text-indigo-500/60 group-hover/btn:text-indigo-400 transition-colors" />
+                  <span className="font-mono text-sm font-bold group-hover/btn:text-indigo-400 transition-colors">{item.totalUsers !== undefined ? item.totalUsers.toLocaleString() : '0'}</span>
                 </div>
-              </div>
+              </button>
               <div className="space-y-1">
                 <span className="mono-label !text-slate-500 flex items-center gap-1">
                   Active (30d)

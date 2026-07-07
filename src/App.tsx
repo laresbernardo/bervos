@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Star, Users, ArrowUpRight, X, GitFork, Download, Search, Loader2 } from 'lucide-react';
 import { FaGithub, FaLinkedin } from 'react-icons/fa';
 import { motion } from 'framer-motion';
@@ -265,7 +265,50 @@ function HomePage() {
   const [repoStats, setRepoStats] = useState<Record<string, { stars: string, forks: string, contributors: string, downloads: string }>>({});
   const [activeFilter, setActiveFilter] = useState<'all' | 'productivity' | 'leisure'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [visibleCount, setVisibleCount] = useState(3);
+  const [visibleCount, setVisibleCount] = useState(9);
+  const [liveMetrics, setLiveMetrics] = useState<Record<string, { lastUpdated?: string; stars?: number; version?: string; uptime?: boolean }>>({});
+
+  const getProjectUpdateDate = useCallback((p: any) => {
+    const live = liveMetrics[p.title.toLowerCase()]?.lastUpdated;
+    return live || p.updated || '';
+  }, [liveMetrics]);
+
+  const getProjectVersion = useCallback((p: any) => {
+    const live = liveMetrics[p.title.toLowerCase()]?.version;
+    const rawVersion = live || p.version || '1.0.0';
+    return rawVersion.replace(/^v+/i, '');
+  }, [liveMetrics]);
+
+  const getProjectUptime = useCallback((p: any) => {
+    const live = liveMetrics[p.title.toLowerCase()]?.uptime;
+    return live !== undefined ? live : true;
+  }, [liveMetrics]);
+
+  useEffect(() => {
+    const fetchPublicMetrics = async () => {
+      try {
+        const res = await fetch('/api/public-metrics');
+        if (res.ok) {
+          const data = await res.json();
+          const metricsMap: Record<string, { lastUpdated?: string; stars?: number; version?: string; uptime?: boolean }> = {};
+          if (Array.isArray(data)) {
+            for (const item of data) {
+              metricsMap[item.name.toLowerCase()] = {
+                lastUpdated: item.lastUpdated,
+                stars: item.stars,
+                version: item.version,
+                uptime: item.uptime
+              };
+            }
+            setLiveMetrics(metricsMap);
+          }
+        }
+      } catch (err) {
+        console.error('[Ecosystem] Failed to fetch public metrics:', err);
+      }
+    };
+    fetchPublicMetrics();
+  }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -546,14 +589,16 @@ function HomePage() {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
           >
             {(() => {
-              const filteredProjects = projects.filter((p) => {
-                const categoryMatch = activeFilter === 'all' || p.category === activeFilter;
-                const searchMatch = !searchQuery ||
-                  p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  p.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-                return categoryMatch && searchMatch;
-              });
+              const filteredProjects = projects
+                .filter((p) => {
+                  const categoryMatch = activeFilter === 'all' || p.category === activeFilter;
+                  const searchMatch = !searchQuery ||
+                    p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    p.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+                  return categoryMatch && searchMatch;
+                })
+                .sort((a, b) => getProjectUpdateDate(b).localeCompare(getProjectUpdateDate(a)));
 
               if (filteredProjects.length === 0) {
                 return (
@@ -568,36 +613,63 @@ function HomePage() {
               const displayProjects = filteredProjects.slice(0, visibleCount);
 
               const cards = displayProjects.map((project, i) => (
-                <motion.a
+                <motion.div
                   layout
                   key={project.title}
-                  href={project.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  onClick={() => trackEvent('project_click', 'engagement', project.title)}
                   className="group relative bg-[#080b12] p-6 sm:p-10 hover:bg-[#0c121d] transition-all duration-500 overflow-hidden flex flex-col justify-between min-h-[340px] sm:min-h-[380px] border border-white/5 hover:border-indigo-500/30 rounded-2xl"
                 >
-                  <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ArrowUpRight size={20} className="text-indigo-400" />
+                  {/* Top HUD status bar */}
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3 mb-6 text-[9px] font-mono text-slate-500">
+                    <span className={getProjectUptime(project) ? "text-emerald-400/80 font-bold" : "text-rose-400/80 font-bold"}>
+                      // {getProjectUptime(project) ? 'STATUS_ONLINE' : 'STATUS_OFFLINE'}
+                    </span>
+                    {getProjectUpdateDate(project) && (
+                      <span className="text-slate-400 group-hover:text-indigo-400 transition-colors">
+                        LAST_UPDATED // {getProjectUpdateDate(project)}
+                      </span>
+                    )}
                   </div>
 
                   <div>
-                    <div className="flex justify-between items-start mb-8 sm:mb-12">
-                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white/5 border border-white/10 overflow-hidden shadow-2xl transition-transform duration-500 group-hover:scale-105 group-hover:border-indigo-500/50">
+                    <div className="flex justify-between items-start mb-6">
+                      <a
+                        href={project.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackEvent('project_click', 'engagement', project.title + ' Logo')}
+                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white/5 border border-white/10 overflow-hidden shadow-2xl transition-all duration-500 hover:scale-105 hover:border-indigo-500/50 block cursor-pointer"
+                      >
                         <img
                           src={project.logo}
                           alt={project.title}
                           className="w-full h-full object-cover"
                           loading="lazy"
                         />
-                      </div>
+                      </a>
+                      
+                      {/* Version Badge on the top right */}
+                      {getProjectVersion(project) && (
+                        <span className="text-[9px] font-mono bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                          v{getProjectVersion(project)}
+                        </span>
+                      )}
                     </div>
 
                     <div className="space-y-3 sm:space-y-4">
-                      <h3 className="text-2xl sm:text-3xl font-black group-hover:text-indigo-400 transition-colors tracking-tight">{project.title}</h3>
+                      <h3 className="text-2xl sm:text-3xl font-black tracking-tight">
+                        <a
+                          href={project.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => trackEvent('project_click', 'engagement', project.title + ' Title')}
+                          className="text-white hover:text-indigo-400 transition-colors cursor-pointer"
+                        >
+                          {project.title}
+                        </a>
+                      </h3>
                       <p className="text-slate-400 mb-6 sm:mb-10 text-base sm:text-lg leading-relaxed group-hover:text-slate-300 transition-colors">{project.description}</p>
                     </div>
                   </div>
@@ -615,7 +687,7 @@ function HomePage() {
                   {/* Decorative blueprint elements */}
                   <div className="absolute bottom-0 left-0 w-20 h-px bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
                   <div className="absolute bottom-0 left-0 w-px h-20 bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
-                </motion.a>
+                </motion.div>
               ));
 
               // If there's an empty slot in the row (length % 3 !== 0), render a custom CTA card
@@ -672,17 +744,19 @@ function HomePage() {
 
           {/* Interactive Expand Workspace Button */}
           {(() => {
-            const filteredProjects = projects.filter((p) => {
-              const categoryMatch = activeFilter === 'all' || p.category === activeFilter;
-              const searchMatch = !searchQuery ||
-                p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                p.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-              return categoryMatch && searchMatch;
-            });
+            const filteredProjects = projects
+              .filter((p) => {
+                const categoryMatch = activeFilter === 'all' || p.category === activeFilter;
+                const searchMatch = !searchQuery ||
+                  p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  p.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+                return categoryMatch && searchMatch;
+              })
+              .sort((a, b) => getProjectUpdateDate(b).localeCompare(getProjectUpdateDate(a)));
 
             const hasMore = filteredProjects.length > visibleCount;
-            const canCollapse = filteredProjects.length > 3 && visibleCount >= filteredProjects.length;
+            const canCollapse = filteredProjects.length > 9 && visibleCount >= filteredProjects.length;
 
             if (!hasMore && !canCollapse) return null;
 
@@ -694,7 +768,7 @@ function HomePage() {
                       setVisibleCount(prev => prev + 3); // Load one additional row (3 columns) at a time
                       trackEvent('expand_workspace', 'engagement', 'Load More');
                     } else {
-                      setVisibleCount(3); // Reset to first row
+                      setVisibleCount(9); // Reset to first row
                       trackEvent('expand_workspace', 'engagement', 'Collapse');
                     }
                   }}
@@ -741,6 +815,16 @@ function HomePage() {
                 transition={{ delay: i * 0.1 }}
                 className="tech-card p-10 flex flex-col justify-between"
               >
+                {/* Top HUD status bar */}
+                <div className="flex items-center justify-between border-b border-white/5 pb-3 mb-6 text-[9px] font-mono text-slate-500">
+                  <span className="text-slate-600">// DEV_STATUS_OSS</span>
+                  {liveMetrics[pkg.name.toLowerCase()]?.lastUpdated && (
+                    <span className="text-slate-400 group-hover:text-indigo-400 transition-colors">
+                      LAST_UPDATED // {liveMetrics[pkg.name.toLowerCase()]?.lastUpdated}
+                    </span>
+                  )}
+                </div>
+
                 <div>
                   <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
@@ -749,7 +833,11 @@ function HomePage() {
                       </div>
                       <h3 className="text-2xl font-black tracking-tight">{pkg.name}</h3>
                     </div>
-
+                    {liveMetrics[pkg.name.toLowerCase()]?.version && (
+                      <span className="text-[9px] font-mono bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                        v{liveMetrics[pkg.name.toLowerCase()]?.version?.replace(/^v+/i, '')}
+                      </span>
+                    )}
                   </div>
                   <p className="text-slate-400 mb-10 text-lg leading-relaxed">{pkg.description}</p>
                 </div>

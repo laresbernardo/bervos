@@ -4,7 +4,27 @@ import type { User } from 'firebase/auth';
 import { auth } from '../firebase';
 import { InitiativeCard } from './InitiativeCard';
 import type { InitiativeMetric } from './InitiativeCard';
-import { RefreshCw, LogOut, Users, Download, ShieldAlert, Star, FolderGit } from 'lucide-react';
+import { RefreshCw, LogOut, Users, Download, ShieldAlert, Star, FolderGit, X, Search, Loader2 } from 'lucide-react';
+
+const UserAvatar: React.FC<{ src?: string; name: string; email: string }> = ({ src, name, email }) => {
+  const [error, setError] = useState(false);
+  const initials = (name || email || '?').substring(0, 2).toUpperCase();
+  if (src && !error) {
+    return (
+      <img
+        src={src}
+        alt=""
+        onError={() => setError(true)}
+        className="w-full h-full object-cover"
+      />
+    );
+  }
+  return (
+    <span className="text-xs font-bold text-indigo-300 uppercase">
+      {initials}
+    </span>
+  );
+};
 
 interface HubDashboardProps {
   user: User;
@@ -16,6 +36,41 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
   const [error, setError] = useState<string | null>(null);
   const [cacheStatus, setCacheStatus] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshingProjectIds, setRefreshingProjectIds] = useState<Record<string, boolean>>({});
+  const [isUsersModalOpen, setIsUsersModalOpen] = useState(false);
+  const [usersList, setUsersList] = useState<Array<{ email: string; displayName: string; photoURL: string; projects: string[]; lastActive: string; firstActive: string }>>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const [usersSearch, setUsersSearch] = useState('');
+  const [selectedProjectFilter, setSelectedProjectFilter] = useState('ALL');
+
+  const fetchUsers = useCallback(async () => {
+    setLoadingUsers(true);
+    setUsersError(null);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/users', {
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to load users list (Status: ${res.status})`);
+      }
+      const data = await res.json();
+      setUsersList(data);
+    } catch (err) {
+      setUsersError(err instanceof Error ? err.message : 'An error occurred while loading users list.');
+    } finally {
+      setLoadingUsers(false);
+    }
+  }, [user]);
+
+  const handleOpenUsersModal = useCallback((projectName = 'ALL') => {
+    setSelectedProjectFilter(projectName);
+    setIsUsersModalOpen(true);
+    fetchUsers();
+  }, [fetchUsers]);
 
   const fetchMetrics = useCallback(async (isManual = false) => {
     if (isManual) {
@@ -75,6 +130,34 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
       setRefreshing(false);
     }
   }, [user]);
+
+  const refreshProject = useCallback(async (projectId: string) => {
+    setRefreshingProjectIds(prev => ({ ...prev, [projectId]: true }));
+    try {
+      const idToken = await user.getIdToken();
+      const projectObj = metrics.find(m => m.id === projectId);
+      const queryParam = projectObj ? encodeURIComponent(projectObj.name) : encodeURIComponent(projectId);
+      const res = await fetch(`/api/metrics?refresh=true&project=${queryParam}`, {
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to refresh project (Status: ${res.status})`);
+      }
+
+      const data = await res.json();
+      setMetrics(data);
+      setCacheStatus(res.headers.get('X-Cache-Status') || 'MISS');
+    } catch (err) {
+      console.error('[Dashboard] Project refresh failed:', err);
+      const msg = err instanceof Error ? err.message : 'Failed to refresh project metrics.';
+      alert(msg);
+    } finally {
+      setRefreshingProjectIds(prev => ({ ...prev, [projectId]: false }));
+    }
+  }, [user, metrics]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -282,13 +365,16 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                 </div>
               </div>
 
-              <div className="tech-card p-6 flex flex-col justify-between group min-h-[130px]">
+              <div 
+                onClick={() => handleOpenUsersModal('ALL')}
+                className="tech-card p-6 flex flex-col justify-between group min-h-[130px] cursor-pointer hover:border-violet-500/40 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all"
+              >
                 <div className="flex items-center justify-between w-full">
                   <div className="space-y-1">
                     <span className="mono-label !text-violet-400">Total Users</span>
                     <h3 className="text-3xl font-black text-white font-display tracking-tight">{totalUsers.toLocaleString()}</h3>
                   </div>
-                  <div className="p-3 bg-violet-500/10 border border-violet-500/20 text-violet-400 rounded-xl">
+                  <div className="p-3 bg-violet-500/10 border border-violet-500/20 text-violet-400 rounded-xl group-hover:bg-violet-500/20 transition-colors">
                     <Users size={20} />
                   </div>
                 </div>
@@ -409,7 +495,13 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
             {filteredAndSorted.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredAndSorted.map((item) => (
-                  <InitiativeCard key={item.id} item={item} />
+                  <InitiativeCard 
+                    key={item.id} 
+                    item={item} 
+                    onUsersClick={handleOpenUsersModal} 
+                    onRefresh={refreshProject}
+                    isRefreshing={!!refreshingProjectIds[item.id]}
+                  />
                 ))}
               </div>
             ) : (
@@ -422,6 +514,207 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
         )}
 
       </div>
+
+      {/* Users Modal */}
+      {isUsersModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#080b12]/80 backdrop-blur-md transition-all duration-300">
+          <div className="relative w-full max-w-4xl max-h-[85vh] bg-[#0c121d] border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-[0_0_50px_rgba(79,70,229,0.15)]">
+            {/* Top blueprint line decorations */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500" />
+            
+            {/* Modal Header */}
+            <div className="p-6 border-b border-white/5 flex items-start justify-between">
+              <div>
+                <span className="mono-label !text-indigo-400">// ECOSYSTEM_REGISTRY_DIRECTORY</span>
+                <h3 className="text-xl font-black text-white tracking-tight uppercase mt-1">Ecosystem User Directory</h3>
+                <p className="text-slate-400 text-xs font-mono mt-1">
+                  Showing aggregated user sign-ups and multi-platform registration tracking.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsUsersModalOpen(false)}
+                className="p-2 bg-white/5 border border-white/10 hover:border-white/20 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Filtering / Search Bar */}
+            <div className="p-6 bg-white/[0.01] border-b border-white/5 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+              {/* Search */}
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  placeholder="Search by name, email, or project..."
+                  value={usersSearch}
+                  onChange={(e) => setUsersSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 focus:border-indigo-500/40 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none transition-all font-mono"
+                />
+                <span className="absolute left-3 top-3 text-slate-500">
+                  <Search size={14} />
+                </span>
+              </div>
+
+              {/* Project Filter Dropdown */}
+              <div className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl border border-white/5">
+                <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Filter:</span>
+                <select
+                  value={selectedProjectFilter}
+                  onChange={(e) => setSelectedProjectFilter(e.target.value)}
+                  className="bg-transparent text-slate-200 font-mono text-xs focus:outline-none cursor-pointer border-0"
+                >
+                  <option value="ALL" className="bg-[#0f131a]">ALL PROJECTS ({usersList.length})</option>
+                  {metrics
+                    .filter(m => m.type === 'SoftwareApplication' && m.applicationCategory !== 'UtilitiesApplication')
+                    .map(proj => {
+                      const count = usersList.filter(u => u.projects.includes(proj.name)).length;
+                      return (
+                        <option key={proj.id} value={proj.name} className="bg-[#0f131a]">
+                          {proj.name.toUpperCase()} ({count})
+                        </option>
+                      );
+                    })
+                  }
+                </select>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {loadingUsers ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <Loader2 size={32} className="text-indigo-500 animate-spin" />
+                  <span className="text-xs font-mono text-slate-400 uppercase tracking-widest">Compiling user records...</span>
+                </div>
+              ) : usersError ? (
+                <div className="tech-card border-red-500/30 p-8 bg-red-500/[0.01] flex items-start gap-4">
+                  <ShieldAlert size={24} className="text-red-400 shrink-0" />
+                  <div className="space-y-1">
+                    <span className="mono-label !text-red-400">// REGISTRY_LOAD_FAILURE</span>
+                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">Failed to load registry</h4>
+                    <p className="text-slate-400 text-xs font-mono">{usersError}</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Grid of Users */}
+                  {(() => {
+                    const filteredUsers = usersList
+                      .filter(u => {
+                        const matchesSearch = 
+                          (u.displayName && u.displayName.toLowerCase().includes(usersSearch.toLowerCase())) ||
+                          (u.email && u.email.toLowerCase().includes(usersSearch.toLowerCase())) ||
+                          u.projects.some(p => p.toLowerCase().includes(usersSearch.toLowerCase()));
+                        
+                        const matchesProject = 
+                          selectedProjectFilter === 'ALL' || 
+                          u.projects.includes(selectedProjectFilter);
+
+                        return matchesSearch && matchesProject;
+                      })
+                      .sort((a, b) => {
+                        const parseToTime = (val?: string) => {
+                          if (!val) return 0;
+                          let t = Date.parse(val);
+                          if (!isNaN(t)) return t;
+                          if (/^\d+$/.test(val)) {
+                            return parseInt(val, 10);
+                          }
+                          return 0;
+                        };
+                        const dateA = parseToTime(a.lastActive);
+                        const dateB = parseToTime(b.lastActive);
+                        return dateB - dateA;
+                      });
+
+                    if (filteredUsers.length === 0) {
+                      return (
+                        <div className="text-center py-20 border border-dashed border-white/5 rounded-xl">
+                          <span className="text-xs font-mono text-slate-500 uppercase tracking-wider">No matching user registrations found.</span>
+                        </div>
+                      );
+                    }
+
+                    const formatDate = (dateStr?: string) => {
+                      if (!dateStr) return 'N/A';
+                      try {
+                        const d = new Date(dateStr);
+                        if (isNaN(d.getTime())) return dateStr;
+                        return d.toISOString().split('T')[0];
+                      } catch (e) {
+                        return dateStr;
+                      }
+                    };
+
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {filteredUsers.map((u, i) => (
+                          <div key={i} className="bg-[#0c121d] border border-white/10 p-4 rounded-xl flex flex-col gap-3 hover:border-indigo-500/40 transition-all hover:bg-white/[0.01] relative overflow-hidden group/item">
+                            {/* Accent highlight on hover */}
+                            <div className="absolute inset-x-0 bottom-0 h-0.5 bg-indigo-500/0 group-hover/item:bg-indigo-500/50 transition-all" />
+                            
+                            {/* Top row: Avatar + Details */}
+                            <div className="flex items-center gap-3">
+                              {/* Avatar */}
+                              <div className="w-10 h-10 rounded-full overflow-hidden bg-indigo-500/10 border border-white/10 flex items-center justify-center shrink-0">
+                                <UserAvatar src={u.photoURL} name={u.displayName} email={u.email} />
+                              </div>
+
+                              {/* Details */}
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-bold text-white truncate leading-tight group-hover/item:text-indigo-400 transition-colors">{u.displayName}</h4>
+                                <p className="text-[10px] font-mono text-slate-400 truncate mt-0.5">{u.email}</p>
+                              </div>
+                            </div>
+
+                            {/* Middle row: Projects (full width) */}
+                            <div className="flex flex-wrap gap-1.5 py-1">
+                              {u.projects.map((proj, idx) => (
+                                <span key={idx} className="text-[8px] font-mono bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded uppercase tracking-wider">
+                                  {proj}
+                                </span>
+                              ))}
+                            </div>
+
+                            {/* Bottom row: Timestamps (full width, side-by-side) */}
+                            <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[9px] font-mono text-slate-500">
+                              <div>
+                                <span className="text-slate-600 uppercase">Signup:</span>{' '}
+                                <span className="text-slate-400 font-bold">{formatDate(u.firstActive)}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-600 uppercase">Active:</span>{' '}
+                                <span className="text-slate-400 font-bold">{formatDate(u.lastActive)}</span>
+                              </div>
+                            </div>
+
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-white/5 bg-white/[0.01] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 text-[10px] font-mono text-slate-500">
+              <div className="flex items-center gap-2">
+                <span>SYSTEM STATUS: ONLINE // DATA SECURE</span>
+                <span className="text-slate-700">|</span>
+                <span className="text-slate-400 cursor-help" title="Unique users are aggregated by email address across all projects. Total registrations is the sum of users in all project databases individually.">
+                  AGGREGATED BY UNIQUE EMAILS
+                </span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span>TOTAL REGISTERED (SUM): <strong className="text-white font-bold">{totalUsers}</strong></span>
+                <span>UNIQUE USERS: <strong className="text-white font-bold">{usersList.length}</strong></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 };
