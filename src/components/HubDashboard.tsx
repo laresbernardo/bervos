@@ -31,19 +31,39 @@ interface HubDashboardProps {
 }
 
 export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
-  const [metrics, setMetrics] = useState<InitiativeMetric[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState<InitiativeMetric[]>(() => {
+    try {
+      const cached = localStorage.getItem('bervos_metrics');
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      const cached = localStorage.getItem('bervos_metrics');
+      return !cached || JSON.parse(cached).length === 0;
+    } catch (e) {
+      return true;
+    }
+  });
   const [error, setError] = useState<string | null>(null);
-  const [cacheStatus, setCacheStatus] = useState<string | null>(null);
+  const [cacheStatus, setCacheStatus] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('bervos_cache_status');
+    } catch (e) {
+      return null;
+    }
+  });
   const [refreshing, setRefreshing] = useState(false);
   const [refreshingProjectIds, setRefreshingProjectIds] = useState<Record<string, boolean>>({});
   const [isUsersModalOpen, setIsUsersModalOpen] = useState(false);
-  const [usersList, setUsersList] = useState<Array<{ 
-    email: string; 
-    displayName: string; 
-    photoURL: string; 
-    projects: string[]; 
-    lastActive: string; 
+  const [usersList, setUsersList] = useState<Array<{
+    email: string;
+    displayName: string;
+    photoURL: string;
+    projects: string[];
+    lastActive: string;
     firstActive: string;
     projectDetails?: Record<string, { firstActive: string; lastActive: string }>;
   }>>([]);
@@ -108,6 +128,14 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
       setMetrics(data);
       const cache = res.headers.get('X-Cache-Status');
       setCacheStatus(cache);
+      try {
+        localStorage.setItem('bervos_metrics', JSON.stringify(data));
+        if (cache) {
+          localStorage.setItem('bervos_cache_status', cache);
+        }
+      } catch (e) {
+        console.error('Failed to cache metrics in localStorage', e);
+      }
 
       // If the cache was stale, the backend triggered a background update.
       // Re-fetch after 4 seconds to get the newly generated data.
@@ -115,16 +143,23 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
         console.log('[SWR] Cache is stale. Scheduling a re-fetch in 4 seconds...');
         setTimeout(async () => {
           try {
-             const freshToken = await user.getIdToken();
-             const freshRes = await fetch('/api/metrics', {
-               headers: { 'Authorization': `Bearer ${freshToken}` }
-             });
-             if (freshRes.ok) {
-               const freshData = await freshRes.json();
-               setMetrics(freshData);
-               setCacheStatus(freshRes.headers.get('X-Cache-Status') || 'HIT');
-               console.log('[SWR] Metrics updated successfully.');
-             }
+            const freshToken = await user.getIdToken();
+            const freshRes = await fetch('/api/metrics', {
+              headers: { 'Authorization': `Bearer ${freshToken}` }
+            });
+            if (freshRes.ok) {
+              const freshData = await freshRes.json();
+              setMetrics(freshData);
+              const freshCache = freshRes.headers.get('X-Cache-Status') || 'HIT';
+              setCacheStatus(freshCache);
+              try {
+                localStorage.setItem('bervos_metrics', JSON.stringify(freshData));
+                localStorage.setItem('bervos_cache_status', freshCache);
+              } catch (e) {
+                console.error('Failed to cache metrics in localStorage', e);
+              }
+              console.log('[SWR] Metrics updated successfully.');
+            }
           } catch (e) {
             console.error('[SWR] Silent re-fetch failed:', e);
           }
@@ -157,7 +192,14 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
 
       const data = await res.json();
       setMetrics(data);
-      setCacheStatus(res.headers.get('X-Cache-Status') || 'MISS');
+      const freshCache = res.headers.get('X-Cache-Status') || 'MISS';
+      setCacheStatus(freshCache);
+      try {
+        localStorage.setItem('bervos_metrics', JSON.stringify(data));
+        localStorage.setItem('bervos_cache_status', freshCache);
+      } catch (e) {
+        console.error('Failed to cache metrics in localStorage', e);
+      }
     } catch (err) {
       console.error('[Dashboard] Project refresh failed:', err);
       const msg = err instanceof Error ? err.message : 'Failed to refresh project metrics.';
@@ -208,7 +250,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
   // Search, Filter, and Sort logic
   const filteredAndSorted = metrics
     .filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) || 
+      const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) ||
         (item.description && item.description.toLowerCase().includes(search.toLowerCase()));
 
       if (filterType === 'WEB') {
@@ -261,33 +303,41 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
 
 
   return (
-    <div className="min-h-screen bg-[#080b12] text-slate-100 py-10 md:py-20 px-4 sm:px-6 md:px-12 selection:bg-indigo-500/30">
-      <div className="max-w-7xl mx-auto space-y-12">
-        
+    <div className="min-h-screen bg-[#080b12] text-slate-100 py-6 md:py-10 px-4 sm:px-6 md:px-12 selection:bg-indigo-500/30">
+      <div className="max-w-7xl mx-auto space-y-8">
+
         {/* Navigation / Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-8">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
-              <span className="mono-label !text-indigo-400">System_Control // Dashboard</span>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-5">
+          <div className="flex items-center gap-3">
+            <a
+              href="/"
+              className="flex items-center justify-center p-2 bg-white/5 border border-white/10 hover:border-indigo-500/40 hover:bg-white/10 rounded-xl transition-all cursor-pointer group"
+              title="Back to website"
+            >
+              <img src="/logo.svg" alt="BERVOS Logo" className="h-7 w-auto brightness-200 group-hover:scale-105 transition-all duration-300" />
+            </a>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                <span className="mono-label !text-indigo-400">System_Control // Dashboard</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-black glow-text tracking-tighter uppercase leading-none">BERVOS Hub</h1>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black glow-text tracking-tighter uppercase">BERVOS Hub</h1>
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
             {/* Cache Status Badge */}
-            {cacheStatus && (
-              <div 
-                className={`px-3 py-1.5 rounded-lg border font-mono text-[10px] tracking-wider uppercase ${
-                  cacheStatus === 'HIT' 
-                    ? 'bg-green-500/5 text-green-400 border-green-500/20' 
+            {cacheStatus && cacheStatus !== 'MISS' && (
+              <div
+                className={`px-3 py-1.5 rounded-lg border font-mono text-[10px] tracking-wider uppercase ${cacheStatus === 'HIT'
+                    ? 'bg-green-500/5 text-green-400 border-green-500/20'
                     : cacheStatus === 'STALE'
-                    ? 'bg-yellow-500/5 text-yellow-400 border-yellow-500/20 animate-pulse'
-                    : 'bg-indigo-500/5 text-indigo-400 border-indigo-500/20'
-                }`}
+                      ? 'bg-yellow-500/5 text-yellow-400 border-yellow-500/20 animate-pulse'
+                      : 'bg-indigo-500/5 text-indigo-400 border-indigo-500/20'
+                  }`}
                 title="SWR Cache Status. HIT = Served from cache. STALE = Served cache and refreshing backend. MISS = Cache empty."
               >
-                CACHE_{cacheStatus}
+                <span className="hidden sm:inline">CACHE_</span>{cacheStatus}
               </div>
             )}
 
@@ -297,7 +347,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
               className="flex items-center gap-2 px-5 py-2.5 bg-white/5 border border-white/10 hover:border-indigo-500/40 rounded-xl text-xs font-mono uppercase tracking-widest text-slate-300 hover:text-indigo-400 transition-all disabled:opacity-50 cursor-pointer"
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-              {refreshing ? 'Refreshing...' : 'Refresh Stats'}
+              {refreshing ? 'Refreshing...' : 'Refresh'}
             </button>
 
             <button
@@ -318,8 +368,8 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
               <span className="mono-label !text-red-400">// CONTROL_SYSTEM_ERROR</span>
               <h4 className="text-lg font-bold text-white uppercase tracking-wider">Metrics Pipeline Failure</h4>
               <p className="text-slate-400 text-sm font-mono">{error}</p>
-              <button 
-                onClick={() => fetchMetrics()} 
+              <button
+                onClick={() => fetchMetrics()}
                 className="mt-4 px-4 py-2 bg-white/5 border border-white/10 hover:border-white/20 rounded-lg text-xs font-mono uppercase text-white"
               >
                 Retry Request
@@ -345,7 +395,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
           </div>
         ) : !error && (
           <div className="space-y-12">
-            
+
             {/* Search, Filter, and Sort Bar */}
             <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
               {/* Search */}
@@ -363,7 +413,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                   </svg>
                 </span>
                 {search && (
-                  <button 
+                  <button
                     onClick={() => setSearch('')}
                     className="absolute right-3.5 top-3.5 text-slate-500 hover:text-white transition-colors cursor-pointer"
                     title="Clear search"
@@ -379,33 +429,29 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                 <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
                   <button
                     onClick={() => setFilterType('ALL')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer ${
-                      filterType === 'ALL' ? 'bg-indigo-500 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer ${filterType === 'ALL' ? 'bg-indigo-500 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                      }`}
                   >
                     ALL
                   </button>
                   <button
                     onClick={() => setFilterType('WEB')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer ${
-                      filterType === 'WEB' ? 'bg-indigo-500 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer ${filterType === 'WEB' ? 'bg-indigo-500 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                      }`}
                   >
                     WEB
                   </button>
                   <button
                     onClick={() => setFilterType('OS')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer ${
-                      filterType === 'OS' ? 'bg-indigo-500 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer ${filterType === 'OS' ? 'bg-indigo-500 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                      }`}
                   >
                     OSS
                   </button>
                   <button
                     onClick={() => setFilterType('DESKTOP')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer ${
-                      filterType === 'DESKTOP' ? 'bg-indigo-500 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer ${filterType === 'DESKTOP' ? 'bg-indigo-500 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                      }`}
                   >
                     DESKTOP
                   </button>
@@ -430,7 +476,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
 
             {/* High-Level Summary Analytics Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              
+
               <div className="tech-card p-6 flex flex-col justify-between group min-h-[130px]">
                 <div className="flex items-center justify-between w-full">
                   <div className="space-y-1">
@@ -459,7 +505,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                 </div>
               </div>
 
-              <div 
+              <div
                 onClick={() => handleOpenUsersModal('ALL')}
                 className="tech-card p-6 flex flex-col justify-between group min-h-[130px] cursor-pointer hover:border-violet-500/40 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all"
               >
@@ -522,10 +568,10 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
             {filteredAndSorted.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredAndSorted.map((item) => (
-                  <InitiativeCard 
-                    key={item.id} 
-                    item={item} 
-                    onUsersClick={handleOpenUsersModal} 
+                  <InitiativeCard
+                    key={item.id}
+                    item={item}
+                    onUsersClick={handleOpenUsersModal}
                     onRefresh={refreshProject}
                     isRefreshing={!!refreshingProjectIds[item.id]}
                   />
@@ -548,7 +594,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
           <div className="relative w-full max-w-4xl max-h-[85vh] bg-[#0c121d] border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-[0_0_50px_rgba(79,70,229,0.15)]">
             {/* Top blueprint line decorations */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500" />
-            
+
             {/* Modal Header */}
             <div className="p-6 border-b border-white/5 flex items-start justify-between">
               <div>
@@ -628,13 +674,13 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                   {(() => {
                     const filteredUsers = usersList
                       .filter(u => {
-                        const matchesSearch = 
+                        const matchesSearch =
                           (u.displayName && u.displayName.toLowerCase().includes(usersSearch.toLowerCase())) ||
                           (u.email && u.email.toLowerCase().includes(usersSearch.toLowerCase())) ||
                           u.projects.some(p => p.toLowerCase().includes(usersSearch.toLowerCase()));
-                        
-                        const matchesProject = 
-                          selectedProjectFilter === 'ALL' || 
+
+                        const matchesProject =
+                          selectedProjectFilter === 'ALL' ||
                           u.projects.includes(selectedProjectFilter);
 
                         return matchesSearch && matchesProject;
@@ -688,7 +734,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                             <div key={i} className="bg-[#0c121d] border border-white/10 p-4 rounded-xl flex flex-col gap-3 hover:border-indigo-500/40 transition-all hover:bg-white/[0.01] relative overflow-hidden group/item">
                               {/* Accent highlight on hover */}
                               <div className="absolute inset-x-0 bottom-0 h-0.5 bg-indigo-500/0 group-hover/item:bg-indigo-500/50 transition-all" />
-                              
+
                               {/* Top row: Avatar + Details */}
                               <div className="flex items-center gap-3">
                                 {/* Avatar */}
@@ -711,11 +757,10 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                                     <button
                                       key={idx}
                                       onClick={() => setSelectedProjectFilter(prev => prev === proj ? 'ALL' : proj)}
-                                      className={`text-[8px] font-mono px-2 py-0.5 rounded uppercase tracking-wider transition-all cursor-pointer ${
-                                        isSelected 
-                                          ? 'bg-indigo-500 border border-indigo-400 text-white font-bold' 
+                                      className={`text-[8px] font-mono px-2 py-0.5 rounded uppercase tracking-wider transition-all cursor-pointer ${isSelected
+                                          ? 'bg-indigo-500 border border-indigo-400 text-white font-bold'
                                           : 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/30'
-                                      }`}
+                                        }`}
                                     >
                                       {proj}
                                     </button>
