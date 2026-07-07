@@ -490,7 +490,30 @@ async function fetchBacklogFromRepo(owner: string, repo: string): Promise<{ coun
       const res = await fetch(url);
       if (res.ok) {
         const content = await res.text();
-        return { count: parseCount(content), content, updatedAt: headerDate(res) };
+        let updatedAt = headerDate(res);
+        // raw.githubusercontent.com doesn't return Last-Modified, so fallback to Commits API
+        if (!updatedAt && token) {
+          try {
+            const commitUrl = `https://api.github.com/repos/${owner}/${repo}/commits?path=BACKLOG.md&per_page=1&sha=${branch}`;
+            const commitRes = await fetch(commitUrl, {
+              headers: {
+                'User-Agent': 'bervos-hub',
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json'
+              }
+            });
+            if (commitRes.ok) {
+              const body = await commitRes.json();
+              if (Array.isArray(body) && body.length > 0) {
+                const date = body[0].commit?.committer?.date || body[0].commit?.author?.date || '';
+                if (date) updatedAt = new Date(date).toISOString().split('T')[0];
+              }
+            }
+          } catch (e) {
+            console.warn(`[Backlog] Commits API failed for ${owner}/${repo}:`, e);
+          }
+        }
+        return { count: parseCount(content), content, updatedAt };
       }
     } catch (err) {
       console.warn(`[Backlog] raw.githubusercontent.com failed for ${owner}/${repo} on ${branch}:`, err);
