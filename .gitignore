@@ -28,6 +28,7 @@ dist-ssr
 .vite
 .firebase
 .eslintcache
+temp_users.json
 
 # Environment variables
 .env

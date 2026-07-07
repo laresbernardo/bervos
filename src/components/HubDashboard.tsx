@@ -182,23 +182,6 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
   const [filterType, setFilterType] = useState('ALL');
   const [sortBy, setSortBy] = useState('LAST_UPDATED');
 
-  // Aggregated Stats
-  const totalProjectsCount = metrics.length;
-  const webProjectsCount = metrics.filter(m => m.type === 'SoftwareApplication' && m.applicationCategory !== 'UtilitiesApplication').length;
-  const desktopProjectsCount = metrics.filter(m => m.type === 'SoftwareApplication' && m.applicationCategory === 'UtilitiesApplication').length;
-  const ossProjectsCount = metrics.filter(m => m.type === 'SoftwareSourceCode').length;
-
-  const totalUsers = metrics.reduce((sum, m) => sum + (m.totalUsers || 0), 0);
-  const totalActive30d = metrics.reduce((sum, m) => sum + (m.active30d || 0), 0);
-
-  const totalDownloads = metrics
-    .filter(m => m.type !== 'SoftwareSourceCode')
-    .reduce((sum, m) => sum + (m.downloads || 0), 0);
-
-  const totalStars = metrics
-    .filter(m => m.type === 'SoftwareSourceCode')
-    .reduce((sum, m) => sum + (m.stars || 0), 0);
-
   // Sorting helper functions
   const getSortDate = (item: InitiativeMetric) => {
     if (item.commits && item.commits.length > 0 && item.commits[0].timestamp) {
@@ -255,8 +238,30 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
       return 0;
     });
 
+  // Check if any filter or search query is active to label stats as filtered
+  const isFiltered = search !== '' || filterType !== 'ALL';
+
+  // Aggregated Stats
+  const totalProjectsCount = filteredAndSorted.length;
+  const webProjectsCount = filteredAndSorted.filter(m => m.type === 'SoftwareApplication' && m.applicationCategory !== 'UtilitiesApplication').length;
+  const desktopProjectsCount = filteredAndSorted.filter(m => m.type === 'SoftwareApplication' && m.applicationCategory === 'UtilitiesApplication').length;
+  const ossProjectsCount = filteredAndSorted.filter(m => m.type === 'SoftwareSourceCode').length;
+
+  const totalUsers = filteredAndSorted.reduce((sum, m) => sum + (m.totalUsers || 0), 0);
+  const totalActive30d = filteredAndSorted.reduce((sum, m) => sum + (m.active30d || 0), 0);
+
+  const totalDownloads = filteredAndSorted
+    .filter(m => m.type !== 'SoftwareSourceCode')
+    .reduce((sum, m) => sum + (m.downloads || 0), 0);
+
+  const totalStars = filteredAndSorted
+    .filter(m => m.type === 'SoftwareSourceCode')
+    .reduce((sum, m) => sum + (m.stars || 0), 0);
+
+
+
   return (
-    <div className="min-h-screen bg-[#080b12] text-slate-100 py-24 px-6 md:px-12 selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-[#080b12] text-slate-100 py-10 md:py-20 px-4 sm:px-6 md:px-12 selection:bg-indigo-500/30">
       <div className="max-w-7xl mx-auto space-y-12">
         
         {/* Navigation / Header */}
@@ -267,9 +272,6 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
               <span className="mono-label !text-indigo-400">System_Control // Dashboard</span>
             </div>
             <h1 className="text-4xl md:text-5xl font-black glow-text tracking-tighter uppercase">BERVOS Hub</h1>
-            <p className="text-slate-400 font-mono text-xs uppercase tracking-wider">
-              Operator: <span className="text-indigo-400 font-bold">{user.email}</span>
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
@@ -344,88 +346,6 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
         ) : !error && (
           <div className="space-y-12">
             
-            {/* High-Level Summary Analytics Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              
-              <div className="tech-card p-6 flex flex-col justify-between group min-h-[130px]">
-                <div className="flex items-center justify-between w-full">
-                  <div className="space-y-1">
-                    <span className="mono-label !text-indigo-400">Total Projects</span>
-                    <h3 className="text-3xl font-black text-white font-display tracking-tight">{totalProjectsCount}</h3>
-                  </div>
-                  <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl">
-                    <FolderGit size={20} />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-1 pt-4 mt-3 border-t border-white/5 text-[9px] font-mono text-slate-400">
-                  <div className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                    <span>WEB <span className="text-white font-bold">{webProjectsCount}</span></span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
-                    <span>DESKTOP <span className="text-white font-bold">{desktopProjectsCount}</span></span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-                    <span>OSS <span className="text-white font-bold">{ossProjectsCount}</span></span>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                onClick={() => handleOpenUsersModal('ALL')}
-                className="tech-card p-6 flex flex-col justify-between group min-h-[130px] cursor-pointer hover:border-violet-500/40 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all"
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className="space-y-1">
-                    <span className="mono-label !text-violet-400">Total Users</span>
-                    <h3 className="text-3xl font-black text-white font-display tracking-tight">{totalUsers.toLocaleString()}</h3>
-                  </div>
-                  <div className="p-3 bg-violet-500/10 border border-violet-500/20 text-violet-400 rounded-xl group-hover:bg-violet-500/20 transition-colors">
-                    <Users size={20} />
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 pt-4 mt-3 border-t border-white/5 text-[9px] font-mono text-slate-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
-                  <span>ACTIVE (30D): <strong className="text-white">{totalActive30d.toLocaleString()}</strong></span>
-                </div>
-              </div>
-
-              <div className="tech-card p-6 flex flex-col justify-between group min-h-[130px]">
-                <div className="flex items-center justify-between w-full">
-                  <div className="space-y-1">
-                    <span className="mono-label !text-cyan-400">Downloads</span>
-                    <h3 className="text-3xl font-black text-white font-display tracking-tight">{totalDownloads.toLocaleString()}</h3>
-                  </div>
-                  <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-xl">
-                    <Download size={20} />
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 pt-4 mt-3 border-t border-white/5 text-[9px] font-mono text-slate-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
-                  <span>TELEMETRY: <strong className="text-white">ACTIVE SOLUTIONS</strong></span>
-                </div>
-              </div>
-
-              <div className="tech-card p-6 flex flex-col justify-between group min-h-[130px]">
-                <div className="flex items-center justify-between w-full">
-                  <div className="space-y-1">
-                    <span className="mono-label !text-yellow-400">GitHub Stars</span>
-                    <h3 className="text-3xl font-black text-white font-display tracking-tight">{totalStars.toLocaleString()}</h3>
-                  </div>
-                  <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 rounded-xl">
-                    <Star size={20} />
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 pt-4 mt-3 border-t border-white/5 text-[9px] font-mono text-slate-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-                  <span>REPOSITORIES: <strong className="text-white">{ossProjectsCount} TRACKED</strong></span>
-                </div>
-              </div>
-
-            </div>
-
             {/* Search, Filter, and Sort Bar */}
             <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
               {/* Search */}
@@ -435,13 +355,22 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                   placeholder="Search solutions, repositories, or tags..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 focus:border-indigo-500/40 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none transition-all font-mono"
+                  className="w-full pl-10 pr-10 py-2.5 bg-white/5 border border-white/10 focus:border-indigo-500/40 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none transition-all font-mono"
                 />
                 <span className="absolute left-3.5 top-3.5 text-slate-500">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                   </svg>
                 </span>
+                {search && (
+                  <button 
+                    onClick={() => setSearch('')}
+                    className="absolute right-3.5 top-3.5 text-slate-500 hover:text-white transition-colors cursor-pointer"
+                    title="Clear search"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
               </div>
 
               {/* Filters & Sorting */}
@@ -497,6 +426,96 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                   </select>
                 </div>
               </div>
+            </div>
+
+            {/* High-Level Summary Analytics Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              
+              <div className="tech-card p-6 flex flex-col justify-between group min-h-[130px]">
+                <div className="flex items-center justify-between w-full">
+                  <div className="space-y-1">
+                    <span className="mono-label !text-indigo-400">
+                      Total Projects {isFiltered && <span className="text-[9px] text-amber-500/80 normal-case ml-1 font-mono font-normal tracking-normal">(Filtered)</span>}
+                    </span>
+                    <h3 className="text-3xl font-black text-white font-display tracking-tight">{totalProjectsCount}</h3>
+                  </div>
+                  <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl">
+                    <FolderGit size={20} />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-1 pt-4 mt-3 border-t border-white/5 text-[9px] font-mono text-slate-400">
+                  <div className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                    <span>WEB <span className="text-white font-bold">{webProjectsCount}</span></span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+                    <span>DESKTOP <span className="text-white font-bold">{desktopProjectsCount}</span></span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                    <span>OSS <span className="text-white font-bold">{ossProjectsCount}</span></span>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                onClick={() => handleOpenUsersModal('ALL')}
+                className="tech-card p-6 flex flex-col justify-between group min-h-[130px] cursor-pointer hover:border-violet-500/40 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="space-y-1">
+                    <span className="mono-label !text-violet-400">
+                      Total Users {isFiltered && <span className="text-[9px] text-amber-500/80 normal-case ml-1 font-mono font-normal tracking-normal">(Filtered)</span>}
+                    </span>
+                    <h3 className="text-3xl font-black text-white font-display tracking-tight">{totalUsers.toLocaleString()}</h3>
+                  </div>
+                  <div className="p-3 bg-violet-500/10 border border-violet-500/20 text-violet-400 rounded-xl group-hover:bg-violet-500/20 transition-colors">
+                    <Users size={20} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 pt-4 mt-3 border-t border-white/5 text-[9px] font-mono text-slate-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
+                  <span>ACTIVE (30D): <strong className="text-white">{totalActive30d.toLocaleString()}</strong></span>
+                </div>
+              </div>
+
+              <div className="tech-card p-6 flex flex-col justify-between group min-h-[130px]">
+                <div className="flex items-center justify-between w-full">
+                  <div className="space-y-1">
+                    <span className="mono-label !text-cyan-400">
+                      Downloads {isFiltered && <span className="text-[9px] text-amber-500/80 normal-case ml-1 font-mono font-normal tracking-normal">(Filtered)</span>}
+                    </span>
+                    <h3 className="text-3xl font-black text-white font-display tracking-tight">{totalDownloads.toLocaleString()}</h3>
+                  </div>
+                  <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-xl">
+                    <Download size={20} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 pt-4 mt-3 border-t border-white/5 text-[9px] font-mono text-slate-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+                  <span>TELEMETRY: <strong className="text-white">ACTIVE SOLUTIONS</strong></span>
+                </div>
+              </div>
+
+              <div className="tech-card p-6 flex flex-col justify-between group min-h-[130px]">
+                <div className="flex items-center justify-between w-full">
+                  <div className="space-y-1">
+                    <span className="mono-label !text-yellow-400">
+                      GitHub Stars {isFiltered && <span className="text-[9px] text-amber-500/80 normal-case ml-1 font-mono font-normal tracking-normal">(Filtered)</span>}
+                    </span>
+                    <h3 className="text-3xl font-black text-white font-display tracking-tight">{totalStars.toLocaleString()}</h3>
+                  </div>
+                  <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 rounded-xl">
+                    <Star size={20} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 pt-4 mt-3 border-t border-white/5 text-[9px] font-mono text-slate-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                  <span>REPOSITORIES: <strong className="text-white">{ossProjectsCount} TRACKED</strong></span>
+                </div>
+              </div>
+
             </div>
 
             {/* Dashboard Grid */}
