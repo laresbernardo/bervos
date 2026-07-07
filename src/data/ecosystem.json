@@ -152,14 +152,28 @@
         "Chrome",
         "Extension",
         "Audio",
-        "YouTube",
-        "Automation"
+        "YouTube"
       ],
       "logo": "/yt2mp3-logo.png",
       "category": "productivity",
       "applicationCategory": "UtilitiesApplication",
       "updated": "2026-07-04",
       "version": "2.1.1"
+    },
+    {
+      "title": "BERVOS",
+      "description": "Centralized ecosystem aggregating all BERVOS projects and open source solutions.",
+      "link": "https://bervos.org/",
+      "tags": [
+        "Website",
+        "Portal",
+        "Business"
+      ],
+      "logo": "/logo-white.png",
+      "category": "productivity",
+      "applicationCategory": "WebApplication",
+      "updated": "2026-07-07",
+      "version": "1.0.0"
     }
   ],
   "openSource": [

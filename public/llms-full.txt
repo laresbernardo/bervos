@@ -68,8 +68,14 @@ The name **BERVOS** represents three distinct architectural layers of the ecosys
 ### YT2MP3
 - **Deployment URL**: [https://github.com/laresbernardo/YT2MP3](https://github.com/laresbernardo/YT2MP3)
 - **Category**: Productivity (UtilitiesApplication)
-- **Tags**: Chrome, Extension, Audio, YouTube, Automation
+- **Tags**: Chrome, Extension, Audio, YouTube
 - **Description**: Lightweight Chrome Extension and Node.js server to download YouTube audio as high-quality MP3 with automatic iTunes metadata and high-res covers.
+
+### BERVOS
+- **Deployment URL**: [https://bervos.org/](https://bervos.org/)
+- **Category**: Productivity (WebApplication)
+- **Tags**: Website, Portal, Business
+- **Description**: Centralized ecosystem aggregating all BERVOS projects and open source solutions.
 
 ## Open Source Software
 ### Robyn

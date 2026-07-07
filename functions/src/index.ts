@@ -164,6 +164,7 @@ function getProjectId(item: any): string {
   if (name === 'laresdj') return 'laresdj-b9947';
   if (name === 'pinmage') return 'pinmage-billio';
   if (name === 'tonaly') return 'tonaly-bervos';
+  if (name === 'bervos') return 'bervos-official';
   // Dynamic fallback from domain name
   const match = item.url?.match(/https:\/\/([^.]+)\.bervos\.org/);
   return match ? match[1] : name;
@@ -510,7 +511,8 @@ function getLocalProjectVersion(projectName: string): string | null {
     'laresdj': 'LaresDJ',
     'pinmage': 'Pinmage',
     'tonaly': 'Tonaly',
-    'yt2mp3': 'YT2MP3'
+    'yt2mp3': 'YT2MP3',
+    'bervos': 'BERVOS/BERVOS.org'
   };
 
   const folderName = directoryNames[normalizedName] || projectName;
