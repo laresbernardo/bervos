@@ -535,7 +535,7 @@ function HomePage() {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setVisibleCount(3); // Reset pagination count on search
+                  setVisibleCount(e.target.value ? 9 : 9); // Reset pagination count on search
                   trackEvent('project_search', 'engagement', e.target.value);
                 }}
                 placeholder="SEARCH_PROJECTS // (e.g. Chess, Finance, Go...)"
@@ -545,7 +545,7 @@ function HomePage() {
                 <button
                   onClick={() => {
                     setSearchQuery('');
-                    setVisibleCount(3);
+                    setVisibleCount(9);
                   }}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
                 >
@@ -562,7 +562,7 @@ function HomePage() {
                   key={filter}
                   onClick={() => {
                     setActiveFilter(filter);
-                    setVisibleCount(3); // Reset visible count when filter changes
+                    setVisibleCount(9); // Reset visible count when filter changes
                     trackEvent('filter_change', 'engagement', filter);
                   }}
                   className={`relative px-4 py-2.5 font-mono text-xs uppercase tracking-widest rounded-lg border transition-all duration-300 cursor-pointer ${activeFilter === filter
