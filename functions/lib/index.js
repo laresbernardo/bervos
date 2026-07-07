@@ -831,11 +831,7 @@ async function fetchInitiativeMetrics(item) {
  */
 async function fetchFreshMetrics() {
     const initiatives = await getInitiativesFromSchema();
-    const results = [];
-    for (const item of initiatives) {
-        results.push(await fetchInitiativeMetrics(item));
-    }
-    return results;
+    return Promise.all(initiatives.map(item => fetchInitiativeMetrics(item)));
 }
 // Local cache configuration
 const LOCAL_CACHE_PATH = path.join('/tmp', 'metrics-snapshot.json');

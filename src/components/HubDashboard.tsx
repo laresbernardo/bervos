@@ -71,6 +71,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
   const [usersError, setUsersError] = useState<string | null>(null);
   const [usersSearch, setUsersSearch] = useState('');
   const [selectedProjectFilter, setSelectedProjectFilter] = useState('ALL');
+  const [usersSortBy, setUsersSortBy] = useState<'LAST_LOGIN' | 'SIGNUP'>('LAST_LOGIN');
 
   const fetchUsers = useCallback(async () => {
     setLoadingUsers(true);
@@ -475,21 +476,21 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
             </div>
 
             {/* High-Level Summary Analytics Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
-              <div className="tech-card p-6 flex flex-col justify-between group min-h-[130px]">
+              <div className="tech-card p-4.5 flex flex-col justify-between group min-h-[110px]">
                 <div className="flex items-center justify-between w-full">
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     <span className="mono-label !text-indigo-400">
                       Total Projects {isFiltered && <span className="text-[9px] text-amber-500/80 normal-case ml-1 font-mono font-normal tracking-normal">(Filtered)</span>}
                     </span>
-                    <h3 className="text-3xl font-black text-white font-display tracking-tight">{totalProjectsCount}</h3>
+                    <h3 className="text-4xl md:text-5xl font-black text-white font-display tracking-tight leading-none">{totalProjectsCount}</h3>
                   </div>
-                  <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl">
-                    <FolderGit size={20} />
+                  <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl shrink-0">
+                    <FolderGit size={18} />
                   </div>
                 </div>
-                <div className="flex items-center justify-between gap-1 pt-4 mt-3 border-t border-white/5 text-[9px] font-mono text-slate-400">
+                <div className="flex items-center justify-between gap-1 pt-3 mt-2.5 border-t border-white/5 text-[9px] font-mono text-slate-400">
                   <div className="flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                     <span>WEB <span className="text-white font-bold">{webProjectsCount}</span></span>
@@ -507,56 +508,56 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
 
               <div
                 onClick={() => handleOpenUsersModal('ALL')}
-                className="tech-card p-6 flex flex-col justify-between group min-h-[130px] cursor-pointer hover:border-violet-500/40 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all"
+                className="tech-card p-4.5 flex flex-col justify-between group min-h-[110px] cursor-pointer hover:border-violet-500/40 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all"
               >
                 <div className="flex items-center justify-between w-full">
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     <span className="mono-label !text-violet-400">
                       Total Users {isFiltered && <span className="text-[9px] text-amber-500/80 normal-case ml-1 font-mono font-normal tracking-normal">(Filtered)</span>}
                     </span>
-                    <h3 className="text-3xl font-black text-white font-display tracking-tight">{totalUsers.toLocaleString()}</h3>
+                    <h3 className="text-4xl md:text-5xl font-black text-white font-display tracking-tight leading-none">{totalUsers.toLocaleString()}</h3>
                   </div>
-                  <div className="p-3 bg-violet-500/10 border border-violet-500/20 text-violet-400 rounded-xl group-hover:bg-violet-500/20 transition-colors">
-                    <Users size={20} />
+                  <div className="p-2.5 bg-violet-500/10 border border-violet-500/20 text-violet-400 rounded-xl group-hover:bg-violet-500/20 transition-colors shrink-0">
+                    <Users size={18} />
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 pt-4 mt-3 border-t border-white/5 text-[9px] font-mono text-slate-400">
+                <div className="flex items-center gap-1.5 pt-3 mt-2.5 border-t border-white/5 text-[9px] font-mono text-slate-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
                   <span>ACTIVE (30D): <strong className="text-white">{totalActive30d.toLocaleString()}</strong></span>
                 </div>
               </div>
 
-              <div className="tech-card p-6 flex flex-col justify-between group min-h-[130px]">
+              <div className="tech-card p-4.5 flex flex-col justify-between group min-h-[110px]">
                 <div className="flex items-center justify-between w-full">
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     <span className="mono-label !text-cyan-400">
                       Downloads {isFiltered && <span className="text-[9px] text-amber-500/80 normal-case ml-1 font-mono font-normal tracking-normal">(Filtered)</span>}
                     </span>
-                    <h3 className="text-3xl font-black text-white font-display tracking-tight">{totalDownloads.toLocaleString()}</h3>
+                    <h3 className="text-4xl md:text-5xl font-black text-white font-display tracking-tight leading-none">{totalDownloads.toLocaleString()}</h3>
                   </div>
-                  <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-xl">
-                    <Download size={20} />
+                  <div className="p-2.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-xl shrink-0">
+                    <Download size={18} />
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 pt-4 mt-3 border-t border-white/5 text-[9px] font-mono text-slate-400">
+                <div className="flex items-center gap-1.5 pt-3 mt-2.5 border-t border-white/5 text-[9px] font-mono text-slate-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
                   <span>TELEMETRY: <strong className="text-white">ACTIVE SOLUTIONS</strong></span>
                 </div>
               </div>
 
-              <div className="tech-card p-6 flex flex-col justify-between group min-h-[130px]">
+              <div className="tech-card p-4.5 flex flex-col justify-between group min-h-[110px]">
                 <div className="flex items-center justify-between w-full">
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     <span className="mono-label !text-yellow-400">
                       GitHub Stars {isFiltered && <span className="text-[9px] text-amber-500/80 normal-case ml-1 font-mono font-normal tracking-normal">(Filtered)</span>}
                     </span>
-                    <h3 className="text-3xl font-black text-white font-display tracking-tight">{totalStars.toLocaleString()}</h3>
+                    <h3 className="text-4xl md:text-5xl font-black text-white font-display tracking-tight leading-none">{totalStars.toLocaleString()}</h3>
                   </div>
-                  <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 rounded-xl">
-                    <Star size={20} />
+                  <div className="p-2.5 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 rounded-xl shrink-0">
+                    <Star size={18} />
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 pt-4 mt-3 border-t border-white/5 text-[9px] font-mono text-slate-400">
+                <div className="flex items-center gap-1.5 pt-3 mt-2.5 border-t border-white/5 text-[9px] font-mono text-slate-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
                   <span>REPOSITORIES: <strong className="text-white">{ossProjectsCount} TRACKED</strong></span>
                 </div>
@@ -628,27 +629,43 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                 </span>
               </div>
 
-              {/* Project Filter Dropdown */}
-              <div className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl border border-white/5">
-                <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Filter:</span>
-                <select
-                  value={selectedProjectFilter}
-                  onChange={(e) => setSelectedProjectFilter(e.target.value)}
-                  className="bg-transparent text-slate-200 font-mono text-xs focus:outline-none cursor-pointer border-0"
-                >
-                  <option value="ALL" className="bg-[#0f131a]">ALL PROJECTS ({usersList.length})</option>
-                  {metrics
-                    .filter(m => m.type === 'SoftwareApplication' && m.applicationCategory !== 'UtilitiesApplication')
-                    .map(proj => {
-                      const count = usersList.filter(u => u.projects.includes(proj.name)).length;
-                      return (
-                        <option key={proj.id} value={proj.name} className="bg-[#0f131a]">
-                          {proj.name.toUpperCase()} ({count})
-                        </option>
-                      );
-                    })
-                  }
-                </select>
+              {/* Project Filter Dropdown & Sort Dropdown wrapper */}
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Project Filter Dropdown */}
+                <div className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl border border-white/5">
+                  <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Filter:</span>
+                  <select
+                    value={selectedProjectFilter}
+                    onChange={(e) => setSelectedProjectFilter(e.target.value)}
+                    className="bg-transparent text-slate-200 font-mono text-xs focus:outline-none cursor-pointer border-0"
+                  >
+                    <option value="ALL" className="bg-[#0f131a]">ALL PROJECTS ({usersList.length})</option>
+                    {metrics
+                      .filter(m => m.type === 'SoftwareApplication' && m.applicationCategory !== 'UtilitiesApplication')
+                      .map(proj => {
+                        const count = usersList.filter(u => u.projects.includes(proj.name)).length;
+                        return (
+                          <option key={proj.id} value={proj.name} className="bg-[#0f131a]">
+                            {proj.name.toUpperCase()} ({count})
+                          </option>
+                        );
+                      })
+                    }
+                  </select>
+                </div>
+
+                {/* Sort Dropdown */}
+                <div className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl border border-white/5">
+                  <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Sort:</span>
+                  <select
+                    value={usersSortBy}
+                    onChange={(e) => setUsersSortBy(e.target.value as 'LAST_LOGIN' | 'SIGNUP')}
+                    className="bg-transparent text-slate-200 font-mono text-xs focus:outline-none cursor-pointer border-0"
+                  >
+                    <option value="LAST_LOGIN" className="bg-[#0f131a]">LAST LOGIN</option>
+                    <option value="SIGNUP" className="bg-[#0f131a]">SIGNUP DATE</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -695,8 +712,30 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                           }
                           return 0;
                         };
-                        const dateA = parseToTime(a.lastActive);
-                        const dateB = parseToTime(b.lastActive);
+                        const getCompareDate = (u: typeof a) => {
+                          if (usersSortBy === 'SIGNUP') {
+                            return (selectedProjectFilter !== 'ALL' && u.projectDetails && u.projectDetails[selectedProjectFilter])
+                              ? u.projectDetails[selectedProjectFilter].firstActive
+                              : u.firstActive;
+                          } else {
+                            if (selectedProjectFilter !== 'ALL' && u.projectDetails && u.projectDetails[selectedProjectFilter]) {
+                              return u.projectDetails[selectedProjectFilter].lastActive;
+                            }
+                            let maxDate = u.lastActive || '';
+                            if (u.projectDetails) {
+                              Object.values(u.projectDetails).forEach((details) => {
+                                if (details.lastActive) {
+                                  if (!maxDate || new Date(details.lastActive) > new Date(maxDate)) {
+                                    maxDate = details.lastActive;
+                                  }
+                                }
+                              });
+                            }
+                            return maxDate;
+                          }
+                        };
+                        const dateA = parseToTime(getCompareDate(a));
+                        const dateB = parseToTime(getCompareDate(b));
                         return dateB - dateA;
                       });
 
@@ -726,9 +765,22 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                             ? u.projectDetails[selectedProjectFilter].firstActive
                             : u.firstActive;
 
-                          const displayActiveDate = (selectedProjectFilter !== 'ALL' && u.projectDetails && u.projectDetails[selectedProjectFilter])
-                            ? u.projectDetails[selectedProjectFilter].lastActive
-                            : u.lastActive;
+                          const displayActiveDate = (() => {
+                            if (selectedProjectFilter !== 'ALL' && u.projectDetails && u.projectDetails[selectedProjectFilter]) {
+                              return u.projectDetails[selectedProjectFilter].lastActive;
+                            }
+                            let maxDate = u.lastActive || '';
+                            if (u.projectDetails) {
+                              Object.values(u.projectDetails).forEach((details) => {
+                                if (details.lastActive) {
+                                  if (!maxDate || new Date(details.lastActive) > new Date(maxDate)) {
+                                    maxDate = details.lastActive;
+                                  }
+                                }
+                              });
+                            }
+                            return maxDate;
+                          })();
 
                           return (
                             <div key={i} className="bg-[#0c121d] border border-white/10 p-4 rounded-xl flex flex-col gap-3 hover:border-indigo-500/40 transition-all hover:bg-white/[0.01] relative overflow-hidden group/item">

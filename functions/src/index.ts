@@ -834,13 +834,7 @@ async function fetchInitiativeMetrics(item: any): Promise<any> {
  */
 async function fetchFreshMetrics(): Promise<any[]> {
   const initiatives = await getInitiativesFromSchema();
-  const results: any[] = [];
-
-  for (const item of initiatives) {
-    results.push(await fetchInitiativeMetrics(item));
-  }
-
-  return results;
+  return Promise.all(initiatives.map(item => fetchInitiativeMetrics(item)));
 }
 
 // Local cache configuration

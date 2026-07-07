@@ -11,5 +11,12 @@ export default defineConfig({
   server: {
     port: 2000,
     host: true,
+    proxy: {
+      '/api': {
+        target: 'https://bervos.org',
+        changeOrigin: true,
+        secure: true,
+      }
+    }
   },
 })

@@ -628,7 +628,11 @@ function HomePage() {
                     </span>
                     {getProjectUpdateDate(project) && (
                       <span className="text-slate-400 group-hover:text-indigo-400 transition-colors">
-                        LAST_UPDATED // {getProjectUpdateDate(project)}
+                        LAST_UPDATED // {(() => {
+                          const rawDate = getProjectUpdateDate(project);
+                          const d = new Date(rawDate);
+                          return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : rawDate;
+                        })()}
                       </span>
                     )}
                   </div>
@@ -818,11 +822,17 @@ function HomePage() {
                 {/* Top HUD status bar */}
                 <div className="flex items-center justify-between border-b border-white/5 pb-3 mb-6 text-[9px] font-mono text-slate-500">
                   <span className="text-slate-600">// DEV_STATUS_OSS</span>
-                  {liveMetrics[pkg.name.toLowerCase()]?.lastUpdated && (
-                    <span className="text-slate-400 group-hover:text-indigo-400 transition-colors">
-                      LAST_UPDATED // {liveMetrics[pkg.name.toLowerCase()]?.lastUpdated}
-                    </span>
-                  )}
+                  {(() => {
+                    const rawDate = liveMetrics[pkg.name.toLowerCase()]?.lastUpdated;
+                    if (!rawDate) return null;
+                    const d = new Date(rawDate);
+                    const formatted = !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : rawDate;
+                    return (
+                      <span className="text-slate-400 group-hover:text-indigo-400 transition-colors">
+                        LAST_UPDATED // {formatted}
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 <div>
