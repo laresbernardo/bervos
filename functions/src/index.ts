@@ -426,7 +426,11 @@ async function fetchRepoMetadata(owner: string, repo: string): Promise<RepoMeta>
     'master/DESCRIPTION',
     'master/R/DESCRIPTION',
     'main/package.json',
-    'master/package.json'
+    'master/package.json',
+    'main/extension/manifest.json',
+    'master/extension/manifest.json',
+    'main/server/package.json',
+    'master/server/package.json'
   ];
 
   for (const p of paths) {
@@ -435,7 +439,7 @@ async function fetchRepoMetadata(owner: string, repo: string): Promise<RepoMeta>
       const res = await fetch(url, { headers });
       if (res.ok) {
         const text = await res.text();
-        if (p.endsWith('package.json')) {
+        if (p.endsWith('package.json') || p.endsWith('manifest.json')) {
           const data = JSON.parse(text);
           if (data.version) {
             return { version: data.version };
@@ -505,7 +509,8 @@ function getLocalProjectVersion(projectName: string): string | null {
     'scribo': 'Scribo',
     'laresdj': 'LaresDJ',
     'pinmage': 'Pinmage',
-    'tonaly': 'Tonaly'
+    'tonaly': 'Tonaly',
+    'yt2mp3': 'YT2MP3'
   };
 
   const folderName = directoryNames[normalizedName] || projectName;
@@ -521,7 +526,9 @@ function getLocalProjectVersion(projectName: string): string | null {
     path.join(projectFolderPath, 'web', 'src', 'version.json'),
     path.join(projectFolderPath, 'web', 'package.json'),
     path.join(projectFolderPath, 'frontend', 'src', 'version.json'),
-    path.join(projectFolderPath, 'frontend', 'package.json')
+    path.join(projectFolderPath, 'frontend', 'package.json'),
+    path.join(projectFolderPath, 'extension', 'manifest.json'),
+    path.join(projectFolderPath, 'server', 'package.json')
   ];
 
   for (const p of packagePaths) {
@@ -567,6 +574,7 @@ async function getRepoCommits(projectName: string, repoUrl: string): Promise<Git
     'laresdj': 'LaresDJ',
     'pinmage': 'Pinmage',
     'tonaly': 'Tonaly',
+    'yt2mp3': 'YT2MP3',
     'bervos': 'BERVOS/BERVOS.org'
   };
 

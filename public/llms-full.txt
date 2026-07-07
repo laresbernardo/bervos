@@ -65,6 +65,12 @@ The name **BERVOS** represents three distinct architectural layers of the ecosys
 - **Tags**: Music, Audio, Practice, PWA
 - **Description**: Immersive ear training studio designed for musicians and audiophiles. Develop absolute note recognition, master relative intervals, and unlock deep performance insights.
 
+### YT2MP3
+- **Deployment URL**: [https://github.com/laresbernardo/YT2MP3](https://github.com/laresbernardo/YT2MP3)
+- **Category**: Productivity (UtilitiesApplication)
+- **Tags**: Chrome, Extension, Audio, YouTube, Automation
+- **Description**: Lightweight Chrome Extension and Node.js server to download YouTube audio as high-quality MP3 with automatic iTunes metadata and high-res covers.
+
 ## Open Source Software
 ### Robyn
 - **Repository**: [https://github.com/facebookexperimental/Robyn](https://github.com/facebookexperimental/Robyn)

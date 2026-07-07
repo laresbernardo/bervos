@@ -12,6 +12,7 @@
 - [LaresDJ](https://laresdj.bervos.org/): The ultimate virtual community and resource hub for DJs and music producers, offering tutorials, community forums, equipment maps, custom skins, and curated download packs.
 - [Pinmage](https://pinmage.bervos.org/): Analyzes scanned photo albums or individual photos using AI to deduce dates and places, writing them directly into native EXIF & GPS image metadata.
 - [Tonaly](https://tonaly.bervos.org/): Immersive ear training studio designed for musicians and audiophiles. Develop absolute note recognition, master relative intervals, and unlock deep performance insights.
+- [YT2MP3](https://github.com/laresbernardo/YT2MP3): Lightweight Chrome Extension and Node.js server to download YouTube audio as high-quality MP3 with automatic iTunes metadata and high-res covers.
 
 ## Open Source Libraries
 
