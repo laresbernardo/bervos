@@ -630,8 +630,24 @@ async function getRepoCommits(projectName, repoUrl) {
             console.warn(`[Local Git] Failed to execute git log for ${projectName}:`, e);
         }
     }
-    if (repoUrl && repoUrl.includes('github.com')) {
-        const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+    let gitUrl = repoUrl;
+    if (!gitUrl || !gitUrl.includes('github.com')) {
+        const gitUrlMap = {
+            'billio': 'https://github.com/laresbernardo/Billio.git',
+            'chessverse': 'https://github.com/laresbernardo/Chessverse.git',
+            'tripitdown': 'https://github.com/laresbernardo/tripitdown.git',
+            'aura': 'https://github.com/laresbernardo/aura.git',
+            'scribo': 'https://github.com/laresbernardo/Scribo.git',
+            'laresdj': 'https://github.com/laresbernardo/laresdj.com.git',
+            'pinmage': 'https://github.com/laresbernardo/pinmage',
+            'tonaly': 'https://github.com/laresbernardo/tonaly',
+            'yt2mp3': 'https://github.com/laresbernardo/YT2MP3.git',
+            'bervos': 'https://github.com/laresbernardo/bervos.git'
+        };
+        gitUrl = gitUrlMap[normalizedName] || '';
+    }
+    if (gitUrl && gitUrl.includes('github.com')) {
+        const match = gitUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
         if (match && match[1] && match[2]) {
             const owner = match[1];
             const repo = match[2].replace(/.git$/, '');
@@ -745,7 +761,20 @@ async function fetchInitiativeMetrics(item) {
         metrics.version = localVersion || '1.0.0';
         // Try GitHub for real version if local is unavailable
         if (!localVersion) {
-            const repoUrl = item.codeRepository || '';
+            const normalizedName = name.toLowerCase();
+            const gitUrlMap = {
+                'billio': 'https://github.com/laresbernardo/Billio.git',
+                'chessverse': 'https://github.com/laresbernardo/Chessverse.git',
+                'tripitdown': 'https://github.com/laresbernardo/tripitdown.git',
+                'aura': 'https://github.com/laresbernardo/aura.git',
+                'scribo': 'https://github.com/laresbernardo/Scribo.git',
+                'laresdj': 'https://github.com/laresbernardo/laresdj.com.git',
+                'pinmage': 'https://github.com/laresbernardo/pinmage',
+                'tonaly': 'https://github.com/laresbernardo/tonaly',
+                'yt2mp3': 'https://github.com/laresbernardo/YT2MP3.git',
+                'bervos': 'https://github.com/laresbernardo/bervos.git'
+            };
+            const repoUrl = item.codeRepository || gitUrlMap[normalizedName] || url || '';
             const repoMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
             if (repoMatch) {
                 const owner = repoMatch[1];
