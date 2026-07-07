@@ -196,6 +196,8 @@ function getProjectId(item) {
         return 'pinmage-billio';
     if (name === 'tonaly')
         return 'tonaly-bervos';
+    if (name === 'bervos')
+        return 'bervos-official';
     // Dynamic fallback from domain name
     const match = item.url?.match(/https:\/\/([^.]+)\.bervos\.org/);
     return match ? match[1] : name;
@@ -522,7 +524,8 @@ function getLocalProjectVersion(projectName) {
         'laresdj': 'LaresDJ',
         'pinmage': 'Pinmage',
         'tonaly': 'Tonaly',
-        'yt2mp3': 'YT2MP3'
+        'yt2mp3': 'YT2MP3',
+        'bervos': 'BERVOS/BERVOS.org'
     };
     const folderName = directoryNames[normalizedName] || projectName;
     const projectFolderPath = path.join(parentDir, folderName);
@@ -1086,6 +1089,13 @@ app.get(['/users', '/api/users'], authenticateAdmin, async (req, res) => {
                         if (!existing.photoURL && user.photoURL) {
                             existing.photoURL = user.photoURL;
                         }
+                        if (!existing.projectDetails) {
+                            existing.projectDetails = {};
+                        }
+                        existing.projectDetails[name] = {
+                            firstActive: firstActive,
+                            lastActive: lastActive
+                        };
                     }
                     else {
                         allUsersMap.set(key, {
@@ -1094,7 +1104,13 @@ app.get(['/users', '/api/users'], authenticateAdmin, async (req, res) => {
                             photoURL: user.photoURL || '',
                             projects: [name],
                             lastActive: lastActive,
-                            firstActive: firstActive
+                            firstActive: firstActive,
+                            projectDetails: {
+                                [name]: {
+                                    firstActive: firstActive,
+                                    lastActive: lastActive
+                                }
+                            }
                         });
                     }
                 }

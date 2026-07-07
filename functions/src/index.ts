@@ -1053,7 +1053,15 @@ async function getAppUsersViaCli(projectId: string): Promise<UserRecord[]> {
 app.get(['/users', '/api/users'], authenticateAdmin, async (req: express.Request, res: express.Response) => {
   try {
     const initiatives = await getInitiativesFromSchema();
-    const allUsersMap = new Map<string, { email: string; displayName: string; photoURL: string; projects: string[]; lastActive: string; firstActive: string }>();
+    const allUsersMap = new Map<string, { 
+      email: string; 
+      displayName: string; 
+      photoURL: string; 
+      projects: string[]; 
+      lastActive: string; 
+      firstActive: string;
+      projectDetails: Record<string, { firstActive: string; lastActive: string }>;
+    }>();
 
     for (const item of initiatives) {
       const type = item['@type'];
@@ -1116,6 +1124,13 @@ app.get(['/users', '/api/users'], authenticateAdmin, async (req: express.Request
             if (!existing.photoURL && user.photoURL) {
               existing.photoURL = user.photoURL;
             }
+            if (!existing.projectDetails) {
+              existing.projectDetails = {};
+            }
+            existing.projectDetails[name] = {
+              firstActive: firstActive,
+              lastActive: lastActive
+            };
           } else {
             allUsersMap.set(key, {
               email: user.email,
@@ -1123,7 +1138,13 @@ app.get(['/users', '/api/users'], authenticateAdmin, async (req: express.Request
               photoURL: user.photoURL || '',
               projects: [name],
               lastActive: lastActive,
-              firstActive: firstActive
+              firstActive: firstActive,
+              projectDetails: {
+                [name]: {
+                  firstActive: firstActive,
+                  lastActive: lastActive
+                }
+              }
             });
           }
         }

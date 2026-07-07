@@ -38,7 +38,15 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshingProjectIds, setRefreshingProjectIds] = useState<Record<string, boolean>>({});
   const [isUsersModalOpen, setIsUsersModalOpen] = useState(false);
-  const [usersList, setUsersList] = useState<Array<{ email: string; displayName: string; photoURL: string; projects: string[]; lastActive: string; firstActive: string }>>([]);
+  const [usersList, setUsersList] = useState<Array<{ 
+    email: string; 
+    displayName: string; 
+    photoURL: string; 
+    projects: string[]; 
+    lastActive: string; 
+    firstActive: string;
+    projectDetails?: Record<string, { firstActive: string; lastActive: string }>;
+  }>>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [usersSearch, setUsersSearch] = useState('');
@@ -648,48 +656,73 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
 
                     return (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {filteredUsers.map((u, i) => (
-                          <div key={i} className="bg-[#0c121d] border border-white/10 p-4 rounded-xl flex flex-col gap-3 hover:border-indigo-500/40 transition-all hover:bg-white/[0.01] relative overflow-hidden group/item">
-                            {/* Accent highlight on hover */}
-                            <div className="absolute inset-x-0 bottom-0 h-0.5 bg-indigo-500/0 group-hover/item:bg-indigo-500/50 transition-all" />
-                            
-                            {/* Top row: Avatar + Details */}
-                            <div className="flex items-center gap-3">
-                              {/* Avatar */}
-                              <div className="w-10 h-10 rounded-full overflow-hidden bg-indigo-500/10 border border-white/10 flex items-center justify-center shrink-0">
-                                <UserAvatar src={u.photoURL} name={u.displayName} email={u.email} />
+                        {filteredUsers.map((u, i) => {
+                          const displaySignupDate = (selectedProjectFilter !== 'ALL' && u.projectDetails && u.projectDetails[selectedProjectFilter])
+                            ? u.projectDetails[selectedProjectFilter].firstActive
+                            : u.firstActive;
+
+                          const displayActiveDate = (selectedProjectFilter !== 'ALL' && u.projectDetails && u.projectDetails[selectedProjectFilter])
+                            ? u.projectDetails[selectedProjectFilter].lastActive
+                            : u.lastActive;
+
+                          return (
+                            <div key={i} className="bg-[#0c121d] border border-white/10 p-4 rounded-xl flex flex-col gap-3 hover:border-indigo-500/40 transition-all hover:bg-white/[0.01] relative overflow-hidden group/item">
+                              {/* Accent highlight on hover */}
+                              <div className="absolute inset-x-0 bottom-0 h-0.5 bg-indigo-500/0 group-hover/item:bg-indigo-500/50 transition-all" />
+                              
+                              {/* Top row: Avatar + Details */}
+                              <div className="flex items-center gap-3">
+                                {/* Avatar */}
+                                <div className="w-10 h-10 rounded-full overflow-hidden bg-indigo-500/10 border border-white/10 flex items-center justify-center shrink-0">
+                                  <UserAvatar src={u.photoURL} name={u.displayName} email={u.email} />
+                                </div>
+
+                                {/* Details */}
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="text-sm font-bold text-white truncate leading-tight group-hover/item:text-indigo-400 transition-colors">{u.displayName}</h4>
+                                  <p className="text-[10px] font-mono text-slate-400 truncate mt-0.5">{u.email}</p>
+                                </div>
                               </div>
 
-                              {/* Details */}
-                              <div className="flex-1 min-w-0">
-                                <h4 className="text-sm font-bold text-white truncate leading-tight group-hover/item:text-indigo-400 transition-colors">{u.displayName}</h4>
-                                <p className="text-[10px] font-mono text-slate-400 truncate mt-0.5">{u.email}</p>
+                              {/* Middle row: Projects (full width) */}
+                              <div className="flex flex-wrap gap-1.5 py-1">
+                                {u.projects.map((proj, idx) => {
+                                  const isSelected = selectedProjectFilter === proj;
+                                  return (
+                                    <button
+                                      key={idx}
+                                      onClick={() => setSelectedProjectFilter(prev => prev === proj ? 'ALL' : proj)}
+                                      className={`text-[8px] font-mono px-2 py-0.5 rounded uppercase tracking-wider transition-all cursor-pointer ${
+                                        isSelected 
+                                          ? 'bg-indigo-500 border border-indigo-400 text-white font-bold' 
+                                          : 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/30'
+                                      }`}
+                                    >
+                                      {proj}
+                                    </button>
+                                  );
+                                })}
                               </div>
+
+                              {/* Bottom row: Timestamps (full width, side-by-side) */}
+                              <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[9px] font-mono text-slate-500">
+                                <div>
+                                  <span className="text-slate-600 uppercase">
+                                    {selectedProjectFilter === 'ALL' ? 'Signup:' : `${selectedProjectFilter.toLowerCase()} signup:`}
+                                  </span>{' '}
+                                  <span className="text-slate-400 font-bold">{formatDate(displaySignupDate)}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-600 uppercase">
+                                    {selectedProjectFilter === 'ALL' ? 'Last Login:' : `${selectedProjectFilter.toLowerCase()} login:`}
+                                  </span>{' '}
+                                  <span className="text-slate-400 font-bold">{formatDate(displayActiveDate)}</span>
+                                </div>
+                              </div>
+
                             </div>
-
-                            {/* Middle row: Projects (full width) */}
-                            <div className="flex flex-wrap gap-1.5 py-1">
-                              {u.projects.map((proj, idx) => (
-                                <span key={idx} className="text-[8px] font-mono bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded uppercase tracking-wider">
-                                  {proj}
-                                </span>
-                              ))}
-                            </div>
-
-                            {/* Bottom row: Timestamps (full width, side-by-side) */}
-                            <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[9px] font-mono text-slate-500">
-                              <div>
-                                <span className="text-slate-600 uppercase">Signup:</span>{' '}
-                                <span className="text-slate-400 font-bold">{formatDate(u.firstActive)}</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-600 uppercase">Active:</span>{' '}
-                                <span className="text-slate-400 font-bold">{formatDate(u.lastActive)}</span>
-                              </div>
-                            </div>
-
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     );
                   })()}
