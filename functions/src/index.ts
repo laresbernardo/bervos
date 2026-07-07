@@ -466,6 +466,89 @@ async function fetchRepoMetadata(owner: string, repo: string): Promise<RepoMeta>
   return { version: '0.0.0' };
 }
 
+async function fetchBacklogFromRepo(owner: string, repo: string): Promise<{ count: number; content: string; updatedAt: string }> {
+  const branches = ['main', 'master'];
+  const token = process.env.GITHUB_TOKEN;
+
+  function parseCount(content: string): number {
+    return content.split('\n').filter(l => l.trim().startsWith('- ')).length;
+  }
+
+  function headerDate(res: Response): string {
+    const lm = res.headers.get('last-modified');
+    if (lm) {
+      const d = new Date(lm);
+      if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+    }
+    return '';
+  }
+
+  // 1. Try raw.githubusercontent.com (public repos)
+  for (const branch of branches) {
+    try {
+      const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/BACKLOG.md`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const content = await res.text();
+        return { count: parseCount(content), content, updatedAt: headerDate(res) };
+      }
+    } catch (err) {
+      console.warn(`[Backlog] raw.githubusercontent.com failed for ${owner}/${repo} on ${branch}:`, err);
+    }
+  }
+
+  if (!token) return { count: 0, content: '', updatedAt: '' };
+
+  // 2. Try GitHub Contents API (private repos) with raw accept header
+  for (const branch of branches) {
+    try {
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/BACKLOG.md?ref=${branch}`;
+      const apiRes = await fetch(apiUrl, {
+        headers: {
+          'User-Agent': 'bervos-hub',
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3.raw'
+        }
+      });
+      if (apiRes.ok) {
+        const content = await apiRes.text();
+        let updatedAt = headerDate(apiRes);
+        console.log(`[Backlog] API response for ${owner}/${repo} on ${branch}: last-modified=${apiRes.headers.get('last-modified')}, updatedAt=${updatedAt}`);
+        // If no last-modified header, fetch the commit date via Commits API
+        if (!updatedAt) {
+          try {
+            const commitUrl = `https://api.github.com/repos/${owner}/${repo}/commits?path=BACKLOG.md&per_page=1&sha=${branch}`;
+            const commitRes = await fetch(commitUrl, {
+              headers: {
+                'User-Agent': 'bervos-hub',
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json'
+              }
+            });
+            if (commitRes.ok) {
+              const body = await commitRes.json();
+              console.log(`[Backlog] Commits API response for ${owner}/${repo} on ${branch}:`, JSON.stringify(body).slice(0, 500));
+              if (Array.isArray(body) && body.length > 0) {
+                const date = body[0].commit?.committer?.date || body[0].commit?.author?.date || '';
+                if (date) updatedAt = new Date(date).toISOString().split('T')[0];
+              }
+            } else {
+              console.warn(`[Backlog] Commits API returned ${commitRes.status} for ${owner}/${repo} on ${branch}`);
+            }
+          } catch (e) {
+            console.warn(`[Backlog] Commits API failed for ${owner}/${repo}:`, e);
+          }
+        }
+        return { count: parseCount(content), content, updatedAt };
+      }
+    } catch (err) {
+      console.warn(`[Backlog] GitHub API failed for ${owner}/${repo} on ${branch}:`, err);
+    }
+  }
+
+  return { count: 0, content: '', updatedAt: '' };
+}
+
 /**
  * lightweight HEAD request ping to calculate server latency
  */
@@ -825,6 +908,42 @@ async function fetchInitiativeMetrics(item: any): Promise<any> {
   // Retrieve recent commits (prefer codeRepository for GitHub projects)
   const commitUrl = item.codeRepository || url;
   metrics.commits = await getRepoCommits(name, commitUrl);
+
+  // Fetch BACKLOG.md count and content from GitHub repo
+  const extractOwnerRepo = (u: string) => {
+    if (!u || !u.includes('github.com')) return null;
+    const m = u.match(/github\.com\/([^/]+)\/([^/]+?)(\.git|\/|$)/);
+    return m && m[1] && m[2] ? { owner: m[1], repo: m[2] } : null;
+  };
+
+  let gh = extractOwnerRepo(item.codeRepository || url);
+
+  if (!gh) {
+    const n = name.toLowerCase();
+    const backlogGitUrlMap: Record<string, string> = {
+      'billio': 'https://github.com/laresbernardo/Billio.git',
+      'chessverse': 'https://github.com/laresbernardo/Chessverse.git',
+      'tripitdown': 'https://github.com/laresbernardo/tripitdown.git',
+      'aura': 'https://github.com/laresbernardo/aura.git',
+      'scribo': 'https://github.com/laresbernardo/Scribo.git',
+      'laresdj': 'https://github.com/laresbernardo/laresdj.com.git',
+      'pinmage': 'https://github.com/laresbernardo/pinmage',
+      'tonaly': 'https://github.com/laresbernardo/tonaly',
+      'yt2mp3': 'https://github.com/laresbernardo/YT2MP3.git',
+      'bervos': 'https://github.com/laresbernardo/bervos.git'
+    };
+    gh = extractOwnerRepo(backlogGitUrlMap[n]);
+  }
+
+  if (gh) {
+    const backlog = await fetchBacklogFromRepo(gh.owner, gh.repo);
+    metrics.backlogCount = backlog.count;
+    metrics.backlogContent = backlog.content;
+    metrics.backlogUpdatedAt = backlog.updatedAt;
+  } else {
+    metrics.backlogCount = 0;
+    metrics.backlogContent = '';
+  }
 
   return metrics;
 }

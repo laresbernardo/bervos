@@ -478,6 +478,50 @@ async function fetchRepoMetadata(owner, repo) {
     }
     return { version: '0.0.0' };
 }
+async function fetchBacklogFromRepo(owner, repo) {
+    const branches = ['main', 'master'];
+    // Try raw.githubusercontent.com first (public repos)
+    for (const branch of branches) {
+        try {
+            const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/BACKLOG.md`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const content = await res.text();
+                const lines = content.split('\n');
+                const count = lines.filter(line => line.trim().startsWith('- ')).length;
+                return { count, content };
+            }
+        }
+        catch (err) {
+            console.warn(`[Backlog] Failed to fetch BACKLOG.md for ${owner}/${repo} on ${branch}:`, err);
+        }
+    }
+    // Fallback: GitHub Contents API (supports private repos with GITHUB_TOKEN)
+    const token = process.env.GITHUB_TOKEN;
+    if (token) {
+        const apiHeaders = {
+            'User-Agent': 'bervos-hub',
+            'Authorization': `token ${token}`,
+            'Accept': 'application/vnd.github.v3.raw'
+        };
+        for (const branch of branches) {
+            try {
+                const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/BACKLOG.md?ref=${branch}`;
+                const apiRes = await fetch(apiUrl, { headers: apiHeaders });
+                if (apiRes.ok) {
+                    const content = await apiRes.text();
+                    const lines = content.split('\n');
+                    const count = lines.filter(line => line.trim().startsWith('- ')).length;
+                    return { count, content };
+                }
+            }
+            catch (err) {
+                console.warn(`[Backlog] GitHub API failed for ${owner}/${repo} on ${branch}:`, err);
+            }
+        }
+    }
+    return { count: 0, content: '' };
+}
 /**
  * lightweight HEAD request ping to calculate server latency
  */
@@ -824,6 +868,39 @@ async function fetchInitiativeMetrics(item) {
     // Retrieve recent commits (prefer codeRepository for GitHub projects)
     const commitUrl = item.codeRepository || url;
     metrics.commits = await getRepoCommits(name, commitUrl);
+    // Fetch BACKLOG.md count and content from GitHub repo
+    const extractOwnerRepo = (u) => {
+        if (!u || !u.includes('github.com'))
+            return null;
+        const m = u.match(/github\.com\/([^/]+)\/([^/]+?)(\.git|\/|$)/);
+        return m && m[1] && m[2] ? { owner: m[1], repo: m[2] } : null;
+    };
+    let gh = extractOwnerRepo(item.codeRepository || url);
+    if (!gh) {
+        const n = name.toLowerCase();
+        const backlogGitUrlMap = {
+            'billio': 'https://github.com/laresbernardo/Billio.git',
+            'chessverse': 'https://github.com/laresbernardo/Chessverse.git',
+            'tripitdown': 'https://github.com/laresbernardo/tripitdown.git',
+            'aura': 'https://github.com/laresbernardo/aura.git',
+            'scribo': 'https://github.com/laresbernardo/Scribo.git',
+            'laresdj': 'https://github.com/laresbernardo/laresdj.com.git',
+            'pinmage': 'https://github.com/laresbernardo/pinmage',
+            'tonaly': 'https://github.com/laresbernardo/tonaly',
+            'yt2mp3': 'https://github.com/laresbernardo/YT2MP3.git',
+            'bervos': 'https://github.com/laresbernardo/bervos.git'
+        };
+        gh = extractOwnerRepo(backlogGitUrlMap[n]);
+    }
+    if (gh) {
+        const backlog = await fetchBacklogFromRepo(gh.owner, gh.repo);
+        metrics.backlogCount = backlog.count;
+        metrics.backlogContent = backlog.content;
+    }
+    else {
+        metrics.backlogCount = 0;
+        metrics.backlogContent = '';
+    }
     return metrics;
 }
 /**

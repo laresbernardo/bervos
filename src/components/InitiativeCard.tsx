@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Star, GitFork, Clock, Users, Download, ArrowUpRight, Info, RefreshCw } from 'lucide-react';
+import { Star, GitFork, Clock, Users, Download, ArrowUpRight, Info, RefreshCw, List } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa';
 
 export interface InitiativeMetric {
@@ -28,6 +28,9 @@ export interface InitiativeMetric {
     timestamp?: string;
     commitUrl?: string;
   }>;
+  backlogCount?: number;
+  backlogContent?: string;
+  backlogUpdatedAt?: string;
 }
 
 interface InitiativeCardProps {
@@ -35,9 +38,10 @@ interface InitiativeCardProps {
   onUsersClick?: (projectName: string) => void;
   onRefresh?: (projectId: string) => void;
   isRefreshing?: boolean;
+  onShowBacklog?: (projectId: string) => void;
 }
 
-export const InitiativeCard: React.FC<InitiativeCardProps> = ({ item, onUsersClick, onRefresh, isRefreshing }) => {
+export const InitiativeCard: React.FC<InitiativeCardProps> = ({ item, onUsersClick, onRefresh, isRefreshing, onShowBacklog }) => {
   const isWebApp = item.type === 'SoftwareApplication' && item.applicationCategory !== 'UtilitiesApplication';
   const isDesktop = item.type === 'SoftwareApplication' && item.applicationCategory === 'UtilitiesApplication';
   const isOS = item.type === 'SoftwareSourceCode';
@@ -63,31 +67,50 @@ export const InitiativeCard: React.FC<InitiativeCardProps> = ({ item, onUsersCli
             {!isOS && item.uptime !== undefined && (
               <div 
                 title={item.uptime ? "Uptime status: The deployment server is responding to network requests successfully." : "Uptime status: The deployment server is currently offline or unreachable."}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-mono tracking-tighter uppercase border cursor-help ${
-                  item.uptime 
-                    ? 'bg-green-500/10 text-green-400 border-green-500/20' 
-                    : 'bg-red-500/10 text-red-400 border-red-500/20'
-                }`}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-mono tracking-tighter uppercase border ${
+                   item.uptime 
+                     ? 'bg-green-500/10 text-green-400 border-green-500/20' 
+                     : 'bg-red-500/10 text-red-400 border-red-500/20'
+                 }`}
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${item.uptime ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
                 {item.uptime ? 'ONLINE' : 'OFFLINE'}
-                <Info size={8} className="opacity-60 ml-0.5" />
               </div>
             )}
 
-            {onRefresh && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRefresh(item.id);
-                }}
-                disabled={isRefreshing}
-                title="Refresh project metrics"
-                className="p-1.5 bg-white/5 border border-white/10 hover:border-indigo-500/40 hover:text-indigo-400 rounded-lg text-slate-400 transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center"
-              >
-                <RefreshCw size={11} className={isRefreshing ? 'animate-spin text-indigo-400' : ''} />
-              </button>
-            )}
+            <div className="flex items-center gap-1.5">
+              {onShowBacklog && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShowBacklog(item.id);
+                  }}
+                  title={`Backlog (${item.backlogCount || 0} items)`}
+                  className="relative p-1.5 bg-white/5 border border-white/10 hover:border-indigo-500/40 hover:text-indigo-400 rounded-lg text-slate-400 transition-all cursor-pointer flex items-center justify-center"
+                >
+                  <List size={11} />
+                  {(item.backlogCount || 0) > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] flex items-center justify-center bg-red-500 text-white text-[8px] font-mono font-bold rounded-full px-[3px] leading-none">
+                      {item.backlogCount}
+                    </span>
+                  )}
+                </button>
+              )}
+
+              {onRefresh && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRefresh(item.id);
+                  }}
+                  disabled={isRefreshing}
+                  title="Refresh project metrics"
+                  className="p-1.5 bg-white/5 border border-white/10 hover:border-indigo-500/40 hover:text-indigo-400 rounded-lg text-slate-400 transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center"
+                >
+                  <RefreshCw size={11} className={isRefreshing ? 'animate-spin text-indigo-400' : ''} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

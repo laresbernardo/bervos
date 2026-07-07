@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { signOut } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { auth } from '../firebase';
 import { InitiativeCard } from './InitiativeCard';
 import type { InitiativeMetric } from './InitiativeCard';
-import { RefreshCw, LogOut, Users, Download, ShieldAlert, Star, FolderGit, X, Search, Loader2 } from 'lucide-react';
+import { RefreshCw, LogOut, Users, Download, ShieldAlert, Star, FolderGit, X, Search, Loader2, List } from 'lucide-react';
 
 const UserAvatar: React.FC<{ src?: string; name: string; email: string }> = ({ src, name, email }) => {
   const [error, setError] = useState(false);
@@ -72,6 +72,84 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
   const [usersSearch, setUsersSearch] = useState('');
   const [selectedProjectFilter, setSelectedProjectFilter] = useState('ALL');
   const [usersSortBy, setUsersSortBy] = useState<'LAST_LOGIN' | 'SIGNUP'>('LAST_LOGIN');
+  const [backlogModalProject, setBacklogModalProject] = useState<string | null>(null);
+  const [backlogModalContent, setBacklogModalContent] = useState<string>('');
+  const [backlogModalUpdatedAt, setBacklogModalUpdatedAt] = useState<string>('');
+  const backlogFetchedRef = useRef(false);
+
+  const GIT_REPO_MAP: Record<string, string> = {
+    'billio': 'laresbernardo/Billio',
+    'chessverse': 'laresbernardo/Chessverse',
+    'tripitdown': 'laresbernardo/tripitdown',
+    'aura': 'laresbernardo/aura',
+    'scribo': 'laresbernardo/Scribo',
+    'laresdj': 'laresbernardo/laresdj.com',
+    'pinmage': 'laresbernardo/pinmage',
+    'tonaly': 'laresbernardo/tonaly',
+    'yt2mp3': 'laresbernardo/YT2MP3',
+    'bervos': 'laresbernardo/bervos'
+  };
+
+  const getRepoPath = useCallback((name: string): string | null => {
+    const n = name.toLowerCase();
+    if (GIT_REPO_MAP[n]) return GIT_REPO_MAP[n];
+    const project = metrics.find(m => m.name === name);
+    if (project?.url?.includes('github.com')) {
+      const m = project.url.match(/github\.com\/([^/]+\/[^/]+?)(\.git|\/|$)/);
+      if (m) return m[1];
+    }
+    return null;
+  }, [metrics]);
+
+  useEffect(() => {
+    if (backlogFetchedRef.current || metrics.length === 0) return;
+    const needsBacklog = metrics.filter(m => m.backlogCount === undefined);
+    if (needsBacklog.length === 0) {
+      backlogFetchedRef.current = true;
+      return;
+    }
+
+    backlogFetchedRef.current = true;
+    Promise.all(needsBacklog.map(async (project) => {
+      const repoPath = getRepoPath(project.name);
+      if (!repoPath) return null;
+      const branches = ['main', 'master'];
+      for (const branch of branches) {
+        try {
+          const res = await fetch(`https://raw.githubusercontent.com/${repoPath}/${branch}/BACKLOG.md`);
+          if (res.ok) {
+            const content = await res.text();
+            const lines = content.split('\n');
+            const count = lines.filter(l => l.trim().startsWith('- ')).length;
+            return { id: project.id, count, content, updatedAt: '' };
+          }
+        } catch (e) { }
+      }
+      for (const branch of branches) {
+        try {
+          const res = await fetch(`https://api.github.com/repos/${repoPath}/contents/BACKLOG.md?ref=${branch}`, {
+            headers: { 'Accept': 'application/vnd.github.v3.raw', 'User-Agent': 'bervos-hub' }
+          });
+          if (res.ok) {
+            const content = await res.text();
+            const lines = content.split('\n');
+            const count = lines.filter(l => l.trim().startsWith('- ')).length;
+            return { id: project.id, count, content, updatedAt: '' };
+          }
+        } catch (e) { }
+      }
+      return { id: project.id, count: 0, content: '', updatedAt: '' };
+    })).then(results => {
+      const valid = results.filter(Boolean) as Array<{ id: string; count: number; content: string; updatedAt: string }>;
+      const toUpdate = valid.filter(r => r.count > 0 || r.content !== '');
+      if (toUpdate.length > 0) {
+        setMetrics(prev => prev.map(m => {
+          const found = toUpdate.find(v => v.id === m.id);
+          return found ? { ...m, backlogCount: found.count, backlogContent: found.content } : m;
+        }));
+      }
+    });
+  }, [metrics, getRepoPath]);
 
   const fetchUsers = useCallback(async () => {
     setLoadingUsers(true);
@@ -100,6 +178,15 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
     setIsUsersModalOpen(true);
     fetchUsers();
   }, [fetchUsers]);
+
+  const handleShowBacklog = useCallback((projectId: string) => {
+    const project = metrics.find(m => m.id === projectId);
+    if (project) {
+      setBacklogModalContent(project.backlogContent || '');
+      setBacklogModalProject(project.name);
+      setBacklogModalUpdatedAt(project.backlogUpdatedAt || '');
+    }
+  }, [metrics]);
 
   const fetchMetrics = useCallback(async (isManual = false) => {
     if (isManual) {
@@ -225,6 +312,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('ALL');
   const [sortBy, setSortBy] = useState('LAST_UPDATED');
+  const [backlogFilter, setBacklogFilter] = useState(false);
 
   // Sorting helper functions
   const getSortDate = (item: InitiativeMetric) => {
@@ -264,6 +352,9 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
       if (filterType === 'OS') {
         return matchesSearch && item.type === 'SoftwareSourceCode';
       }
+      if (backlogFilter) {
+        return matchesSearch && (item.backlogCount || 0) > 0;
+      }
       return matchesSearch;
     })
     .sort((a, b) => {
@@ -283,7 +374,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
     });
 
   // Check if any filter or search query is active to label stats as filtered
-  const isFiltered = search !== '' || filterType !== 'ALL';
+  const isFiltered = search !== '' || filterType !== 'ALL' || backlogFilter;
 
   // Aggregated Stats
   const totalProjectsCount = filteredAndSorted.length;
@@ -307,12 +398,12 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
 
   // Dynamic unique users logic for summary analytics card
   const filteredUsersList = usersList.filter(u => {
-    const matchesSearch = !search || 
+    const matchesSearch = !search ||
       (u.displayName && u.displayName.toLowerCase().includes(search.toLowerCase())) ||
       (u.email && u.email.toLowerCase().includes(search.toLowerCase())) ||
       u.projects.some(p => p.toLowerCase().includes(search.toLowerCase()));
 
-    const matchesProject = filterType === 'ALL' || 
+    const matchesProject = filterType === 'ALL' ||
       u.projects.some(projName => {
         const proj = metrics.find(m => m.name === projName);
         if (!proj) return false;
@@ -352,7 +443,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-                <span className="mono-label !text-indigo-400">System_Control // Dashboard</span>
+                <span className="mono-label !text-indigo-400">System_Control // {__APP_VERSION__}</span>
               </div>
               <h1 className="text-3xl md:text-4xl font-black glow-text tracking-tighter uppercase leading-none">BERVOS Hub</h1>
             </div>
@@ -363,10 +454,10 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
             {cacheStatus && cacheStatus !== 'MISS' && (
               <div
                 className={`px-3 py-1.5 rounded-lg border font-mono text-[10px] tracking-wider uppercase ${cacheStatus === 'HIT'
-                    ? 'bg-green-500/5 text-green-400 border-green-500/20'
-                    : cacheStatus === 'STALE'
-                      ? 'bg-yellow-500/5 text-yellow-400 border-yellow-500/20 animate-pulse'
-                      : 'bg-indigo-500/5 text-indigo-400 border-indigo-500/20'
+                  ? 'bg-green-500/5 text-green-400 border-green-500/20'
+                  : cacheStatus === 'STALE'
+                    ? 'bg-yellow-500/5 text-yellow-400 border-yellow-500/20 animate-pulse'
+                    : 'bg-indigo-500/5 text-indigo-400 border-indigo-500/20'
                   }`}
                 title="SWR Cache Status. HIT = Served from cache. STALE = Served cache and refreshing backend. MISS = Cache empty."
               >
@@ -490,6 +581,22 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                   </button>
                 </div>
 
+                {metrics.some(m => (m.backlogCount || 0) > 0) && (
+                  <button
+                    onClick={() => setBacklogFilter(v => !v)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer border ${backlogFilter
+                        ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 font-bold'
+                        : 'bg-white/5 text-slate-400 hover:text-slate-200 border-white/5'
+                      }`}
+                    title="Show only projects with backlog items"
+                  >
+                    <span>w/BACKLOG</span>
+                    <span className={`text-[9px] ${backlogFilter ? 'text-amber-300' : 'text-slate-500'}`}>
+                      ({metrics.filter(m => (m.backlogCount || 0) > 0).length})
+                    </span>
+                  </button>
+                )}
+
                 {/* Sort dropdown */}
                 <div className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl border border-white/5">
                   <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Sort:</span>
@@ -508,7 +615,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
             </div>
 
             {/* High-Level Summary Analytics Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 
               <div className="tech-card p-4.5 flex flex-col justify-between group min-h-[110px]">
                 <div className="flex items-center justify-between w-full">
@@ -535,6 +642,26 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                     <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
                     <span>OSS <span className="text-white font-bold">{ossProjectsCount}</span></span>
                   </div>
+                </div>
+              </div>
+
+              <div className="tech-card p-4.5 flex flex-col justify-between group min-h-[110px]">
+                <div className="flex items-center justify-between w-full">
+                  <div className="space-y-0.5">
+                    <span className="mono-label !text-amber-400">
+                      Backlog Items {isFiltered && <span className="text-[9px] text-amber-500/80 normal-case ml-1 font-mono font-normal tracking-normal">(Filtered)</span>}
+                    </span>
+                    <h3 className="text-4xl md:text-5xl font-black text-white font-display tracking-tight leading-none">
+                      {metrics.reduce((s, m) => s + (m.backlogCount || 0), 0)}
+                    </h3>
+                  </div>
+                  <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl shrink-0">
+                    <List size={18} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 pt-3 mt-2.5 border-t border-white/5 text-[9px] font-mono text-slate-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span>PROJECTS: <strong className="text-white">{metrics.filter(m => (m.backlogCount || 0) > 0).length}</strong> WITH ITEMS</span>
                 </div>
               </div>
 
@@ -630,6 +757,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                     onUsersClick={handleOpenUsersModal}
                     onRefresh={refreshProject}
                     isRefreshing={!!refreshingProjectIds[item.id]}
+                    onShowBacklog={handleShowBacklog}
                   />
                 ))}
               </div>
@@ -865,8 +993,8 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                                       key={idx}
                                       onClick={() => setSelectedProjectFilter(prev => prev === proj ? 'ALL' : proj)}
                                       className={`text-[8px] font-mono px-2 py-0.5 rounded uppercase tracking-wider transition-all cursor-pointer ${isSelected
-                                          ? 'bg-indigo-500 border border-indigo-400 text-white font-bold'
-                                          : 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/30'
+                                        ? 'bg-indigo-500 border border-indigo-400 text-white font-bold'
+                                        : 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/30'
                                         }`}
                                     >
                                       {proj}
@@ -914,6 +1042,117 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                 <span>TOTAL REGISTERED (SUM): <strong className="text-white font-bold">{totalUsers}</strong></span>
                 <span>UNIQUE USERS: <strong className="text-white font-bold">{usersList.length}</strong></span>
               </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Backlog Modal */}
+      {backlogModalProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#080b12]/80 backdrop-blur-md transition-all duration-300">
+          <div className="relative w-full max-w-2xl max-h-[80vh] bg-[#0c121d] border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-[0_0_50px_rgba(79,70,229,0.15)]">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500" />
+
+            {/* Modal Header */}
+            <div className="p-6 border-b border-white/5 flex items-start justify-between">
+              <div>
+                <span className="mono-label !text-indigo-400">
+                  // BACKLOG_DIRECTORY{backlogModalUpdatedAt ? <span className="text-slate-500 ml-1">// LAST UPDATED: {backlogModalUpdatedAt}</span> : ''}
+                </span>
+                <h3 className="text-xl font-black text-white tracking-tight uppercase mt-1">{backlogModalProject}</h3>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setBacklogModalProject(null)}
+                  className="p-2 bg-white/5 border border-white/10 hover:border-white/20 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {backlogModalContent ? (
+                <div className="space-y-1.5 font-mono text-xs leading-relaxed">
+                  {(() => {
+                    const lines = backlogModalContent.split('\n');
+                    const sections: { heading: string | null; items: string[] }[] = [];
+                    let orphanItems: string[] = [];
+
+                    // Collect all list items that appear before any header
+                    let headerFound = false;
+                    lines.forEach((line) => {
+                      if (line.startsWith('#')) {
+                        headerFound = true;
+                        sections.push({ heading: line.replace(/^#+\s*/, '').replace(/:[\s]*$/, '').trim(), items: [] });
+                      } else if (line.trim().startsWith('- ')) {
+                        if (!headerFound) {
+                          orphanItems.push(line);
+                        } else if (sections.length > 0) {
+                          sections[sections.length - 1].items.push(line);
+                        }
+                      } else if (line.startsWith('#') === false && sections.length > 0 && line.trim()) {
+                        // non-empty non-header line after a header — could be body text, skip
+                      }
+                    });
+
+                    const rendered: React.ReactNode[] = [];
+
+                    if (orphanItems.length > 0) {
+                      rendered.push(
+                        <div key="orphan" className="space-y-1.5 mt-2">
+                          {orphanItems.map((item, ii) => (
+                            <div key={ii} className="text-slate-200 pl-4 border-l-2 border-indigo-500/40">
+                              <span className="flex items-start gap-2">
+                                <span className="text-indigo-400 shrink-0 mt-0.5">→</span>
+                                <span>{item.trim().substring(2)}</span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+
+                    sections.forEach((section, si) => {
+                      if (section.items.length === 0) return;
+                      rendered.push(
+                        <div key={`s-${si}`}>
+                          <div className="text-white font-bold text-sm mt-4 mb-2">{section.heading}</div>
+                          <div className="space-y-1.5">
+                            {section.items.map((item, ii) => (
+                              <div key={ii} className="text-slate-200 pl-4 border-l-2 border-indigo-500/40">
+                                <span className="flex items-start gap-2">
+                                  <span className="text-indigo-400 shrink-0 mt-0.5">→</span>
+                                  <span>{item.trim().substring(2)}</span>
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    });
+
+                    return rendered.length > 0 ? rendered : <div className="text-slate-500 text-center py-10 font-mono text-xs">No actionable backlog items found.</div>;
+                  })()}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <List size={32} className="text-slate-500" />
+                  <span className="text-xs font-mono text-slate-500 uppercase tracking-widest">No backlog items found</span>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-white/5 bg-white/[0.01] flex items-center justify-between text-[10px] font-mono text-slate-500">
+              <span>BACKLOG.md // LIVE FROM GITHUB</span>
+              <span>
+                <strong className="text-white font-bold">
+                  {backlogModalContent ? backlogModalContent.split('\n').filter(l => l.trim().startsWith('- ')).length : 0}
+                </strong> ITEM{(backlogModalContent ? backlogModalContent.split('\n').filter(l => l.trim().startsWith('- ')).length : 0) !== 1 ? 'S' : ''}
+              </span>
             </div>
 
           </div>
