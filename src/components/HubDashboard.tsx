@@ -213,9 +213,10 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchMetrics();
+      fetchUsers();
     }, 0);
     return () => clearTimeout(timer);
-  }, [fetchMetrics]);
+  }, [fetchMetrics, fetchUsers]);
 
   const handleSignOut = () => {
     if (auth) signOut(auth);
@@ -300,6 +301,37 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
   const totalStars = filteredAndSorted
     .filter(m => m.type === 'SoftwareSourceCode')
     .reduce((sum, m) => sum + (m.stars || 0), 0);
+
+  const downloadSolutionsCount = filteredAndSorted
+    .filter(m => m.type !== 'SoftwareSourceCode' && (m.downloads || 0) > 0).length;
+
+  // Dynamic unique users logic for summary analytics card
+  const filteredUsersList = usersList.filter(u => {
+    const matchesSearch = !search || 
+      (u.displayName && u.displayName.toLowerCase().includes(search.toLowerCase())) ||
+      (u.email && u.email.toLowerCase().includes(search.toLowerCase())) ||
+      u.projects.some(p => p.toLowerCase().includes(search.toLowerCase()));
+
+    const matchesProject = filterType === 'ALL' || 
+      u.projects.some(projName => {
+        const proj = metrics.find(m => m.name === projName);
+        if (!proj) return false;
+        if (filterType === 'WEB') return proj.type === 'SoftwareApplication' && proj.applicationCategory !== 'UtilitiesApplication';
+        if (filterType === 'DESKTOP') return proj.type === 'SoftwareApplication' && proj.applicationCategory === 'UtilitiesApplication';
+        if (filterType === 'OS') return proj.type === 'SoftwareSourceCode';
+        return true;
+      });
+
+    return matchesSearch && matchesProject;
+  });
+
+  const uniqueUsersFiltered = filteredUsersList.length;
+  const uniqueActive30dFiltered = filteredUsersList.filter(u => {
+    const lastActiveTime = Date.parse(u.lastActive);
+    if (isNaN(lastActiveTime)) return false;
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return lastActiveTime >= thirtyDaysAgo;
+  }).length;
 
 
 
@@ -515,7 +547,16 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                     <span className="mono-label !text-violet-400">
                       Total Users {isFiltered && <span className="text-[9px] text-amber-500/80 normal-case ml-1 font-mono font-normal tracking-normal">(Filtered)</span>}
                     </span>
-                    <h3 className="text-4xl md:text-5xl font-black text-white font-display tracking-tight leading-none">{totalUsers.toLocaleString()}</h3>
+                    <div className="flex items-baseline gap-1.5">
+                      <h3 className="text-4xl md:text-5xl font-black text-white font-display tracking-tight leading-none">
+                        {usersList.length > 0 ? uniqueUsersFiltered.toLocaleString() : totalUsers.toLocaleString()}
+                      </h3>
+                      {usersList.length > 0 && (
+                        <span className="text-[9px] text-slate-400 font-mono">
+                          UNIQ ({totalUsers.toLocaleString()} SUM)
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="p-2.5 bg-violet-500/10 border border-violet-500/20 text-violet-400 rounded-xl group-hover:bg-violet-500/20 transition-colors shrink-0">
                     <Users size={18} />
@@ -523,7 +564,14 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                 </div>
                 <div className="flex items-center gap-1.5 pt-3 mt-2.5 border-t border-white/5 text-[9px] font-mono text-slate-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
-                  <span>ACTIVE (30D): <strong className="text-white">{totalActive30d.toLocaleString()}</strong></span>
+                  <span>
+                    ACTIVE (30D): <strong className="text-white">{usersList.length > 0 ? uniqueActive30dFiltered.toLocaleString() : totalActive30d.toLocaleString()}</strong>
+                    {usersList.length > 0 && (
+                      <span className="text-slate-500 ml-1.5">
+                        UNIQ ({totalActive30d.toLocaleString()} SUM)
+                      </span>
+                    )}
+                  </span>
                 </div>
               </div>
 
@@ -533,7 +581,14 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                     <span className="mono-label !text-cyan-400">
                       Downloads {isFiltered && <span className="text-[9px] text-amber-500/80 normal-case ml-1 font-mono font-normal tracking-normal">(Filtered)</span>}
                     </span>
-                    <h3 className="text-4xl md:text-5xl font-black text-white font-display tracking-tight leading-none">{totalDownloads.toLocaleString()}</h3>
+                    <div className="flex items-baseline gap-1.5">
+                      <h3 className="text-4xl md:text-5xl font-black text-white font-display tracking-tight leading-none">
+                        {totalDownloads.toLocaleString()}
+                      </h3>
+                      <span className="text-[9px] text-slate-400 font-mono">
+                        FROM {downloadSolutionsCount} {downloadSolutionsCount === 1 ? 'SOLUTION' : 'SOLUTIONS'}
+                      </span>
+                    </div>
                   </div>
                   <div className="p-2.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-xl shrink-0">
                     <Download size={18} />
