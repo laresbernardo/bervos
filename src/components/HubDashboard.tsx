@@ -5,6 +5,7 @@ import { auth } from '../firebase';
 import { InitiativeCard } from './InitiativeCard';
 import type { InitiativeMetric } from './InitiativeCard';
 import { RefreshCw, LogOut, Users, Download, ShieldAlert, Star, FolderGit, X, Search, Loader2, List } from 'lucide-react';
+import ecosystem from '../data/ecosystem.json';
 
 const UserAvatar: React.FC<{ src?: string; name: string; email: string }> = ({ src, name, email }) => {
   const [error, setError] = useState(false);
@@ -26,6 +27,35 @@ const UserAvatar: React.FC<{ src?: string; name: string; email: string }> = ({ s
   );
 };
 
+const getStaticMetrics = (): InitiativeMetric[] => {
+  const { projects, openSource } = ecosystem;
+  
+  const staticProj = projects.map((p) => {
+    const isOS = p.category === 'oss' || (p.link.includes('github.com/laresbernardo') && !p.link.includes('github.io'));
+    const type = isOS ? ('SoftwareSourceCode' as const) : ('SoftwareApplication' as const);
+    
+    return {
+      id: p.title.toLowerCase(),
+      name: p.title,
+      type,
+      url: p.link,
+      description: p.description,
+      version: p.version,
+      applicationCategory: p.applicationCategory,
+    };
+  });
+
+  const staticOS = openSource.map((o) => ({
+    id: o.name.toLowerCase(),
+    name: o.name,
+    type: 'SoftwareSourceCode' as const,
+    url: o.link,
+    description: o.description,
+  }));
+
+  return [...staticProj, ...staticOS] as InitiativeMetric[];
+};
+
 interface HubDashboardProps {
   user: User;
 }
@@ -34,19 +64,57 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
   const [metrics, setMetrics] = useState<InitiativeMetric[]>(() => {
     try {
       const cached = localStorage.getItem('bervos_metrics');
-      return cached ? JSON.parse(cached) : [];
-    } catch (e) {
-      return [];
-    }
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return getStaticMetrics();
   });
   const [loading, setLoading] = useState(() => {
     try {
       const cached = localStorage.getItem('bervos_metrics');
-      return !cached || JSON.parse(cached).length === 0;
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return !parsed || parsed.length === 0;
+      }
+      return true;
     } catch (e) {
       return true;
     }
   });
+  const [loadingStepText, setLoadingStepText] = useState('Establishing connection with secure gateway...');
+  const [loadingProgress, setLoadingProgress] = useState(10);
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingProgress(100);
+      return;
+    }
+    setLoadingProgress(15);
+    setLoadingStepText('Initializing secure session gateway...');
+
+    const steps = [
+      { text: 'Resolving BERVOS Hub configuration...', progress: 30 },
+      { text: 'Accessing Firebase Admin SDK database references...', progress: 50 },
+      { text: 'Polling live GitHub API repositories for stars & issues...', progress: 70 },
+      { text: 'Compiling project backlogs and commit histories...', progress: 85 },
+      { text: 'Securing local cache and finalizing pipeline...', progress: 95 }
+    ];
+
+    let currentStep = 0;
+    const interval = setInterval(() => {
+      if (currentStep < steps.length) {
+        setLoadingStepText(steps[currentStep].text);
+        setLoadingProgress(steps[currentStep].progress);
+        currentStep++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 1200);
+
+    return () => clearInterval(interval);
+  }, [loading]);
   const [error, setError] = useState<string | null>(null);
   const [cacheStatus, setCacheStatus] = useState<string | null>(() => {
     try {
@@ -193,8 +261,8 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
       setRefreshing(true);
     } else {
       setLoading(true);
+      setError(null);
     }
-    setError(null);
 
     try {
       const idToken = await user.getIdToken();
@@ -376,6 +444,9 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
   // Check if any filter or search query is active to label stats as filtered
   const isFiltered = search !== '' || filterType !== 'ALL' || backlogFilter;
 
+  // Check if we have active telemetry records loaded (e.g. from local storage cache)
+  const hasTelemetry = metrics.some(m => m.stars !== undefined || m.totalUsers !== undefined || m.downloads !== undefined);
+
   // Aggregated Stats
   const totalProjectsCount = filteredAndSorted.length;
   const webProjectsCount = filteredAndSorted.filter(m => m.type === 'SoftwareApplication' && m.applicationCategory !== 'UtilitiesApplication').length;
@@ -484,8 +555,30 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
           </div>
         </div>
 
+        {/* Telemetry Handshake Status (Progress Log) */}
+        {loading && (
+          <div className="tech-card border-indigo-500/20 bg-indigo-500/[0.01] p-4.5 font-mono text-xs text-indigo-300 flex items-center gap-3">
+            <Loader2 size={16} className="animate-spin text-indigo-400 shrink-0" />
+            <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-indigo-500">//</span>
+                <span className="text-slate-200">{loadingStepText}</span>
+              </div>
+              <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
+                <span className="text-[10px] text-indigo-400/80">{loadingProgress}%</span>
+                <div className="w-full sm:w-48 bg-white/5 border border-white/10 h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500 h-full rounded-full transition-all duration-300"
+                    style={{ width: `${loadingProgress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Loading / Error States */}
-        {error && (
+        {error && !hasTelemetry && (
           <div className="tech-card border-red-500/30 p-8 bg-red-500/[0.02] flex items-start gap-4">
             <ShieldAlert size={28} className="text-red-400 shrink-0" />
             <div className="space-y-1">
@@ -502,7 +595,30 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
           </div>
         )}
 
-        {loading ? (
+        {error && hasTelemetry && (
+          <div className="flex items-center justify-between gap-3 px-4.5 py-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-mono">
+            <div className="flex items-center gap-2">
+              <ShieldAlert size={14} className="shrink-0" />
+              <span>[SYSTEM_ALERT] Telemetry update failed: {error}. Serving cached records.</span>
+            </div>
+            <button
+              onClick={() => fetchMetrics(true)}
+              disabled={refreshing}
+              className="px-2.5 py-1 bg-white/5 hover:bg-white/10 hover:border-red-500/40 text-red-400 rounded-lg border border-white/10 uppercase text-[9px] tracking-wider transition-all cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+            >
+              {refreshing ? (
+                <>
+                  <Loader2 size={10} className="animate-spin text-red-400" />
+                  Retrying...
+                </>
+              ) : (
+                'Retry'
+              )}
+            </button>
+          </div>
+        )}
+
+        {loading && metrics.length === 0 ? (
           <div className="space-y-8">
             {/* Skeletal Quick Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -517,7 +633,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
               ))}
             </div>
           </div>
-        ) : !error && (
+        ) : (
           <div className="space-y-12">
 
             {/* Search, Filter, and Sort Bar */}
@@ -652,7 +768,11 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                       Backlog Items {isFiltered && <span className="text-[9px] text-amber-500/80 normal-case ml-1 font-mono font-normal tracking-normal">(Filtered)</span>}
                     </span>
                     <h3 className="text-4xl md:text-5xl font-black text-white font-display tracking-tight leading-none">
-                      {metrics.reduce((s, m) => s + (m.backlogCount || 0), 0)}
+                      {loading && metrics.every(m => m.backlogCount === undefined) ? (
+                        <span className="inline-block w-16 h-8 bg-white/5 border border-white/10 rounded-lg animate-pulse mt-1" />
+                      ) : (
+                        metrics.reduce((s, m) => s + (m.backlogCount || 0), 0)
+                      )}
                     </h3>
                   </div>
                   <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl shrink-0">
@@ -660,14 +780,20 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 pt-3 mt-2.5 border-t border-white/5 text-[9px] font-mono text-slate-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                  <span>PROJECTS: <strong className="text-white">{metrics.filter(m => (m.backlogCount || 0) > 0).length}</strong> WITH ITEMS</span>
+                  {loading && metrics.every(m => m.backlogCount === undefined) ? (
+                    <span className="inline-block w-24 h-3 bg-white/5 rounded animate-pulse" />
+                  ) : (
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                      <span>PROJECTS: <strong className="text-white">{metrics.filter(m => (m.backlogCount || 0) > 0).length}</strong> WITH ITEMS</span>
+                    </>
+                  )}
                 </div>
               </div>
 
               <div
-                onClick={() => handleOpenUsersModal('ALL')}
-                className="tech-card p-4.5 flex flex-col justify-between group min-h-[110px] cursor-pointer hover:border-violet-500/40 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all"
+                onClick={() => !loading && handleOpenUsersModal('ALL')}
+                className={`tech-card p-4.5 flex flex-col justify-between group min-h-[110px] ${loading ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer hover:border-violet-500/40 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)]'} transition-all`}
               >
                 <div className="flex items-center justify-between w-full">
                   <div className="space-y-0.5">
@@ -676,9 +802,13 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                     </span>
                     <div className="flex items-baseline gap-1.5">
                       <h3 className="text-4xl md:text-5xl font-black text-white font-display tracking-tight leading-none">
-                        {usersList.length > 0 ? uniqueUsersFiltered.toLocaleString() : totalUsers.toLocaleString()}
+                        {loading && usersList.length === 0 ? (
+                          <span className="inline-block w-24 h-8 bg-white/5 border border-white/10 rounded-lg animate-pulse mt-1" />
+                        ) : (
+                          usersList.length > 0 ? uniqueUsersFiltered.toLocaleString() : totalUsers.toLocaleString()
+                        )}
                       </h3>
-                      {usersList.length > 0 && (
+                      {!loading && usersList.length > 0 && (
                         <span className="text-[9px] text-slate-400 font-mono">
                           UNIQ ({totalUsers.toLocaleString()} SUM)
                         </span>
@@ -690,15 +820,21 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 pt-3 mt-2.5 border-t border-white/5 text-[9px] font-mono text-slate-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
-                  <span>
-                    ACTIVE (30D): <strong className="text-white">{usersList.length > 0 ? uniqueActive30dFiltered.toLocaleString() : totalActive30d.toLocaleString()}</strong>
-                    {usersList.length > 0 && (
-                      <span className="text-slate-500 ml-1.5">
-                        UNIQ ({totalActive30d.toLocaleString()} SUM)
+                  {loading && usersList.length === 0 ? (
+                    <span className="inline-block w-36 h-3 bg-white/5 rounded animate-pulse" />
+                  ) : (
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
+                      <span>
+                        ACTIVE (30D): <strong className="text-white">{usersList.length > 0 ? uniqueActive30dFiltered.toLocaleString() : totalActive30d.toLocaleString()}</strong>
+                        {usersList.length > 0 && (
+                          <span className="text-slate-500 ml-1.5">
+                            UNIQ ({totalActive30d.toLocaleString()} SUM)
+                          </span>
+                        )}
                       </span>
-                    )}
-                  </span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -710,11 +846,17 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                     </span>
                     <div className="flex items-baseline gap-1.5">
                       <h3 className="text-4xl md:text-5xl font-black text-white font-display tracking-tight leading-none">
-                        {totalDownloads.toLocaleString()}
+                        {loading && metrics.every(m => m.downloads === undefined) ? (
+                          <span className="inline-block w-24 h-8 bg-white/5 border border-white/10 rounded-lg animate-pulse mt-1" />
+                        ) : (
+                          totalDownloads.toLocaleString()
+                        )}
                       </h3>
-                      <span className="text-[9px] text-slate-400 font-mono">
-                        FROM {downloadSolutionsCount} {downloadSolutionsCount === 1 ? 'SOLUTION' : 'SOLUTIONS'}
-                      </span>
+                      {!loading && (
+                        <span className="text-[9px] text-slate-400 font-mono">
+                          FROM {downloadSolutionsCount} {downloadSolutionsCount === 1 ? 'SOLUTION' : 'SOLUTIONS'}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="p-2.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-xl shrink-0">
@@ -722,8 +864,14 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 pt-3 mt-2.5 border-t border-white/5 text-[9px] font-mono text-slate-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
-                  <span>TELEMETRY: <strong className="text-white">ACTIVE SOLUTIONS</strong></span>
+                  {loading && metrics.every(m => m.downloads === undefined) ? (
+                    <span className="inline-block w-32 h-3 bg-white/5 rounded animate-pulse" />
+                  ) : (
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+                      <span>TELEMETRY: <strong className="text-white">ACTIVE SOLUTIONS</strong></span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -733,15 +881,27 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                     <span className="mono-label !text-yellow-400">
                       GitHub Stars {isFiltered && <span className="text-[9px] text-amber-500/80 normal-case ml-1 font-mono font-normal tracking-normal">(Filtered)</span>}
                     </span>
-                    <h3 className="text-4xl md:text-5xl font-black text-white font-display tracking-tight leading-none">{totalStars.toLocaleString()}</h3>
+                    <h3 className="text-4xl md:text-5xl font-black text-white font-display tracking-tight leading-none">
+                      {loading && metrics.every(m => m.stars === undefined) ? (
+                        <span className="inline-block w-16 h-8 bg-white/5 border border-white/10 rounded-lg animate-pulse mt-1" />
+                      ) : (
+                        totalStars.toLocaleString()
+                      )}
+                    </h3>
                   </div>
                   <div className="p-2.5 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 rounded-xl shrink-0">
                     <Star size={18} />
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 pt-3 mt-2.5 border-t border-white/5 text-[9px] font-mono text-slate-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-                  <span>REPOSITORIES: <strong className="text-white">{ossProjectsCount} TRACKED</strong></span>
+                  {loading && metrics.every(m => m.stars === undefined) ? (
+                    <span className="inline-block w-36 h-3 bg-white/5 rounded animate-pulse" />
+                  ) : (
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                      <span>REPOSITORIES: <strong className="text-white">{ossProjectsCount} TRACKED</strong></span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -758,6 +918,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                     onRefresh={refreshProject}
                     isRefreshing={!!refreshingProjectIds[item.id]}
                     onShowBacklog={handleShowBacklog}
+                    isLoadingData={loading}
                   />
                 ))}
               </div>
