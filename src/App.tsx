@@ -253,8 +253,79 @@ const Modal = ({
 
 // ----- Home page extracted into its own component to satisfy Rules of Hooks -----
 
+const updateMetaAndCanonical = (title: string, description: string, path: string) => {
+  document.title = title;
+  
+  const metaDesc = document.getElementById('meta-description');
+  if (metaDesc) {
+    metaDesc.setAttribute('content', description);
+  }
+  
+  let canonical = document.querySelector('link[rel="canonical"]');
+  if (!canonical) {
+    canonical = document.createElement('link');
+    canonical.setAttribute('rel', 'canonical');
+    document.head.appendChild(canonical);
+  }
+  canonical.setAttribute('href', `https://bervos.org${path}`);
+
+  const ogUrl = document.querySelector('meta[property="og:url"]');
+  if (ogUrl) ogUrl.setAttribute('content', `https://bervos.org${path}`);
+  const twitterUrl = document.querySelector('meta[property="twitter:url"]');
+  if (twitterUrl) twitterUrl.setAttribute('content', `https://bervos.org${path}`);
+
+  const ogTitle = document.querySelector('meta[property="og:title"]');
+  if (ogTitle) ogTitle.setAttribute('content', title);
+  const twitterTitle = document.querySelector('meta[property="twitter:title"]');
+  if (twitterTitle) twitterTitle.setAttribute('content', title);
+
+  const ogDesc = document.querySelector('meta[property="og:description"]');
+  if (ogDesc) ogDesc.setAttribute('content', description);
+  const twitterDesc = document.querySelector('meta[property="twitter:description"]');
+  if (twitterDesc) twitterDesc.setAttribute('content', description);
+};
+
+const navigateToPath = (path: string) => {
+  window.history.pushState(null, '', path);
+  window.dispatchEvent(new Event('popstate'));
+};
+
 function HomePage() {
   const [modalType, setModalType] = useState<'privacy' | 'terms' | 'contact' | 'concept' | null>(null);
+
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const path = window.location.pathname;
+      let type: 'privacy' | 'terms' | 'contact' | 'concept' | null = null;
+      let title = 'BERVOS | Digital Solutions, Systems & Open Source';
+      let desc = 'BERVOS - A family of flexible digital solutions, systems, and open-source packages designed to learn, drive true action, and optimize growth. Built by Bernardo Lares.';
+
+      if (path === '/privacy') {
+        type = 'privacy';
+        title = 'Privacy Policy | BERVOS';
+        desc = 'Read the BERVOS Privacy Policy. Learn about our commitment to user privacy, data protection, and secure digital craftsmanship.';
+      } else if (path === '/terms') {
+        type = 'terms';
+        title = 'Terms of Service | BERVOS';
+        desc = 'Review the Terms of Service for BERVOS. Guidelines on using our showcase applications, licenses, and intellectual property.';
+      } else if (path === '/concept') {
+        type = 'concept';
+        title = 'The BERVOS Concept | Digital Philosophy';
+        desc = 'Discover the philosophy behind BERVOS: Action Angle (Ber + Verbos), Enterprise System (B.E.R.V.O.S.), and hyper-personalized solutions.';
+      } else if (path === '/contact') {
+        type = 'contact';
+        title = 'Connect & Collaborate | BERVOS';
+        desc = 'Get in touch with Bernardo Lares at BERVOS. Reach out for high-impact partnerships, project inquiries, or digital collaboration.';
+      }
+
+      setModalType(type);
+      updateMetaAndCanonical(title, desc, path === '/' ? '' : path);
+    };
+
+    handleLocationChange();
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
   const [contactStatus, setContactStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [contactData, setContactData] = useState<ContactData>({
     name: '',
@@ -701,7 +772,7 @@ function HomePage() {
                     layout
                     key="cta-project"
                     onClick={() => {
-                      setModalType('contact');
+                      navigateToPath('/contact');
                       trackEvent('cta_click', 'engagement', 'Your Project');
                     }}
                     className="group relative bg-[#080b12] p-6 sm:p-10 hover:bg-[#0c121d] transition-all duration-500 overflow-hidden flex flex-col justify-between min-h-[340px] sm:min-h-[380px] border border-white/5 hover:border-indigo-500/30 rounded-2xl cursor-pointer text-left w-full"
@@ -939,7 +1010,7 @@ function HomePage() {
               {['Concept', 'Privacy', 'Terms', 'Contact'].map(item => (
                 <button
                   key={item}
-                  onClick={() => setModalType(item.toLowerCase() as 'privacy' | 'terms' | 'contact' | 'concept')}
+                  onClick={() => navigateToPath('/' + item.toLowerCase())}
                   className="mono-label !text-slate-500 hover:!text-indigo-400 transition-colors cursor-pointer"
                 >
                   [{item.toUpperCase()}]
@@ -947,11 +1018,11 @@ function HomePage() {
               ))}
             </div>
           </div>
-        </div>
+          </div>
         {modalType && (
           <Modal
             type={modalType}
-            onClose={() => setModalType(null)}
+            onClose={() => navigateToPath('/')}
             status={contactStatus}
             data={contactData}
             setData={setContactData}

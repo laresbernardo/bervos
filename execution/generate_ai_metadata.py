@@ -266,6 +266,30 @@ def update_sitemap_xml():
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://bervos.org/concept</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://bervos.org/privacy</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://bervos.org/terms</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://bervos.org/contact</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://bervos.org/llms.txt</loc>
     <lastmod>{today}</lastmod>
     <changefreq>weekly</changefreq>
