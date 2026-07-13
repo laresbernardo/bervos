@@ -30,7 +30,6 @@ jobs:
         run: npm i -g firebase-tools
       
       - name: Deploy Cloud Functions
-        continue-on-error: true
         run: >-
           firebase deploy --only functions --project bervos-official
           --non-interactive --force --token "$FIREBASE_TOKEN"
