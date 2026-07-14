@@ -670,7 +670,7 @@ function getLocalProjectVersion(projectName: string): string | null {
  * If running locally and the sibling directory exists, reads from local git log.
  * Otherwise, fetches from the GitHub API if it is a public GitHub repository.
  */
-async function getRepoCommits(projectName: string, repoUrl: string): Promise<GitCommit[]> {
+async function getRepoCommits(projectName: string, repoUrl: string, limit = 15): Promise<GitCommit[]> {
   const normalizedName = projectName.toLowerCase();
   const parentDir = path.join(__dirname, '..', '..', '..', '..');
   const directoryNames: Record<string, string> = {
@@ -708,7 +708,7 @@ async function getRepoCommits(projectName: string, repoUrl: string): Promise<Git
       } catch (e) {}
 
       const stdout = execSync(
-        'git log -n 3 --date=short --pretty=format:"%h__DELIM__%an__DELIM__%ad__DELIM__%aI__DELIM__%s"',
+        `git log -n ${limit} --date=short --pretty=format:"%h__DELIM__%an__DELIM__%ad__DELIM__%aI__DELIM__%s"`,
         { cwd: projectFolderPath, encoding: 'utf8', timeout: 2000 }
       );
       return stdout.trim().split('\n').filter(Boolean).map(line => {
@@ -760,7 +760,7 @@ async function getRepoCommits(projectName: string, repoUrl: string): Promise<Git
       }
 
       try {
-        const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=3`, { headers });
+        const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=${limit}`, { headers });
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
@@ -1048,6 +1048,32 @@ async function saveCache(data: unknown[]): Promise<void> {
     console.error('[Cache] Failed to write cache to Firestore:', err);
   }
 }
+
+app.get(['/commits', '/api/commits'], authenticateAdmin, async (req: express.Request, res: express.Response) => {
+  try {
+    const projectName = req.query.project as string;
+    const limit = parseInt(req.query.limit as string) || 15;
+    if (!projectName) {
+      res.status(400).json({ error: 'Missing project parameter' });
+      return;
+    }
+    const initiatives = await getInitiativesFromSchema();
+    const projectItem = initiatives.find(item => 
+      item.name.toLowerCase() === projectName.toLowerCase()
+    );
+    if (!projectItem) {
+      res.status(404).json({ error: `Project not found: ${projectName}` });
+      return;
+    }
+    const url = projectItem.url || projectItem.codeRepository;
+    const commitUrl = projectItem.codeRepository || url;
+    const commits = await getRepoCommits(projectName, commitUrl, limit);
+    res.json(commits);
+  } catch (err) {
+    console.error('[Commits API] Failed to fetch commits:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 app.get(['/metrics', '/api/metrics'], authenticateAdmin, async (req: express.Request, res: express.Response) => {
   try {

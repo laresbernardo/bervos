@@ -19,9 +19,9 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'https://bervos.org',
+        target: 'http://localhost:5001/bervos-official/us-central1/hubApi',
         changeOrigin: true,
-        secure: true,
+        secure: false,
       }
     }
   },

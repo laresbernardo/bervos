@@ -4,7 +4,7 @@ import type { User } from 'firebase/auth';
 import { auth } from '../firebase';
 import { InitiativeCard } from './InitiativeCard';
 import type { InitiativeMetric } from './InitiativeCard';
-import { RefreshCw, LogOut, Users, Download, ShieldAlert, Star, FolderGit, X, Search, Loader2, List } from 'lucide-react';
+import { RefreshCw, LogOut, Users, Download, ShieldAlert, Star, FolderGit, X, Search, Loader2, List, Sparkles, Wrench, FileText, GitBranch, Settings, GitCommit } from 'lucide-react';
 import ecosystem from '../data/ecosystem.json';
 
 const UserAvatar: React.FC<{ src?: string; name: string; email: string }> = ({ src, name, email }) => {
@@ -143,6 +143,8 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
   const [backlogModalProject, setBacklogModalProject] = useState<string | null>(null);
   const [backlogModalContent, setBacklogModalContent] = useState<string>('');
   const [backlogModalUpdatedAt, setBacklogModalUpdatedAt] = useState<string>('');
+  const [backlogModalTab, setBacklogModalTab] = useState<'tasks' | 'commits'>('tasks');
+  const [loadingMoreCommits, setLoadingMoreCommits] = useState(false);
   const backlogFetchedRef = useRef(false);
 
   const GIT_REPO_MAP: Record<string, string> = {
@@ -253,8 +255,32 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
       setBacklogModalContent(project.backlogContent || '');
       setBacklogModalProject(project.name);
       setBacklogModalUpdatedAt(project.backlogUpdatedAt || '');
+      setBacklogModalTab('tasks');
     }
   }, [metrics]);
+
+  const handleLoadMoreCommits = useCallback(async (projectName: string, currentCount: number) => {
+    setLoadingMoreCommits(true);
+    try {
+      const idToken = await user.getIdToken();
+      const nextLimit = currentCount + 10;
+      const res = await fetch(`/api/commits?project=${encodeURIComponent(projectName)}&limit=${nextLimit}`, {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      if (res.ok) {
+        const newCommits = await res.json();
+        setMetrics(prev => prev.map(m => 
+          m.name.toLowerCase() === projectName.toLowerCase() 
+            ? { ...m, commits: newCommits } 
+            : m
+        ));
+      }
+    } catch (e) {
+      console.error('Failed to load more commits:', e);
+    } finally {
+      setLoadingMoreCommits(false);
+    }
+  }, [user]);
 
   const fetchMetrics = useCallback(async (isManual = false) => {
     if (isManual) {
@@ -1210,115 +1236,320 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
       )}
 
       {/* Backlog Modal */}
-      {backlogModalProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#080b12]/80 backdrop-blur-md transition-all duration-300">
-          <div className="relative w-full max-w-2xl max-h-[80vh] bg-[#0c121d] border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-[0_0_50px_rgba(79,70,229,0.15)]">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500" />
+      {backlogModalProject && (() => {
+        const project = metrics.find(m => m.name.toLowerCase() === backlogModalProject.toLowerCase());
+        const commits = project?.commits || [];
 
-            {/* Modal Header */}
-            <div className="p-6 border-b border-white/5 flex items-start justify-between">
-              <div>
-                <span className="mono-label !text-indigo-400">
-                  // BACKLOG_DIRECTORY{backlogModalUpdatedAt ? <span className="text-slate-500 ml-1">// LAST UPDATED: {backlogModalUpdatedAt}</span> : ''}
-                </span>
-                <h3 className="text-xl font-black text-white tracking-tight uppercase mt-1">{backlogModalProject}</h3>
+        // Group commits
+        const groupedCommits: Record<string, typeof commits> = {
+          feat: [],
+          fix: [],
+          docs: [],
+          refactor: [],
+          chore: [],
+          other: [],
+        };
+
+        commits.forEach(commit => {
+          const msg = commit.message.trim().toLowerCase();
+          if (msg.startsWith('feat') || msg.startsWith('feature')) {
+            groupedCommits.feat.push(commit);
+          } else if (msg.startsWith('fix') || msg.startsWith('bugfix')) {
+            groupedCommits.fix.push(commit);
+          } else if (msg.startsWith('docs') || msg.startsWith('doc')) {
+            groupedCommits.docs.push(commit);
+          } else if (msg.startsWith('refactor')) {
+            groupedCommits.refactor.push(commit);
+          } else if (msg.startsWith('chore') || msg.startsWith('build') || msg.startsWith('ci') || msg.startsWith('style') || msg.startsWith('test')) {
+            groupedCommits.chore.push(commit);
+          } else {
+            groupedCommits.other.push(commit);
+          }
+        });
+
+        const categoryConfig: Record<string, { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
+          feat: {
+            label: 'Features',
+            color: 'text-emerald-400',
+            bg: 'bg-emerald-500/5',
+            border: 'border-emerald-500/10',
+            icon: <Sparkles size={12} className="text-emerald-400 shrink-0" />
+          },
+          fix: {
+            label: 'Bug Fixes',
+            color: 'text-rose-400',
+            bg: 'bg-rose-500/5',
+            border: 'border-rose-500/10',
+            icon: <Wrench size={12} className="text-rose-400 shrink-0" />
+          },
+          docs: {
+            label: 'Documentation',
+            color: 'text-cyan-400',
+            bg: 'bg-cyan-500/5',
+            border: 'border-cyan-500/10',
+            icon: <FileText size={12} className="text-cyan-400 shrink-0" />
+          },
+          refactor: {
+            label: 'Refactoring',
+            color: 'text-violet-400',
+            bg: 'bg-violet-500/5',
+            border: 'border-violet-500/10',
+            icon: <GitBranch size={12} className="text-violet-400 shrink-0" />
+          },
+          chore: {
+            label: 'Maintenance',
+            color: 'text-amber-400',
+            bg: 'bg-amber-500/5',
+            border: 'border-amber-500/10',
+            icon: <Settings size={12} className="text-amber-400 shrink-0" />
+          },
+          other: {
+            label: 'Other Changes',
+            color: 'text-slate-400',
+            bg: 'bg-slate-500/5',
+            border: 'border-white/5',
+            icon: <GitCommit size={12} className="text-slate-400 shrink-0" />
+          }
+        };
+
+        const totalTasks = backlogModalContent ? backlogModalContent.split('\n').filter(l => l.trim().startsWith('- ')).length : 0;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#080b12]/80 backdrop-blur-md transition-all duration-300">
+            <div className="relative w-full max-w-5xl max-h-[85vh] bg-[#0c121d] border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-[0_0_50px_rgba(79,70,229,0.15)]">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500" />
+
+              {/* Modal Header */}
+              <div className="p-6 border-b border-white/5 flex items-start justify-between shrink-0">
+                <div>
+                  <span className="mono-label !text-indigo-400">
+                    // BACKLOG_DIRECTORY{backlogModalUpdatedAt ? <span className="text-slate-500 ml-1">// LAST UPDATED: {backlogModalUpdatedAt}</span> : ''}
+                  </span>
+                  <div className="flex items-center gap-2.5 mt-1">
+                    <h3 className="text-xl font-black text-white tracking-tight uppercase">{backlogModalProject}</h3>
+                    {project?.applicationCategory && (
+                      <span className="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-[9px] font-mono uppercase tracking-wider text-indigo-400 font-bold">
+                        {project.applicationCategory}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setBacklogModalProject(null)}
+                    className="p-2 bg-white/5 border border-white/10 hover:border-white/20 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
+
+              {/* Mobile Tabs */}
+              <div className="flex border-b border-white/5 md:hidden shrink-0">
                 <button
-                  onClick={() => setBacklogModalProject(null)}
-                  className="p-2 bg-white/5 border border-white/10 hover:border-white/20 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
+                  onClick={() => setBacklogModalTab('tasks')}
+                  className={`flex-1 py-3 text-xs font-mono font-bold tracking-wider uppercase border-b-2 transition-all cursor-pointer ${backlogModalTab === 'tasks' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-500'}`}
                 >
-                  <X size={16} />
+                  Tasks ({totalTasks})
+                </button>
+                <button
+                  onClick={() => setBacklogModalTab('commits')}
+                  className={`flex-1 py-3 text-xs font-mono font-bold tracking-wider uppercase border-b-2 transition-all cursor-pointer ${backlogModalTab === 'commits' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-500'}`}
+                >
+                  Commits ({commits.length})
                 </button>
               </div>
-            </div>
 
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              {backlogModalContent ? (
-                <div className="space-y-1.5 font-mono text-xs leading-relaxed">
-                  {(() => {
-                    const lines = backlogModalContent.split('\n');
-                    const sections: { heading: string | null; items: string[] }[] = [];
-                    let orphanItems: string[] = [];
+              {/* Modal Body */}
+              <div className="flex-1 overflow-hidden flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-white/5">
+                {/* Backlog Column (Left) */}
+                <div className={`flex-[3] overflow-y-auto p-6 flex flex-col min-w-0 md:flex ${backlogModalTab === 'tasks' ? 'flex' : 'hidden'}`}>
+                  <div className="flex items-center gap-2 mb-4 shrink-0">
+                    <List size={16} className="text-indigo-400" />
+                    <span className="mono-label !text-slate-400">Backlog Tasks</span>
+                  </div>
+                  <div className="flex-1 min-h-0">
+                    {backlogModalContent ? (
+                      <div className="space-y-3">
+                        {(() => {
+                          const lines = backlogModalContent.split('\n');
+                          const sections: { heading: string | null; items: string[] }[] = [];
+                          let orphanItems: string[] = [];
 
-                    // Collect all list items that appear before any header
-                    let headerFound = false;
-                    lines.forEach((line) => {
-                      if (line.startsWith('#')) {
-                        headerFound = true;
-                        sections.push({ heading: line.replace(/^#+\s*/, '').replace(/:[\s]*$/, '').trim(), items: [] });
-                      } else if (line.trim().startsWith('- ')) {
-                        if (!headerFound) {
-                          orphanItems.push(line);
-                        } else if (sections.length > 0) {
-                          sections[sections.length - 1].items.push(line);
-                        }
-                      } else if (line.startsWith('#') === false && sections.length > 0 && line.trim()) {
-                        // non-empty non-header line after a header — could be body text, skip
-                      }
-                    });
+                          // Collect all list items that appear before any header
+                          let headerFound = false;
+                          lines.forEach((line) => {
+                            if (line.startsWith('#')) {
+                              headerFound = true;
+                              sections.push({ heading: line.replace(/^#+\s*/, '').replace(/:[\s]*$/, '').trim(), items: [] });
+                            } else if (line.trim().startsWith('- ')) {
+                              if (!headerFound) {
+                                orphanItems.push(line);
+                              } else if (sections.length > 0) {
+                                sections[sections.length - 1].items.push(line);
+                              }
+                            }
+                          });
 
-                    const rendered: React.ReactNode[] = [];
+                          const rendered: React.ReactNode[] = [];
 
-                    if (orphanItems.length > 0) {
-                      rendered.push(
-                        <div key="orphan" className="space-y-1.5 mt-2">
-                          {orphanItems.map((item, ii) => (
-                            <div key={ii} className="text-slate-200 pl-4 border-l-2 border-indigo-500/40">
-                              <span className="flex items-start gap-2">
-                                <span className="text-indigo-400 shrink-0 mt-0.5">→</span>
-                                <span>{item.trim().substring(2)}</span>
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    }
-
-                    sections.forEach((section, si) => {
-                      if (section.items.length === 0) return;
-                      rendered.push(
-                        <div key={`s-${si}`}>
-                          <div className="text-white font-bold text-sm mt-4 mb-2">{section.heading}</div>
-                          <div className="space-y-1.5">
-                            {section.items.map((item, ii) => (
-                              <div key={ii} className="text-slate-200 pl-4 border-l-2 border-indigo-500/40">
-                                <span className="flex items-start gap-2">
-                                  <span className="text-indigo-400 shrink-0 mt-0.5">→</span>
-                                  <span>{item.trim().substring(2)}</span>
-                                </span>
+                          if (orphanItems.length > 0) {
+                            rendered.push(
+                              <div key="orphan" className="space-y-2 mt-2">
+                                {orphanItems.map((item, ii) => (
+                                  <div key={ii} className="pl-2">
+                                    <span className="flex items-start gap-2.5 group">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400/50 group-hover:bg-indigo-400 mt-1.5 transition-colors shrink-0" />
+                                      <span className="text-slate-200 font-sans text-xs leading-relaxed group-hover:text-white transition-colors">{item.trim().substring(2)}</span>
+                                    </span>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
+                            );
+                          }
+
+                          sections.forEach((section, si) => {
+                            if (section.items.length === 0) return;
+                            rendered.push(
+                              <div key={`s-${si}`} className="mb-4">
+                                <div className="text-white font-bold text-sm mt-3 mb-2">{section.heading}</div>
+                                <div className="space-y-2.5">
+                                  {section.items.map((item, ii) => (
+                                    <div key={ii} className="pl-2">
+                                      <span className="flex items-start gap-2.5 group">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400/50 group-hover:bg-indigo-400 mt-1.5 transition-colors shrink-0" />
+                                        <span className="text-slate-200 font-sans text-xs leading-relaxed group-hover:text-white transition-colors">{item.trim().substring(2)}</span>
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          });
+
+                          return rendered.length > 0 ? rendered : <div className="text-slate-500 text-center py-10 font-mono text-xs">No actionable backlog items found.</div>;
+                        })()}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-20 gap-3">
+                        <List size={32} className="text-slate-500" />
+                        <span className="text-xs font-mono text-slate-500 uppercase tracking-widest">No backlog items found</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Commits Column (Right) */}
+                <div className={`flex-[2] overflow-y-auto p-6 bg-white/[0.01] flex flex-col min-w-0 md:flex ${backlogModalTab === 'commits' ? 'flex' : 'hidden'}`}>
+                  <div className="flex items-center gap-2 mb-4 shrink-0">
+                    <FolderGit size={16} className="text-indigo-400" />
+                    <span className="mono-label !text-slate-400">Recent Commits ({commits.length})</span>
+                  </div>
+                  <div className="flex-1 space-y-4">
+                    {commits.length > 0 ? (
+                      <>
+                        <div className="space-y-4">
+                          {Object.entries(groupedCommits).map(([key, list]) => {
+                            if (list.length === 0) return null;
+                            const config = categoryConfig[key];
+                            return (
+                              <div key={key} className={`p-4 rounded-xl border ${config.bg} ${config.border} space-y-3`}>
+                                <div className="flex items-center gap-1.5 border-b border-white/5 pb-2">
+                                  {config.icon}
+                                  <span className={`text-[10px] font-mono tracking-wider uppercase font-extrabold ${config.color}`}>
+                                    {config.label} ({list.length})
+                                  </span>
+                                </div>
+                                <div className="space-y-1">
+                                  {list.map((commit) => (
+                                    <div key={commit.hash} className="group relative pl-4 border-l border-white/5 hover:border-indigo-500/30 transition-all py-2.5 font-mono rounded-r-lg hover:bg-white/[0.01]">
+                                      {/* Timeline dot */}
+                                      <div className="absolute left-[-4.5px] top-[15px] w-2 h-2 rounded-full bg-slate-700 group-hover:bg-indigo-500 group-hover:scale-125 transition-all" />
+                                      
+                                      <div className="flex items-start justify-between gap-4">
+                                        <span className="text-slate-200 text-[11px] leading-relaxed font-sans font-medium break-words group-hover:text-white transition-colors">
+                                          {commit.message}
+                                        </span>
+                                        <span className="text-slate-500 text-[9px] font-mono shrink-0 mt-0.5">
+                                          {(() => {
+                                            if (commit.timestamp) {
+                                              const d = new Date(commit.timestamp);
+                                              if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+                                            }
+                                            return commit.date;
+                                          })()}
+                                        </span>
+                                      </div>
+                                      
+                                      <div className="flex items-center gap-2 mt-1.5 text-[9px] text-slate-500 font-mono">
+                                        {commit.commitUrl ? (
+                                          <a
+                                            href={commit.commitUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-indigo-400/80 hover:text-indigo-300 hover:underline transition-colors font-bold"
+                                          >
+                                            {commit.hash}
+                                          </a>
+                                        ) : (
+                                          <span className="text-indigo-400/80 font-bold">{commit.hash}</span>
+                                        )}
+                                        <span>•</span>
+                                        <span>{commit.author}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    });
 
-                    return rendered.length > 0 ? rendered : <div className="text-slate-500 text-center py-10 font-mono text-xs">No actionable backlog items found.</div>;
-                  })()}
+                        {commits.length >= 15 && (
+                          <button
+                            disabled={loadingMoreCommits}
+                            onClick={() => handleLoadMoreCommits(backlogModalProject, commits.length)}
+                            className="w-full py-2.5 px-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 active:scale-[0.98] disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed transition-all text-xs font-mono font-bold text-slate-300 hover:text-white flex items-center justify-center gap-2 cursor-pointer mt-4"
+                          >
+                            {loadingMoreCommits ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <span>LOADING_COMMITS...</span>
+                              </>
+                            ) : (
+                              <span>LOAD 10 COMMITS MORE // +10</span>
+                            )}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-20 gap-3">
+                        <GitCommit size={24} className="text-slate-600" />
+                        <span className="text-[10px] font-mono text-slate-600 uppercase tracking-widest">No commit logs loaded</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 gap-3">
-                  <List size={32} className="text-slate-500" />
-                  <span className="text-xs font-mono text-slate-500 uppercase tracking-widest">No backlog items found</span>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-white/5 bg-white/[0.01] flex items-center justify-between text-[10px] font-mono text-slate-500 shrink-0">
+                <span>BACKLOG.md // LIVE DATA</span>
+                <div className="flex items-center gap-4">
+                  <span>
+                    <strong className="text-white font-bold">{totalTasks}</strong> TASK{totalTasks !== 1 ? 'S' : ''}
+                  </span>
+                  <span className="text-slate-600">|</span>
+                  <span>
+                    <strong className="text-white font-bold">{commits.length}</strong> COMMIT{commits.length !== 1 ? 'S' : ''}
+                  </span>
                 </div>
-              )}
-            </div>
+              </div>
 
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-white/5 bg-white/[0.01] flex items-center justify-between text-[10px] font-mono text-slate-500">
-              <span>BACKLOG.md // LIVE FROM GITHUB</span>
-              <span>
-                <strong className="text-white font-bold">
-                  {backlogModalContent ? backlogModalContent.split('\n').filter(l => l.trim().startsWith('- ')).length : 0}
-                </strong> ITEM{(backlogModalContent ? backlogModalContent.split('\n').filter(l => l.trim().startsWith('- ')).length : 0) !== 1 ? 'S' : ''}
-              </span>
             </div>
-
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

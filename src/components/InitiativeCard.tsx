@@ -281,7 +281,7 @@ export const InitiativeCard: React.FC<InitiativeCardProps> = ({ item, onUsersCli
           <div className="mt-4 pt-4 border-t border-white/5 space-y-2 mb-4">
             <span className="mono-label !text-slate-500 block mb-1.5 text-[9px]">RECENT_COMMITS</span>
             <div className="space-y-2">
-              {item.commits.map((commit) => (
+              {item.commits.slice(0, 3).map((commit) => (
                 <div key={commit.hash} className="text-[10px] font-mono leading-relaxed text-slate-400">
                   {commit.commitUrl ? (
                     <a

@@ -480,47 +480,111 @@ async function fetchRepoMetadata(owner, repo) {
 }
 async function fetchBacklogFromRepo(owner, repo) {
     const branches = ['main', 'master'];
-    // Try raw.githubusercontent.com first (public repos)
+    const token = process.env.GITHUB_TOKEN;
+    function parseCount(content) {
+        return content.split('\n').filter(l => l.trim().startsWith('- ')).length;
+    }
+    function headerDate(res) {
+        const lm = res.headers.get('last-modified');
+        if (lm) {
+            const d = new Date(lm);
+            if (!isNaN(d.getTime()))
+                return d.toISOString().split('T')[0];
+        }
+        return '';
+    }
+    // 1. Try raw.githubusercontent.com (public repos)
     for (const branch of branches) {
         try {
             const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/BACKLOG.md`;
             const res = await fetch(url);
             if (res.ok) {
                 const content = await res.text();
-                const lines = content.split('\n');
-                const count = lines.filter(line => line.trim().startsWith('- ')).length;
-                return { count, content };
+                let updatedAt = headerDate(res);
+                // raw.githubusercontent.com doesn't return Last-Modified, so fallback to Commits API
+                if (!updatedAt && token) {
+                    try {
+                        const commitUrl = `https://api.github.com/repos/${owner}/${repo}/commits?path=BACKLOG.md&per_page=1&sha=${branch}`;
+                        const commitRes = await fetch(commitUrl, {
+                            headers: {
+                                'User-Agent': 'bervos-hub',
+                                'Authorization': `token ${token}`,
+                                'Accept': 'application/vnd.github.v3+json'
+                            }
+                        });
+                        if (commitRes.ok) {
+                            const body = await commitRes.json();
+                            if (Array.isArray(body) && body.length > 0) {
+                                const date = body[0].commit?.committer?.date || body[0].commit?.author?.date || '';
+                                if (date)
+                                    updatedAt = new Date(date).toISOString().split('T')[0];
+                            }
+                        }
+                    }
+                    catch (e) {
+                        console.warn(`[Backlog] Commits API failed for ${owner}/${repo}:`, e);
+                    }
+                }
+                return { count: parseCount(content), content, updatedAt };
             }
         }
         catch (err) {
-            console.warn(`[Backlog] Failed to fetch BACKLOG.md for ${owner}/${repo} on ${branch}:`, err);
+            console.warn(`[Backlog] raw.githubusercontent.com failed for ${owner}/${repo} on ${branch}:`, err);
         }
     }
-    // Fallback: GitHub Contents API (supports private repos with GITHUB_TOKEN)
-    const token = process.env.GITHUB_TOKEN;
-    if (token) {
-        const apiHeaders = {
-            'User-Agent': 'bervos-hub',
-            'Authorization': `token ${token}`,
-            'Accept': 'application/vnd.github.v3.raw'
-        };
-        for (const branch of branches) {
-            try {
-                const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/BACKLOG.md?ref=${branch}`;
-                const apiRes = await fetch(apiUrl, { headers: apiHeaders });
-                if (apiRes.ok) {
-                    const content = await apiRes.text();
-                    const lines = content.split('\n');
-                    const count = lines.filter(line => line.trim().startsWith('- ')).length;
-                    return { count, content };
+    if (!token)
+        return { count: 0, content: '', updatedAt: '' };
+    // 2. Try GitHub Contents API (private repos) with raw accept header
+    for (const branch of branches) {
+        try {
+            const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/BACKLOG.md?ref=${branch}`;
+            const apiRes = await fetch(apiUrl, {
+                headers: {
+                    'User-Agent': 'bervos-hub',
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3.raw'
                 }
-            }
-            catch (err) {
-                console.warn(`[Backlog] GitHub API failed for ${owner}/${repo} on ${branch}:`, err);
+            });
+            if (apiRes.ok) {
+                const content = await apiRes.text();
+                let updatedAt = headerDate(apiRes);
+                console.log(`[Backlog] API response for ${owner}/${repo} on ${branch}: last-modified=${apiRes.headers.get('last-modified')}, updatedAt=${updatedAt}`);
+                // If no last-modified header, fetch the commit date via Commits API
+                if (!updatedAt) {
+                    try {
+                        const commitUrl = `https://api.github.com/repos/${owner}/${repo}/commits?path=BACKLOG.md&per_page=1&sha=${branch}`;
+                        const commitRes = await fetch(commitUrl, {
+                            headers: {
+                                'User-Agent': 'bervos-hub',
+                                'Authorization': `token ${token}`,
+                                'Accept': 'application/vnd.github.v3+json'
+                            }
+                        });
+                        if (commitRes.ok) {
+                            const body = await commitRes.json();
+                            console.log(`[Backlog] Commits API response for ${owner}/${repo} on ${branch}:`, JSON.stringify(body).slice(0, 500));
+                            if (Array.isArray(body) && body.length > 0) {
+                                const date = body[0].commit?.committer?.date || body[0].commit?.author?.date || '';
+                                if (date)
+                                    updatedAt = new Date(date).toISOString().split('T')[0];
+                            }
+                        }
+                        else {
+                            console.warn(`[Backlog] Commits API returned ${commitRes.status} for ${owner}/${repo} on ${branch}`);
+                        }
+                    }
+                    catch (e) {
+                        console.warn(`[Backlog] Commits API failed for ${owner}/${repo}:`, e);
+                    }
+                }
+                return { count: parseCount(content), content, updatedAt };
             }
         }
+        catch (err) {
+            console.warn(`[Backlog] GitHub API failed for ${owner}/${repo} on ${branch}:`, err);
+        }
     }
-    return { count: 0, content: '' };
+    return { count: 0, content: '', updatedAt: '' };
 }
 /**
  * lightweight HEAD request ping to calculate server latency
@@ -617,7 +681,7 @@ function getLocalProjectVersion(projectName) {
  * If running locally and the sibling directory exists, reads from local git log.
  * Otherwise, fetches from the GitHub API if it is a public GitHub repository.
  */
-async function getRepoCommits(projectName, repoUrl) {
+async function getRepoCommits(projectName, repoUrl, limit = 15) {
     const normalizedName = projectName.toLowerCase();
     const parentDir = path.join(__dirname, '..', '..', '..', '..');
     const directoryNames = {
@@ -652,7 +716,7 @@ async function getRepoCommits(projectName, repoUrl) {
                 }
             }
             catch (e) { }
-            const stdout = (0, child_process_1.execSync)('git log -n 3 --date=short --pretty=format:"%h__DELIM__%an__DELIM__%ad__DELIM__%aI__DELIM__%s"', { cwd: projectFolderPath, encoding: 'utf8', timeout: 2000 });
+            const stdout = (0, child_process_1.execSync)(`git log -n ${limit} --date=short --pretty=format:"%h__DELIM__%an__DELIM__%ad__DELIM__%aI__DELIM__%s"`, { cwd: projectFolderPath, encoding: 'utf8', timeout: 2000 });
             return stdout.trim().split('\n').filter(Boolean).map(line => {
                 const parts = line.split('__DELIM__');
                 const hash = parts[0] || '';
@@ -700,7 +764,7 @@ async function getRepoCommits(projectName, repoUrl) {
                 headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
             }
             try {
-                const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=3`, { headers });
+                const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=${limit}`, { headers });
                 if (res.ok) {
                     const data = await res.json();
                     if (Array.isArray(data)) {
@@ -896,6 +960,7 @@ async function fetchInitiativeMetrics(item) {
         const backlog = await fetchBacklogFromRepo(gh.owner, gh.repo);
         metrics.backlogCount = backlog.count;
         metrics.backlogContent = backlog.content;
+        metrics.backlogUpdatedAt = backlog.updatedAt;
     }
     else {
         metrics.backlogCount = 0;
@@ -977,6 +1042,30 @@ async function saveCache(data) {
         console.error('[Cache] Failed to write cache to Firestore:', err);
     }
 }
+app.get(['/commits', '/api/commits'], authenticateAdmin, async (req, res) => {
+    try {
+        const projectName = req.query.project;
+        const limit = parseInt(req.query.limit) || 15;
+        if (!projectName) {
+            res.status(400).json({ error: 'Missing project parameter' });
+            return;
+        }
+        const initiatives = await getInitiativesFromSchema();
+        const projectItem = initiatives.find(item => item.name.toLowerCase() === projectName.toLowerCase());
+        if (!projectItem) {
+            res.status(404).json({ error: `Project not found: ${projectName}` });
+            return;
+        }
+        const url = projectItem.url || projectItem.codeRepository;
+        const commitUrl = projectItem.codeRepository || url;
+        const commits = await getRepoCommits(projectName, commitUrl, limit);
+        res.json(commits);
+    }
+    catch (err) {
+        console.error('[Commits API] Failed to fetch commits:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 app.get(['/metrics', '/api/metrics'], authenticateAdmin, async (req, res) => {
     try {
         const isRefresh = req.query.refresh === 'true';
