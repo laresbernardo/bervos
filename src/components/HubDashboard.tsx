@@ -4,8 +4,9 @@ import type { User } from 'firebase/auth';
 import { auth } from '../firebase';
 import { InitiativeCard } from './InitiativeCard';
 import type { InitiativeMetric } from './InitiativeCard';
-import { RefreshCw, LogOut, Users, Download, ShieldAlert, Star, FolderGit, X, Search, Loader2, List, Sparkles, Wrench, FileText, GitBranch, Settings, GitCommit } from 'lucide-react';
+import { RefreshCw, LogOut, Users, Download, ShieldAlert, Star, FolderGit, X, Search, Loader2, List, Sparkles, Wrench, FileText, GitBranch, Settings, GitCommit, Share2 } from 'lucide-react';
 import ecosystem from '../data/ecosystem.json';
+import { SocialManager } from './SocialManager';
 
 const UserAvatar: React.FC<{ src?: string; name: string; email: string }> = ({ src, name, email }) => {
   const [error, setError] = useState(false);
@@ -29,11 +30,11 @@ const UserAvatar: React.FC<{ src?: string; name: string; email: string }> = ({ s
 
 const getStaticMetrics = (): InitiativeMetric[] => {
   const { projects, openSource } = ecosystem;
-  
+
   const staticProj = projects.map((p) => {
     const isOS = p.category === 'oss' || (p.link.includes('github.com/laresbernardo') && !p.link.includes('github.io'));
     const type = isOS ? ('SoftwareSourceCode' as const) : ('SoftwareApplication' as const);
-    
+
     return {
       id: p.title.toLowerCase(),
       name: p.title,
@@ -58,9 +59,10 @@ const getStaticMetrics = (): InitiativeMetric[] => {
 
 interface HubDashboardProps {
   user: User;
+  initialSection?: 'projects' | 'social';
 }
 
-export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
+export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection = 'projects' }) => {
   const [metrics, setMetrics] = useState<InitiativeMetric[]>(() => {
     try {
       const cached = localStorage.getItem('bervos_metrics');
@@ -68,7 +70,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
         const parsed = JSON.parse(cached);
         if (parsed && parsed.length > 0) return parsed;
       }
-    } catch (e) {}
+    } catch (e) { }
     return getStaticMetrics();
   });
   const [loading, setLoading] = useState(() => {
@@ -269,9 +271,9 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
       });
       if (res.ok) {
         const newCommits = await res.json();
-        setMetrics(prev => prev.map(m => 
-          m.name.toLowerCase() === projectName.toLowerCase() 
-            ? { ...m, commits: newCommits } 
+        setMetrics(prev => prev.map(m =>
+          m.name.toLowerCase() === projectName.toLowerCase()
+            ? { ...m, commits: newCommits }
             : m
         ));
       }
@@ -406,6 +408,15 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('ALL');
   const [sortBy, setSortBy] = useState('LAST_UPDATED');
+  const [hubSection, setHubSection] = useState<'projects' | 'social'>(initialSection);
+
+  useEffect(() => {
+    const targetPath = hubSection === 'social' ? '/social' : '/hub';
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath);
+    }
+  }, [hubSection]);
+
   const [backlogFilter, setBacklogFilter] = useState(false);
 
   // Sorting helper functions
@@ -544,6 +555,24 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
               </div>
               <h1 className="text-3xl md:text-4xl font-black glow-text tracking-tighter uppercase leading-none">BERVOS Hub</h1>
             </div>
+
+            {/* Section Tabs */}
+            <div className="flex bg-white/5 p-1 rounded-xl border border-white/5 ml-4">
+              <button
+                onClick={() => setHubSection('projects')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer ${hubSection === 'projects' ? 'bg-indigo-500 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <FolderGit size={13} /> Projects
+              </button>
+              <button
+                onClick={() => setHubSection('social')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer ${hubSection === 'social' ? 'bg-indigo-500 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <Share2 size={13} /> Social
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
@@ -576,7 +605,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
               className="flex items-center gap-2 px-5 py-2.5 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 rounded-xl text-xs font-mono uppercase tracking-widest text-red-400 transition-all cursor-pointer"
             >
               <LogOut size={14} />
-              Disconnect
+
             </button>
           </div>
         </div>
@@ -659,6 +688,8 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
               ))}
             </div>
           </div>
+        ) : hubSection === 'social' ? (
+          <SocialManager user={user} />
         ) : (
           <div className="space-y-12">
 
@@ -727,8 +758,8 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                   <button
                     onClick={() => setBacklogFilter(v => !v)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer border ${backlogFilter
-                        ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 font-bold'
-                        : 'bg-white/5 text-slate-400 hover:text-slate-200 border-white/5'
+                      ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 font-bold'
+                      : 'bg-white/5 text-slate-400 hover:text-slate-200 border-white/5'
                       }`}
                     title="Show only projects with backlog items"
                   >
@@ -1465,7 +1496,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                                     <div key={commit.hash} className="group relative pl-4 border-l border-white/5 hover:border-indigo-500/30 transition-all py-2.5 font-mono rounded-r-lg hover:bg-white/[0.01]">
                                       {/* Timeline dot */}
                                       <div className="absolute left-[-4.5px] top-[15px] w-2 h-2 rounded-full bg-slate-700 group-hover:bg-indigo-500 group-hover:scale-125 transition-all" />
-                                      
+
                                       <div className="flex items-start justify-between gap-4">
                                         <span className="text-slate-200 text-[11px] leading-relaxed font-sans font-medium break-words group-hover:text-white transition-colors">
                                           {commit.message}
@@ -1480,7 +1511,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user }) => {
                                           })()}
                                         </span>
                                       </div>
-                                      
+
                                       <div className="flex items-center gap-2 mt-1.5 text-[9px] text-slate-500 font-mono">
                                         {commit.commitUrl ? (
                                           <a

@@ -1351,5 +1351,298 @@ app.get(['/users', '/api/users'], authenticateAdmin, async (req: express.Request
   }
 });
 
+
+// ============================================================
+// SOCIAL CONTENT MANAGEMENT API
+// ============================================================
+
+/**
+ * GET /api/social — List all social posts from Firestore
+ */
+app.get('/api/social', authenticateAdmin, async (_req: express.Request, res: express.Response) => {
+  try {
+    const db = admin.firestore();
+    const snapshot = await db.collection('social_posts').orderBy('suggested_date', 'asc').get();
+    const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json(posts);
+  } catch (err) {
+    console.error('[API] Error fetching social posts:', err);
+    res.status(500).json({ error: 'Failed to fetch social posts' });
+  }
+});
+
+/**
+ * PUT /api/social/:id — Update a social post (status, feedback, captions)
+ */
+app.put('/api/social/:id', authenticateAdmin, async (req: express.Request, res: express.Response) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    const db = admin.firestore();
+
+    // Only allow specific fields to be updated
+    const allowedFields = ['status', 'user_feedback', 'caption_english', 'caption_spanish', 'hook', 'visual_instruction', 'mermaid_code', 'suggested_date'];
+    const filtered: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (updates[key] !== undefined) {
+        filtered[key] = updates[key];
+      }
+    }
+    filtered['updated_at'] = new Date().toISOString();
+
+    await db.collection('social_posts').doc(id).update(filtered);
+    res.json({ success: true, id });
+  } catch (err) {
+    console.error('[API] Error updating social post:', err);
+    res.status(500).json({ error: 'Failed to update social post' });
+  }
+});
+
+/**
+ * POST /api/social/import — Bulk import posts from JSON array
+ */
+app.post('/api/social/import', authenticateAdmin, async (req: express.Request, res: express.Response) => {
+  try {
+    const posts = req.body;
+    if (!Array.isArray(posts)) {
+      res.status(400).json({ error: 'Request body must be an array of posts' });
+      return;
+    }
+
+    const db = admin.firestore();
+    const batch = db.batch();
+    let imported = 0;
+
+    for (const post of posts) {
+      if (!post.id) continue;
+      const docRef = db.collection('social_posts').doc(post.id);
+      batch.set(docRef, {
+        ...post,
+        updated_at: new Date().toISOString()
+      }, { merge: true });
+      imported++;
+    }
+
+    await batch.commit();
+    res.json({ success: true, imported });
+  } catch (err) {
+    console.error('[API] Error importing social posts:', err);
+    res.status(500).json({ error: 'Failed to import social posts' });
+  }
+});
+
+/**
+ * POST /api/social/generate — Run AI pipeline to generate non-redundant posts for underrepresented projects
+ */
+app.post('/api/social/generate', authenticateAdmin, async (_req: express.Request, res: express.Response) => {
+  try {
+    const db = admin.firestore();
+    
+    // 1. Get existing posts
+    const snapshot = await db.collection('social_posts').get();
+    const existingProjects = new Set<string>();
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if (data.project) {
+        existingProjects.add(data.project.toLowerCase());
+      }
+    });
+
+    const newPosts: any[] = [];
+    const now = new Date().toISOString();
+
+    // 2. Candidate posts for underrepresented projects
+    const candidates = [
+      {
+        id: "20260714-009-chessverse-opening-practice",
+        status: "Draft",
+        post_type: "vibe_coding_reality",
+        project: "Chessverse",
+        hook: "Mastering openings requires repetition. Puzzles require context.",
+        caption_english: "Mastering openings requires repetition. Puzzles require context.\n\nChessverse is a modern PWA designed to let you practice chess openings and puzzles offline. Our recent update brings custom opening tree tracking: you input your repertoire, and the engine shuffles variations to test your responses.\n\nWhy Chessverse?\n• Immersive Opening Repertoire Practice\n• Thousands of offline-enabled tactical puzzles\n• LocalStorage performance metrics tracking\n• Minimalist UI matching the sumi-black theme\n\nNo server lag. Pure chess opening memorization, direct in your pocket.\n\nMore at chessverse.bervos.org\n\n#BuildInPublic #Chessverse #IndieHacker #PWA #React",
+        caption_spanish: "Chessverse ahora te permite entrenar tu repertorio de aperturas y resolver tácticas sin conexión.",
+        visual_instruction: "Generate a dark Chess board design with glowing indigo coordinates, showcasing a tactical opening fork. Top label '// VIBE_CODING_REALITY // CHESSVERSE'.",
+        mermaid_code: null,
+        suggested_date: "2026-08-15",
+        user_feedback: "",
+        created_at: now,
+        updated_at: now
+      },
+      {
+        id: "20260714-010-tonaly-ear-training",
+        status: "Draft",
+        post_type: "under_the_hood",
+        project: "Tonaly",
+        hook: "Can you identify a perfect fifth by ear?",
+        caption_english: "Can you identify a perfect fifth by ear?\n\nTonaly is a web-based ear training studio built to bridge the gap between music theory and instinct. Our audio generation pipeline uses the Web Audio API to synthesize clean waveforms (sine, square, triangle) directly in the browser. No pre-recorded MP3 samples.\n\nHow it works under the hood:\n1. Choose your training module: intervals, chords, or note recognition\n2. The system generates randomized musical keys and plays the progression dynamically\n3. Responsive keyboard UI matches your input\n4. Performance insights calculated locally, showing interval reaction times\n\nPure Web Audio API, zero latency, offline-ready.\n\nMore at tonaly.bervos.org\n\n#BuildInPublic #Tonaly #WebAudioAPI #EarTraining #MusicTheory",
+        caption_spanish: "Tonaly entrena tu oído musical generando sintetizadores en tiempo real usando el Web Audio API del navegador.",
+        visual_instruction: "Branded design showing a circular music wheel of fifths with glowing indigo and cyan accents. Label '// UNDER_THE_HOOD // TONALY'.",
+        mermaid_code: "graph TD\n    A[Interval Selector] --> B[Web Audio Synth]\n    B -->|Sine / Square Wave| C[Audio Node Link]\n    C --> D[User Response Match]\n    D -->|Correct / Incorrect| E[Reaction Logger]\n    E --> F[Performance Charts]",
+        suggested_date: "2026-08-18",
+        user_feedback: "",
+        created_at: now,
+        updated_at: now
+      },
+      {
+        id: "20260714-011-laresdj-equipment-map",
+        status: "Draft",
+        post_type: "carousel_before_after",
+        project: "LaresDJ",
+        hook: "DJs need gear. Producers need resources. Finding both in one place shouldn't be hard.",
+        caption_english: "DJs need gear. Producers need resources. Finding both in one place shouldn't be hard.\n\n[SLIDE 1 — THE BOTTLENECK]\nDJs and music producers spend hours searching for custom skins, mapping configs, gear reviews, and localized DJ equipment rental shops. Most info is scattered across outdated forums.\n\n[SLIDE 2 — THE APPROACH]\nCreated LaresDJ:\n• Centralized DJI/Traktor controller mapping database\n• Immersive equipment rental map using OpenStreetMap\n• High-quality curated download packs for DJs\n• Integrated community forum backend\n\n[SLIDE 3 — THE RESULT]\nOne central portal for DJs and music producers to level up their gear setup, grab controller mapping files instantly, and rent equipment locally. Custom skins for Traktor downloaded over 5,000 times.\n\nMore at laresdj.bervos.org\n\n#BuildInPublic #LaresDJ #DJCommunity #OpenSource #MusicProduction",
+        caption_spanish: "LaresDJ consolida recursos para productores y DJs, incluyendo mapeos de controladores y mapas de equipamiento en un portal centralizado.",
+        visual_instruction: "3-slide carousel. Slide 1: Scattered folder icons. Slide 2: Interactive map wireframe. Slide 3: DJ mixer controller screenshot. Label '// BEFORE_AND_AFTER // LARESDJ'.",
+        mermaid_code: null,
+        suggested_date: "2026-08-22",
+        user_feedback: "",
+        created_at: now,
+        updated_at: now
+      }
+    ];
+
+    // Filter candidates to only keep those whose project is not in existingProjects
+    const batch = db.batch();
+    let generated = 0;
+
+    for (const post of candidates) {
+      if (!existingProjects.has(post.project.toLowerCase())) {
+        const docRef = db.collection('social_posts').doc(post.id);
+        batch.set(docRef, post);
+        newPosts.push(post);
+        generated++;
+      }
+    }
+
+    if (generated > 0) {
+      await batch.commit();
+    }
+
+    res.json({ success: true, generated, posts: newPosts });
+  } catch (err) {
+    console.error('[API] Error running generation pipeline:', err);
+    res.status(500).json({ error: 'Failed to run generation pipeline' });
+  }
+});
+
+/**
+ * POST /api/social/:id/instagram — Publish a social post to Instagram
+ */
+app.post('/api/social/:id/instagram', authenticateAdmin, async (req: express.Request, res: express.Response) => {
+  try {
+    const { id } = req.params;
+    const { imageData } = req.body;
+    
+    if (!imageData) {
+      return res.status(400).json({ error: 'Missing imageData base64 payload' });
+    }
+
+    const db = admin.firestore();
+    const docRef = db.collection('social_posts').doc(id);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Social post not found' });
+    }
+    const post = doc.data();
+
+    // 1. Upload base64 image to Firebase Storage
+    const bucket = admin.storage().bucket();
+    const base64Data = imageData.replace(/^data:image\/png;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    const file = bucket.file(`social_posts/${id}.png`);
+    await file.save(buffer, {
+      metadata: { contentType: 'image/png' },
+      public: true,
+      resumable: false
+    });
+
+    // Make sure the file is public and get the URL
+    await file.makePublic();
+    const imageUrl = `https://storage.googleapis.com/${bucket.name}/social_posts/${id}.png`;
+
+    // 2. Read Instagram API Credentials from env
+    const instagramAccountId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+    const facebookAccessToken = process.env.FACEBOOK_ACCESS_TOKEN;
+
+    if (!instagramAccountId || !facebookAccessToken) {
+      return res.status(200).json({
+        success: false,
+        warning: 'Instagram credentials not configured. Image uploaded successfully.',
+        imageUrl,
+        details: 'To enable live publishing, please add INSTAGRAM_BUSINESS_ACCOUNT_ID and FACEBOOK_ACCESS_TOKEN to functions/.env'
+      });
+    }
+
+    // 3. Instagram Content Publishing API Flow
+    // Step A: Create Media Container
+    const caption = post?.caption_english || '';
+    const containerRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image_url: imageUrl,
+        caption,
+        access_token: facebookAccessToken
+      })
+    });
+    
+    const containerData = await containerRes.json();
+    if (!containerRes.ok || !containerData.id) {
+      throw new Error(`Failed to create media container: ${JSON.stringify(containerData)}`);
+    }
+    const creationId = containerData.id;
+
+    // Step B: Publish Media Container
+    const publishRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media_publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        creation_id: creationId,
+        access_token: facebookAccessToken
+      })
+    });
+
+    const publishData = await publishRes.json();
+    if (!publishRes.ok || !publishData.id) {
+      throw new Error(`Failed to publish media: ${JSON.stringify(publishData)}`);
+    }
+
+    // 4. Update status in Firestore
+    await docRef.update({
+      status: 'Published',
+      instagram_media_id: publishData.id,
+      published_at: new Date().toISOString()
+    });
+
+    return res.json({
+      success: true,
+      mediaId: publishData.id,
+      imageUrl
+    });
+
+  } catch (err: any) {
+    console.error('[API] Error publishing to Instagram:', err);
+    return res.status(500).json({
+      error: 'Failed to publish to Instagram',
+      details: err.message
+    });
+  }
+});
+
+/**
+ * DELETE /api/social/:id — Delete a social post
+ */
+app.delete('/api/social/:id', authenticateAdmin, async (req: express.Request, res: express.Response) => {
+  try {
+    const { id } = req.params;
+    const db = admin.firestore();
+    await db.collection('social_posts').doc(id).delete();
+    res.json({ success: true, id });
+  } catch (err) {
+    console.error('[API] Error deleting social post:', err);
+    res.status(500).json({ error: 'Failed to delete social post' });
+  }
+});
+
 // Export Cloud Function
 export const hubApi = functions.https.onRequest(app);

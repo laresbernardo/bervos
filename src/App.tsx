@@ -497,7 +497,7 @@ function HomePage() {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            onClick={() => window.location.href = '/hub'}
+            onClick={() => { window.location.href = window.location.pathname === '/social' ? '/social' : '/hub'; }}
             className="flex items-center gap-3 group cursor-pointer"
           >
             <img src="/logo.svg" alt="BERVOS" className="h-8 w-auto brightness-200" />
@@ -1051,7 +1051,7 @@ function App() {
     return unsubscribe;
   }, []);
 
-  const isHub = window.location.pathname === '/hub';
+  const isHub = window.location.pathname === '/hub' || window.location.pathname === '/social';
 
   if (isHub) {
     if (loadingAuth) {
@@ -1068,7 +1068,12 @@ function App() {
     if (user.email !== 'laresbernardo@gmail.com') {
       return <HubAccessDenied user={user} onBackToHome={() => { window.location.href = '/'; }} />;
     }
-    return <HubDashboard user={user} />;
+    return (
+      <HubDashboard
+        user={user}
+        initialSection={window.location.pathname === '/social' ? 'social' : 'projects'}
+      />
+    );
   }
 
   return <HomePage />;

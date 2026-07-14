@@ -1,0 +1,1581 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import type { User } from 'firebase/auth';
+import { Search, X, Loader2, Check, MessageSquare, Edit3, Eye, Calendar, Share2, Sparkles, Download, Maximize2, Trash2 } from 'lucide-react';
+
+interface SocialPost {
+  id: string;
+  status: 'Draft' | 'Approved' | 'Published' | 'Needs AI Revision';
+  post_type: 'carousel_before_after' | 'under_the_hood' | 'vibe_coding_reality';
+  project: string;
+  hook: string;
+  caption_english: string;
+  caption_spanish: string;
+  visual_instruction: string;
+  mermaid_code: string | null;
+  suggested_date: string;
+  user_feedback: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface SocialManagerProps {
+  user: User;
+}
+
+const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; label: string }> = {
+  'Draft': { bg: 'bg-indigo-500/10', text: 'text-indigo-400', border: 'border-indigo-500/20', label: 'DRAFT' },
+  'Approved': { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20', label: 'APPROVED' },
+  'Published': { bg: 'bg-slate-500/10', text: 'text-slate-400', border: 'border-slate-500/20', label: 'PUBLISHED' },
+  'Needs AI Revision': { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20', label: 'NEEDS_REVISION' },
+};
+
+const POST_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
+  'carousel_before_after': { label: 'Before & After', color: 'text-cyan-400' },
+  'under_the_hood': { label: 'Under the Hood', color: 'text-indigo-400' },
+  'vibe_coding_reality': { label: 'Vibe Coding', color: 'text-purple-400' },
+};
+
+export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
+  const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedPost, setSelectedPost] = useState<SocialPost | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [search, setSearch] = useState('');
+  const [feedbackText, setFeedbackText] = useState('');
+  const [showFeedbackInput, setShowFeedbackInput] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingCaption, setEditingCaption] = useState(false);
+  const [editedCaptionEn, setEditedCaptionEn] = useState('');
+  const [editedCaptionEs, setEditedCaptionEs] = useState('');
+  const [editingVisual, setEditingVisual] = useState(false);
+  const [editedVisualInstruction, setEditedVisualInstruction] = useState('');
+  const [generatedImages, setGeneratedImages] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem('bervos_social_generated_images');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [generationStep, setGenerationStep] = useState<string>('');
+  const [generatingPipeline, setGeneratingPipeline] = useState(false);
+  const [generationStatusText, setGenerationStatusText] = useState('');
+  const [publishingInstagram, setPublishingInstagram] = useState(false);
+  const [showGrid, setShowGrid] = useState(true);
+  const [showHud, setShowHud] = useState(true);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+
+  const fetchPosts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/social', {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      if (!res.ok) throw new Error(`Failed to load social posts (Status: ${res.status})`);
+      const data = await res.json();
+      setPosts(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load social posts');
+      // Fallback: try loading from local JSON
+      try {
+        const res = await fetch('/social/bervos_social_queue.json');
+        if (res.ok) {
+          const data = await res.json();
+          setPosts(data);
+          setError(null);
+        }
+      } catch (e) {
+        console.error('[Social] Fallback load failed:', e);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
+
+  const updatePost = useCallback(async (postId: string, updates: Partial<SocialPost>) => {
+    setSaving(true);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch(`/api/social/${postId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updates)
+      });
+      if (!res.ok) throw new Error(`Failed to update post (Status: ${res.status})`);
+
+      setPosts(prev => prev.map(p =>
+        p.id === postId ? { ...p, ...updates, updated_at: new Date().toISOString() } : p
+      ));
+      if (selectedPost?.id === postId) {
+        setSelectedPost(prev => prev ? { ...prev, ...updates, updated_at: new Date().toISOString() } : null);
+      }
+    } catch (err) {
+      console.error('[Social] Update failed:', err);
+      setPosts(prev => prev.map(p =>
+        p.id === postId ? { ...p, ...updates, updated_at: new Date().toISOString() } : p
+      ));
+      if (selectedPost?.id === postId) {
+        setSelectedPost(prev => prev ? { ...prev, ...updates, updated_at: new Date().toISOString() } : null);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }, [user, selectedPost]);
+
+  const splitTitleToLines = (text: string, maxLen = 32): string[] => {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let current = '';
+    for (const w of words) {
+      if ((current + ' ' + w).trim().length <= maxLen) {
+        current = (current + ' ' + w).trim();
+      } else {
+        if (current) lines.push(current);
+        current = w;
+      }
+    }
+    if (current) lines.push(current);
+    return lines;
+  };
+
+  const downloadSvg = (post: SocialPost) => {
+    const dataUrl = generateBrandedSvg(post, showGrid, showHud);
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = `bervos-post-${post.id}.svg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const downloadPng = (post: SocialPost) => {
+    const svgDataUrl = generateBrandedSvg(post, showGrid, showHud);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 2160;
+      canvas.height = 2160;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#080b12';
+        ctx.fillRect(0, 0, 2160, 2160);
+        ctx.drawImage(img, 0, 0, 2160, 2160);
+        try {
+          const pngUrl = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.href = pngUrl;
+          link.download = `bervos-post-${post.id}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } catch (e) {
+          console.error('PNG conversion failed:', e);
+        }
+      }
+    };
+    img.src = svgDataUrl;
+  };
+
+  const generateBrandedSvg = (post: SocialPost, gridEnabled: boolean = showGrid, hudEnabled: boolean = showHud): string => {
+    const bg = '#080b12';
+    const accentIndigo = '#6366f1';
+    const accentCyan = '#06b6d4';
+    const textPrimary = '#f1f5f9';
+    const textSecondary = '#94a3b8';
+    
+    let diagramContent = '';
+    const proj = post.project.toLowerCase();
+    
+    if (proj === 'billio') {
+      diagramContent = `
+        <!-- Connection 1 -->
+        <g>
+          <path d="M 370 575 L 430 575" stroke="url(#accentGrad)" stroke-width="3" stroke-dasharray="6 3"/>
+          <circle cx="400" cy="575" r="4" fill="${accentCyan}"/>
+          <text x="400" y="555" font-family="monospace" font-size="9" fill="${accentCyan}" text-anchor="middle" font-weight="bold">STDIO</text>
+        </g>
+
+        <!-- Connection 2 -->
+        <g>
+          <path d="M 680 575 L 740 575" stroke="url(#accentGrad)" stroke-width="3"/>
+          <circle cx="710" cy="575" r="4" fill="${accentIndigo}"/>
+          <text x="710" y="555" font-family="monospace" font-size="9" fill="${accentIndigo}" text-anchor="middle" font-weight="bold">HTTPS/SSL</text>
+        </g>
+
+        <!-- LOCAL AI Card -->
+        <g transform="translate(110, 480)">
+          <rect width="260" height="190" rx="16" fill="#0c121d" fill-opacity="0.8" stroke="rgba(99, 102, 241, 0.25)" stroke-width="2"/>
+          <circle cx="30" cy="30" r="5" fill="#10b981"/>
+          <text x="45" y="34" font-family="monospace" font-size="10" fill="#94a3b8" font-weight="bold">NODE_01 // OLLAMA</text>
+          <path d="M 115 85 C 105 75, 95 80, 95 95 C 95 105, 105 110, 115 120 C 125 110, 135 105, 135 95 C 135 80, 125 75, 115 85 Z" fill="none" stroke="${accentIndigo}" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="M 145 85 C 155 75, 165 80, 165 95 C 165 105, 155 110, 145 120 C 135 110, 125 105, 125 95 C 125 80, 135 75, 145 85 Z" fill="none" stroke="${accentIndigo}" stroke-width="2.5" stroke-linejoin="round"/>
+          <text x="130" y="150" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="16" fill="#f8fafc" font-weight="900" text-anchor="middle" letter-spacing="1">LOCAL AI</text>
+          <text x="130" y="170" font-family="monospace" font-size="10" fill="#94a3b8" text-anchor="middle">llama3:8b (local)</text>
+        </g>
+
+        <!-- MCP BRIDGE Card -->
+        <g transform="translate(420, 480)">
+          <rect width="260" height="190" rx="16" fill="#0c121d" fill-opacity="0.8" stroke="rgba(6, 182, 212, 0.3)" stroke-width="2"/>
+          <circle cx="30" cy="30" r="5" fill="#10b981"/>
+          <text x="45" y="34" font-family="monospace" font-size="10" fill="#94a3b8" font-weight="bold">NODE_02 // PROT</text>
+          <rect x="115" y="80" width="30" height="20" rx="4" fill="none" stroke="${accentCyan}" stroke-width="2"/>
+          <path d="M 125 100 L 125 115 M 135 100 L 135 115" stroke="${accentCyan}" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M 130 70 L 130 80" stroke="${accentCyan}" stroke-width="2.5" stroke-linecap="round"/>
+          <text x="130" y="150" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="16" fill="#f8fafc" font-weight="900" text-anchor="middle" letter-spacing="1">MCP BRIDGE</text>
+          <text x="130" y="170" font-family="monospace" font-size="10" fill="#94a3b8" text-anchor="middle">ollama_mcp_client.js</text>
+        </g>
+
+        <!-- CLOUD API Card -->
+        <g transform="translate(730, 480)">
+          <rect width="260" height="190" rx="16" fill="#0c121d" fill-opacity="0.8" stroke="rgba(99, 102, 241, 0.25)" stroke-width="2"/>
+          <circle cx="30" cy="30" r="5" fill="#10b981"/>
+          <text x="45" y="34" font-family="monospace" font-size="10" fill="#94a3b8" font-weight="bold">NODE_03 // DATA</text>
+          <path d="M 120 100 A 10 10 0 0 1 130 90 A 15 15 0 0 1 155 83 A 11 11 0 0 1 165 100 Z" fill="none" stroke="${accentIndigo}" stroke-width="2.5" stroke-linejoin="round"/>
+          <line x1="115" y1="100" x2="170" y2="100" stroke="${accentIndigo}" stroke-width="2.5" stroke-linecap="round"/>
+          <text x="130" y="150" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="16" fill="#f8fafc" font-weight="900" text-anchor="middle" letter-spacing="1">CLOUD DB</text>
+          <text x="130" y="170" font-family="monospace" font-size="10" fill="#94a3b8" text-anchor="middle">Firestore (online)</text>
+        </g>
+      `;
+    } else if (proj === 'bervos' || proj === 'hub') {
+      if (post.hook.toLowerCase().includes('llm') || post.hook.toLowerCase().includes('recommend') || post.hook.toLowerCase().includes('seo')) {
+        diagramContent = `
+          <!-- Central Python Script Node -->
+          <g transform="translate(420, 520)">
+            <rect width="240" height="90" rx="12" fill="#0c121d" stroke="${accentCyan}" stroke-width="2" />
+            <text x="120" y="40" font-family="monospace" font-size="11" fill="${accentCyan}" font-weight="bold" text-anchor="middle">generate_ai_metadata.py</text>
+            <text x="120" y="60" font-family="monospace" font-size="9" fill="${textSecondary}" text-anchor="middle">Python CLI Tool</text>
+          </g>
+
+          <!-- Branch Connections -->
+          <path d="M 420 565 L 280 450 M 420 565 L 280 670 M 660 565 L 800 450 M 660 565 L 800 670" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2" stroke-dasharray="4 4" />
+
+          <!-- Out Nodes -->
+          <g transform="translate(100, 400)">
+            <rect width="180" height="70" rx="8" fill="#0c121d" stroke="${accentIndigo}" stroke-width="1.5" />
+            <text x="90" y="32" font-family="monospace" font-size="11" fill="#f8fafc" font-weight="bold" text-anchor="middle">JSON-LD SCHEMA</text>
+            <text x="90" y="50" font-family="monospace" font-size="8" fill="#94a3b8" text-anchor="middle">index.html injection</text>
+          </g>
+
+          <g transform="translate(100, 620)">
+            <rect width="180" height="70" rx="8" fill="#0c121d" stroke="${accentIndigo}" stroke-width="1.5" />
+            <text x="90" y="32" font-family="monospace" font-size="11" fill="#f8fafc" font-weight="bold" text-anchor="middle">LLMS.TXT</text>
+            <text x="90" y="50" font-family="monospace" font-size="8" fill="#94a3b8" text-anchor="middle">AI Documentation</text>
+          </g>
+
+          <g transform="translate(800, 400)">
+            <rect width="180" height="70" rx="8" fill="#0c121d" stroke="${accentIndigo}" stroke-width="1.5" />
+            <text x="90" y="32" font-family="monospace" font-size="11" fill="#f8fafc" font-weight="bold" text-anchor="middle">SITEMAP.XML</text>
+            <text x="90" y="50" font-family="monospace" font-size="8" fill="#94a3b8" text-anchor="middle">Dynamic SEO Index</text>
+          </g>
+
+          <g transform="translate(800, 620)">
+            <rect width="180" height="70" rx="8" fill="#0c121d" stroke="${accentIndigo}" stroke-width="1.5" />
+            <text x="90" y="32" font-family="monospace" font-size="11" fill="#f8fafc" font-weight="bold" text-anchor="middle">ROBOTS.TXT</text>
+            <text x="90" y="50" font-family="monospace" font-size="8" fill="#94a3b8" text-anchor="middle">Sitemap Pointer</text>
+          </g>
+        `;
+      } else {
+        diagramContent = `
+          <!-- Top Row: Floating open tabs -->
+          <g opacity="0.4">
+            <rect x="150" y="380" width="100" height="24" rx="4" fill="#0c121d" stroke="rgba(239, 68, 68, 0.4)" stroke-width="1"/>
+            <text x="200" y="395" font-family="monospace" font-size="9" fill="#ef4444" text-anchor="middle">Tab 1</text>
+
+            <rect x="270" y="380" width="100" height="24" rx="4" fill="#0c121d" stroke="rgba(239, 68, 68, 0.4)" stroke-width="1"/>
+            <text x="320" y="395" font-family="monospace" font-size="9" fill="#ef4444" text-anchor="middle">Tab 2</text>
+
+            <rect x="390" y="380" width="100" height="24" rx="4" fill="#0c121d" stroke="rgba(239, 68, 68, 0.4)" stroke-width="1"/>
+            <text x="440" y="395" font-family="monospace" font-size="9" fill="#ef4444" text-anchor="middle">Tab 3</text>
+
+            <text x="530" y="395" font-family="monospace" font-size="12" fill="#94a3b8">...</text>
+
+            <rect x="580" y="380" width="100" height="24" rx="4" fill="#0c121d" stroke="rgba(239, 68, 68, 0.4)" stroke-width="1"/>
+            <text x="630" y="395" font-family="monospace" font-size="9" fill="#ef4444" text-anchor="middle">Tab 10</text>
+          </g>
+
+          <g transform="translate(490, 420)">
+            <path d="M 50 10 L 50 70" fill="none" stroke="${accentCyan}" stroke-width="3" stroke-dasharray="4 4" />
+            <path d="M 40 60 L 50 75 L 60 60" fill="none" stroke="${accentCyan}" stroke-width="3" stroke-linejoin="round" />
+            <rect x="-10" y="25" width="120" height="20" rx="4" fill="#080b12" stroke="rgba(255,255,255,0.06)" stroke-width="1" />
+            <text x="50" y="38" font-family="monospace" font-size="8" fill="${accentCyan}" text-anchor="middle" font-weight="bold">CONSOLIDATE</text>
+          </g>
+
+          <!-- Consolidated Hub Dashboard -->
+          <g transform="translate(180, 520)">
+            <rect width="720" height="380" rx="16" fill="#0c121d" stroke="${accentCyan}" stroke-width="2" fill-opacity="0.9"/>
+            
+            <!-- Window header -->
+            <rect width="720" height="30" rx="16" fill="rgba(255,255,255,0.02)"/>
+            <circle cx="20" cy="15" r="4" fill="#ef4444" />
+            <circle cx="35" cy="15" r="4" fill="#f59e0b" />
+            <circle cx="50" cy="15" r="4" fill="#10b981" />
+            <text x="360" y="19" font-family="monospace" font-size="10" fill="#94a3b8" text-anchor="middle">bervos.org/hub</text>
+
+            <!-- Dashboard mock grid -->
+            <g transform="translate(40, 60)">
+              <rect x="0" y="0" width="180" height="120" rx="8" fill="#080b12" stroke="rgba(255,255,255,0.04)" stroke-width="1" />
+              <text x="15" y="25" font-family="monospace" font-size="9" fill="${accentCyan}" font-weight="bold">BILLIO</text>
+              <text x="15" y="55" font-family="-apple-system, sans-serif" font-size="20" fill="#f8fafc" font-weight="900">$1,482</text>
+              <text x="15" y="80" font-family="monospace" font-size="8" fill="#94a3b8">Active Ledger</text>
+              <rect x="15" y="95" width="150" height="6" rx="3" fill="rgba(6, 182, 212, 0.1)"/>
+              <rect x="15" y="95" width="110" height="6" rx="3" fill="${accentCyan}"/>
+
+              <rect x="220" y="0" width="180" height="120" rx="8" fill="#080b12" stroke="rgba(255,255,255,0.04)" stroke-width="1" />
+              <text x="235" y="25" font-family="monospace" font-size="9" fill="${accentCyan}" font-weight="bold">PINMAGE</text>
+              <text x="235" y="55" font-family="-apple-system, sans-serif" font-size="20" fill="#f8fafc" font-weight="900">85% GPS</text>
+              <text x="235" y="80" font-family="monospace" font-size="8" fill="#94a3b8">Geocoded Albums</text>
+              <rect x="235" y="95" width="150" height="6" rx="3" fill="rgba(6, 182, 212, 0.1)"/>
+              <rect x="235" y="95" width="130" height="6" rx="3" fill="${accentCyan}"/>
+
+              <rect x="440" y="0" width="180" height="120" rx="8" fill="#080b12" stroke="rgba(255,255,255,0.04)" stroke-width="1" />
+              <text x="455" y="25" font-family="monospace" font-size="9" fill="${accentCyan}" font-weight="bold">AURA</text>
+              <text x="455" y="55" font-family="-apple-system, sans-serif" font-size="20" fill="#f8fafc" font-weight="900">Time Tour</text>
+              <text x="455" y="80" font-family="monospace" font-size="8" fill="#94a3b8">550ms transitions</text>
+              <rect x="455" y="95" width="150" height="6" rx="3" fill="rgba(6, 182, 212, 0.1)"/>
+              <rect x="455" y="95" width="90" height="6" rx="3" fill="${accentCyan}"/>
+
+              <!-- Bottom Row dashboard metrics -->
+              <g transform="translate(0, 140)">
+                <rect x="0" y="0" width="300" height="120" rx="8" fill="#080b12" stroke="rgba(255,255,255,0.04)" stroke-width="1" />
+                <text x="15" y="25" font-family="monospace" font-size="9" fill="${accentIndigo}" font-weight="bold">LATEST COMMIT HISTORY</text>
+                <text x="15" y="55" font-family="monospace" font-size="8" fill="#f8fafc">fe82a1d: fix scroll flicker on map view</text>
+                <text x="15" y="75" font-family="monospace" font-size="8" fill="#94a3b8">0a1bc92: add morse catalog renderer</text>
+                <text x="15" y="95" font-family="monospace" font-size="8" fill="#94a3b8">9b821a8: setup mcp auth token check</text>
+              </g>
+
+              <g transform="translate(320, 140)">
+                <rect x="0" y="0" width="300" height="120" rx="8" fill="#080b12" stroke="rgba(255,255,255,0.04)" stroke-width="1" />
+                <text x="15" y="25" font-family="monospace" font-size="9" fill="${accentIndigo}" font-weight="bold">INTELLIGENT SWR CACHING</text>
+                <rect x="15" y="45" width="270" height="55" rx="6" fill="#0c121d" stroke="rgba(6, 182, 212, 0.15)"/>
+                <circle cx="40" cy="72" r="6" fill="#10b981" />
+                <text x="60" y="76" font-family="monospace" font-size="11" fill="#f8fafc" font-weight="bold">CACHE HIT (STALE)</text>
+              </g>
+            </g>
+          </g>
+        `;
+      }
+    } else if (proj === 'pinmage') {
+      diagramContent = `
+        <!-- Funnel Background Grid -->
+        <g opacity="0.3">
+          <line x1="540" y1="360" x2="540" y2="920" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4 4" />
+        </g>
+
+        <!-- Vertical Cascade Funnel -->
+        <g transform="translate(340, 370)">
+          <!-- Layer 1 -->
+          <rect width="400" height="90" rx="12" fill="#0c121d" stroke="${accentIndigo}" stroke-width="1.5" />
+          <circle cx="40" cy="45" r="16" fill="rgba(99, 102, 241, 0.1)" stroke="${accentIndigo}" stroke-width="1" />
+          <circle cx="40" cy="45" r="5" fill="${accentIndigo}"/>
+          <path d="M 30 45 Q 40 37 50 45 Q 40 53 30 45" fill="none" stroke="${accentIndigo}" stroke-width="1.5"/>
+          <text x="75" y="38" font-family="monospace" font-size="11" fill="${accentIndigo}" font-weight="bold">LAYER 01 // AI VISION CASCADE</text>
+          <text x="75" y="58" font-family="-apple-system, sans-serif" font-size="14" fill="#f8fafc" font-weight="bold">Extract landmark visual clues</text>
+          <text x="75" y="74" font-family="monospace" font-size="9" fill="#94a3b8">Gemini vision API fallbacks</text>
+          
+          <!-- Layer 2 -->
+          <g transform="translate(0, 140)">
+            <rect width="400" height="90" rx="12" fill="#0c121d" stroke="${accentCyan}" stroke-width="1.5" />
+            <circle cx="40" cy="45" r="16" fill="rgba(6, 182, 212, 0.1)" stroke="${accentCyan}" stroke-width="1" />
+            <circle cx="40" cy="45" r="8" fill="none" stroke="${accentCyan}" stroke-width="1.5"/>
+            <line x1="32" y1="45" x2="48" y2="45" stroke="${accentCyan}" stroke-width="1"/>
+            <text x="75" y="38" font-family="monospace" font-size="11" fill="${accentCyan}" font-weight="bold">LAYER 02 // OSM NOMINATIM</text>
+            <text x="75" y="58" font-family="-apple-system, sans-serif" font-size="14" fill="#f8fafc" font-weight="bold">Primary OSM Geocoder</text>
+            <text x="75" y="74" font-family="monospace" font-size="9" fill="#94a3b8">Rate limited to 1 request/second</text>
+          </g>
+
+          <!-- Layer 3 -->
+          <g transform="translate(0, 280)">
+            <rect width="400" height="90" rx="12" fill="#0c121d" stroke="${accentIndigo}" stroke-width="1.5" opacity="0.8" />
+            <circle cx="40" cy="45" r="16" fill="rgba(99, 102, 241, 0.05)" stroke="${accentIndigo}" stroke-width="1" />
+            <path d="M 40 37 A 4 4 0 0 1 44 41 C 44 47, 40 53, 40 53 C 40 53, 36 47, 36 41 A 4 4 0 0 1 40 37" fill="none" stroke="${accentIndigo}" stroke-width="1.5" />
+            <text x="75" y="38" font-family="monospace" font-size="11" fill="${accentIndigo}" font-weight="bold">LAYER 03 // APPLE CLGEOCODER</text>
+            <text x="75" y="58" font-family="-apple-system, sans-serif" font-size="14" fill="#f8fafc" font-weight="bold">Apple Native Fallback API</text>
+            <text x="75" y="74" font-family="monospace" font-size="9" fill="#94a3b8">Coordinates derived regionally</text>
+          </g>
+
+          <!-- Layer 4 -->
+          <g transform="translate(0, 420)">
+            <rect width="400" height="90" rx="12" fill="#0c121d" stroke="#f59e0b" stroke-width="1.5" opacity="0.6" />
+            <circle cx="40" cy="45" r="16" fill="rgba(245, 158, 11, 0.05)" stroke="#f59e0b" stroke-width="1" />
+            <text x="40" y="49" font-family="monospace" font-size="11" fill="#f59e0b" font-weight="bold" text-anchor="middle">&gt;_</text>
+            <text x="75" y="38" font-family="monospace" font-size="11" fill="#f59e0b" font-weight="bold">LAYER 04 // AI COORDS FALLBACK</text>
+            <text x="75" y="58" font-family="-apple-system, sans-serif" font-size="14" fill="#f8fafc" font-weight="bold">Raw Lat/Lon coordinates fallback</text>
+            <text x="75" y="74" font-family="monospace" font-size="9" fill="#94a3b8">Validated via isValidCoordinate()</text>
+          </g>
+        </g>
+      `;
+    } else if (proj === 'aura') {
+      diagramContent = `
+        <!-- World map grid lines layout -->
+        <g opacity="0.08">
+          <line x1="100" y1="600" x2="980" y2="600" stroke="#ffffff" stroke-width="1"/>
+          <line x1="540" y1="360" x2="540" y2="840" stroke="#ffffff" stroke-width="1"/>
+          <circle cx="540" cy="600" r="150" fill="none" stroke="#ffffff" stroke-width="1"/>
+          <circle cx="540" cy="600" r="280" fill="none" stroke="#ffffff" stroke-width="1" stroke-dasharray="8 4"/>
+        </g>
+
+        <!-- Continent vector shapes (abstract blocks) -->
+        <g fill="rgba(255,255,255,0.025)" stroke="rgba(255,255,255,0.05)" stroke-width="1">
+          <path d="M 180 430 L 320 400 L 280 520 L 220 540 Z"/>
+          <path d="M 280 580 L 340 600 L 310 740 L 260 760 Z"/>
+          <path d="M 460 380 L 680 360 L 820 420 L 740 650 L 600 700 L 480 620 L 440 450 Z"/>
+          <path d="M 780 680 L 860 690 L 840 760 L 760 740 Z"/>
+        </g>
+
+        <!-- Glowing map clusters -->
+        <g transform="translate(240, 470)">
+          <circle cx="0" cy="0" r="20" fill="${accentIndigo}" opacity="0.15"/>
+          <circle cx="0" cy="0" r="8" fill="${accentIndigo}"/>
+          <text x="12" y="4" font-family="monospace" font-size="10" fill="#f8fafc" font-weight="bold">SF [142]</text>
+        </g>
+
+        <g transform="translate(520, 440)">
+          <circle cx="0" cy="0" r="28" fill="${accentCyan}" opacity="0.15"/>
+          <circle cx="0" cy="0" r="10" fill="${accentCyan}"/>
+          <text x="15" y="4" font-family="monospace" font-size="10" fill="#f8fafc" font-weight="bold">PARIS [524]</text>
+        </g>
+
+        <g transform="translate(780, 460)">
+          <circle cx="0" cy="0" r="24" fill="${accentIndigo}" opacity="0.15"/>
+          <circle cx="0" cy="0" r="9" fill="${accentIndigo}"/>
+          <text x="12" y="4" font-family="monospace" font-size="10" fill="#f8fafc" font-weight="bold">TOKYO [312]</text>
+        </g>
+
+        <g transform="translate(820, 720)">
+          <circle cx="0" cy="0" r="16" fill="${accentCyan}" opacity="0.15"/>
+          <circle cx="0" cy="0" r="6" fill="${accentCyan}"/>
+          <text x="12" y="4" font-family="monospace" font-size="10" fill="#f8fafc" font-weight="bold">SYD [84]</text>
+        </g>
+
+        <!-- Curved Flight Paths -->
+        <path d="M 240 470 Q 380 360 520 440" fill="none" stroke="${accentCyan}" stroke-width="2.5" stroke-dasharray="4 2" />
+        <path d="M 520 440 Q 650 380 780 460" fill="none" stroke="url(#accentGrad)" stroke-width="3" />
+        <path d="M 780 460 Q 800 590 820 720" fill="none" stroke="${accentCyan}" stroke-width="2" stroke-dasharray="3 3" />
+
+        <!-- Timeline HUD Slider at bottom -->
+        <g transform="translate(180, 810)">
+          <rect width="720" height="60" rx="12" fill="#0c121d" stroke="rgba(6, 182, 212, 0.2)" stroke-width="1" />
+          <circle cx="40" cy="30" r="12" fill="rgba(6, 182, 212, 0.1)" stroke="${accentCyan}" stroke-width="1"/>
+          <polygon points="37,25 37,35 46,30" fill="${accentCyan}" />
+          
+          <line x1="80" y1="30" x2="600" y2="30" stroke="rgba(255,255,255,0.06)" stroke-width="4" stroke-linecap="round" />
+          <line x1="80" y1="30" x2="380" y2="30" stroke="${accentCyan}" stroke-width="4" stroke-linecap="round" />
+          <circle cx="380" cy="30" r="7" fill="${accentCyan}" stroke="#080b12" stroke-width="2"/>
+          
+          <text x="615" y="34" font-family="monospace" font-size="10" fill="${textSecondary}">2016 - 2026</text>
+        </g>
+      `;
+    } else if (proj === 'scribo') {
+      diagramContent = `
+        <!-- Writing systems comparison -->
+        <g transform="translate(80, 420)">
+          <!-- Arabic Card -->
+          <rect x="0" y="0" width="210" height="360" rx="16" fill="#0c121d" stroke="rgba(99, 102, 241, 0.25)" stroke-width="2" />
+          <rect x="0" y="0" width="210" height="30" rx="16" fill="rgba(255,255,255,0.02)"/>
+          <text x="15" y="19" font-family="monospace" font-size="9" fill="${accentIndigo}" font-weight="bold">CATALOG // ARABIC</text>
+          <text x="105" y="180" font-family="Arial, sans-serif" font-size="72" fill="#f8fafc" text-anchor="middle">ض</text>
+          <text x="105" y="270" font-family="-apple-system, sans-serif" font-size="16" fill="#f8fafc" font-weight="bold" text-anchor="middle">Arabic Glyph</text>
+          <text x="105" y="295" font-family="monospace" font-size="10" fill="#94a3b8" text-anchor="middle">Unicode text rendering</text>
+
+          <!-- Japanese Card -->
+          <g transform="translate(240, 0)">
+            <rect x="0" y="0" width="210" height="360" rx="16" fill="#0c121d" stroke="rgba(6, 182, 212, 0.3)" stroke-width="2" />
+            <rect x="0" y="0" width="210" height="30" rx="16" fill="rgba(255,255,255,0.02)"/>
+            <text x="15" y="19" font-family="monospace" font-size="9" fill="${accentCyan}" font-weight="bold">CATALOG // KANA</text>
+            <text x="105" y="180" font-family="sans-serif" font-size="72" fill="#f8fafc" text-anchor="middle">あ</text>
+            <text x="105" y="270" font-family="-apple-system, sans-serif" font-size="16" fill="#f8fafc" font-weight="bold" text-anchor="middle">Hiragana</text>
+            <text x="105" y="295" font-family="monospace" font-size="10" fill="#94a3b8" text-anchor="middle">Unicode text rendering</text>
+          </g>
+
+          <!-- Elvish Card -->
+          <g transform="translate(480, 0)">
+            <rect x="0" y="0" width="210" height="360" rx="16" fill="#0c121d" stroke="rgba(99, 102, 241, 0.25)" stroke-width="2" />
+            <rect x="0" y="0" width="210" height="30" rx="16" fill="rgba(255,255,255,0.02)"/>
+            <text x="15" y="19" font-family="monospace" font-size="9" fill="${accentIndigo}" font-weight="bold">CATALOG // TENGWAR</text>
+            <text x="105" y="180" font-family="Times New Roman, serif" font-style="italic" font-size="72" fill="#f8fafc" text-anchor="middle">λ</text>
+            <text x="105" y="270" font-family="-apple-system, sans-serif" font-size="16" fill="#f8fafc" font-weight="bold" text-anchor="middle">Tengwar</text>
+            <text x="105" y="295" font-family="monospace" font-size="10" fill="#94a3b8" text-anchor="middle">Custom Web Font layer</text>
+          </g>
+
+          <!-- Morse Code Card -->
+          <g transform="translate(720, 0)">
+            <rect x="0" y="0" width="210" height="360" rx="16" fill="#0c121d" stroke="#f59e0b" stroke-width="2" />
+            <rect x="0" y="0" width="210" height="30" rx="16" fill="rgba(255,255,255,0.02)"/>
+            <text x="15" y="19" font-family="monospace" font-size="9" fill="#f59e0b" font-weight="bold">CATALOG // MORSE</text>
+            
+            <g transform="translate(45, 120)" fill="#f59e0b">
+              <rect x="0" y="0" width="40" height="15" rx="5"/>
+              <circle cx="60" cy="7.5" r="7.5"/>
+              <circle cx="85" cy="7.5" r="7.5"/>
+
+              <circle cx="20" cy="50" r="7.5"/>
+              <circle cx="45" cy="50" r="7.5"/>
+
+              <circle cx="20" cy="90" r="7.5"/>
+              <circle cx="45" cy="90" r="7.5"/>
+              <circle cx="70" cy="90" r="7.5"/>
+              <rect x="90" y="82.5" width="40" height="15" rx="5"/>
+            </g>
+
+            <text x="105" y="270" font-family="-apple-system, sans-serif" font-size="16" fill="#f8fafc" font-weight="bold" text-anchor="middle">Morse Code</text>
+            <text x="105" y="295" font-family="monospace" font-size="10" fill="#94a3b8" text-anchor="middle">MorseDisplay SVG node</text>
+          </g>
+        </g>
+      `;
+    } else if (proj === 'yt2mp3') {
+      diagramContent = `
+        <!-- Horizontal Connection Pipeline lines -->
+        <g opacity="0.2">
+          <line x1="180" y1="580" x2="900" y2="580" stroke="url(#accentGrad)" stroke-width="4" stroke-dasharray="8 4"/>
+        </g>
+
+        <!-- 5 Horizontal Stages -->
+        <g transform="translate(60, 480)">
+          <rect x="0" y="0" width="160" height="200" rx="14" fill="#0c121d" stroke="${accentIndigo}" stroke-width="1.5"/>
+          <text x="80" y="30" font-family="monospace" font-size="10" fill="${accentIndigo}" font-weight="bold" text-anchor="middle">STAGE 01</text>
+          <circle cx="80" cy="90" r="25" fill="none" stroke="${accentIndigo}" stroke-width="2"/>
+          <circle cx="80" cy="90" r="10" fill="none" stroke="${accentIndigo}" stroke-width="1.5"/>
+          <text x="80" y="145" font-family="-apple-system, sans-serif" font-size="13" fill="#f8fafc" font-weight="bold" text-anchor="middle">Extension</text>
+          <text x="80" y="165" font-family="monospace" font-size="8" fill="#94a3b8" text-anchor="middle">URL Capture</text>
+
+          <g transform="translate(195, 0)">
+            <rect x="0" y="0" width="160" height="200" rx="14" fill="#0c121d" stroke="${accentCyan}" stroke-width="1.5"/>
+            <text x="80" y="30" font-family="monospace" font-size="10" fill="${accentCyan}" font-weight="bold" text-anchor="middle">STAGE 02</text>
+            <rect x="55" y="65" width="50" height="45" rx="4" fill="none" stroke="${accentCyan}" stroke-width="2"/>
+            <line x1="55" y1="80" x2="105" y2="80" stroke="${accentCyan}" stroke-width="1.5"/>
+            <line x1="55" y1="95" x2="105" y2="95" stroke="${accentCyan}" stroke-width="1.5"/>
+            <text x="80" y="145" font-family="-apple-system, sans-serif" font-size="13" fill="#f8fafc" font-weight="bold" text-anchor="middle">Node.js API</text>
+            <text x="80" y="165" font-family="monospace" font-size="8" fill="#94a3b8" text-anchor="middle">Localhost server</text>
+          </g>
+
+          <g transform="translate(390, 0)">
+            <rect x="0" y="0" width="160" height="200" rx="14" fill="#0c121d" stroke="${accentIndigo}" stroke-width="1.5"/>
+            <text x="80" y="30" font-family="monospace" font-size="10" fill="${accentIndigo}" font-weight="bold" text-anchor="middle">STAGE 03</text>
+            <circle cx="80" cy="85" r="22" fill="none" stroke="${accentIndigo}" stroke-width="2" stroke-dasharray="10 4"/>
+            <text x="80" y="145" font-family="-apple-system, sans-serif" font-size="13" fill="#f8fafc" font-weight="bold" text-anchor="middle">yt-dlp Engine</text>
+            <text x="80" y="165" font-family="monospace" font-size="8" fill="#94a3b8" text-anchor="middle">Split streams / MP3</text>
+          </g>
+
+          <g transform="translate(585, 0)">
+            <rect x="0" y="0" width="160" height="200" rx="14" fill="#0c121d" stroke="${accentCyan}" stroke-width="1.5"/>
+            <text x="80" y="30" font-family="monospace" font-size="10" fill="${accentCyan}" font-weight="bold" text-anchor="middle">STAGE 04</text>
+            <path d="M 75 90 L 75 70 L 95 65 L 95 85" fill="none" stroke="${accentCyan}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="70" cy="90" r="5" fill="${accentCyan}"/>
+            <circle cx="90" cy="85" r="5" fill="${accentCyan}"/>
+            <text x="80" y="145" font-family="-apple-system, sans-serif" font-size="13" fill="#f8fafc" font-weight="bold" text-anchor="middle">iTunes Tagging</text>
+            <text x="80" y="165" font-family="monospace" font-size="8" fill="#94a3b8" text-anchor="middle">Artwork &amp; Metadata</text>
+          </g>
+
+          <g transform="translate(780, 0)">
+            <rect x="0" y="0" width="160" height="200" rx="14" fill="#0c121d" stroke="#10b981" stroke-width="1.5"/>
+            <text x="80" y="30" font-family="monospace" font-size="10" fill="#10b981" font-weight="bold" text-anchor="middle">STAGE 05</text>
+            <rect x="65" y="65" width="30" height="40" rx="2" fill="none" stroke="#10b981" stroke-width="1.5"/>
+            <line x1="70" y1="75" x2="85" y2="75" stroke="#10b981" stroke-width="1.5"/>
+            <line x1="70" y1="85" x2="85" y2="85" stroke="#10b981" stroke-width="1.5"/>
+            <line x1="70" y1="95" x2="80" y2="95" stroke="#10b981" stroke-width="1.5"/>
+            <text x="80" y="145" font-family="-apple-system, sans-serif" font-size="13" fill="#f8fafc" font-weight="bold" text-anchor="middle">LRCLIB Lyrics</text>
+            <text x="80" y="165" font-family="monospace" font-size="8" fill="#94a3b8" text-anchor="middle">Regex stripped lyrics</text>
+          </g>
+        </g>
+      `;
+    } else if (proj === 'tripitdown') {
+      diagramContent = `
+        <g transform="translate(80, 420)">
+          <!-- Sidebar -->
+          <rect x="0" y="0" width="260" height="360" rx="16" fill="#0c121d" stroke="rgba(255,255,255,0.04)" stroke-width="1.5" />
+          <rect x="0" y="0" width="260" height="40" rx="16" fill="rgba(255,255,255,0.02)"/>
+          <text x="20" y="24" font-family="monospace" font-size="11" fill="${accentCyan}" font-weight="bold">// TRIP_THREADS</text>
+          
+          <g transform="translate(15, 60)">
+            <rect x="0" y="0" width="230" height="45" rx="8" fill="rgba(6, 182, 212, 0.08)" stroke="${accentCyan}" stroke-width="1" />
+            <circle cx="20" cy="22" r="4" fill="${accentCyan}" />
+            <text x="35" y="26" font-family="-apple-system, sans-serif" font-size="12" fill="#f8fafc" font-weight="bold">France Culinary Tour</text>
+            <text x="215" y="26" font-family="monospace" font-size="9" fill="${accentCyan}" text-anchor="end">&gt;</text>
+
+            <rect x="0" y="55" width="230" height="45" rx="8" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" />
+            <circle cx="20" cy="77" r="4" fill="#94a3b8" opacity="0.4" />
+            <text x="35" y="81" font-family="-apple-system, sans-serif" font-size="12" fill="#94a3b8">Tokyo Logistics Grid</text>
+
+            <rect x="0" y="110" width="230" height="45" rx="8" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" />
+            <circle cx="20" cy="132" r="4" fill="#94a3b8" opacity="0.4" />
+            <text x="35" y="136" font-family="-apple-system, sans-serif" font-size="12" fill="#94a3b8">Hotel &amp; Train Bookings</text>
+          </g>
+
+          <rect x="15" y="300" width="230" height="40" rx="10" fill="none" stroke="${accentIndigo}" stroke-width="1.5" stroke-dasharray="4 2"/>
+          <text x="130" y="324" font-family="monospace" font-size="11" fill="${accentIndigo}" font-weight="bold" text-anchor="middle">+ NEW CONVERSATION</text>
+        </g>
+
+        <g transform="translate(370, 420)">
+          <rect x="0" y="0" width="630" height="360" rx="16" fill="#0c121d" stroke="rgba(255,255,255,0.04)" stroke-width="1.5" />
+          <rect x="0" y="0" width="630" height="40" rx="16" fill="rgba(255,255,255,0.02)"/>
+          <text x="20" y="24" font-family="monospace" font-size="11" fill="${textSecondary}">ACTIVE_THREAD // France Culinary Tour</text>
+
+          <g transform="translate(20, 60)">
+            <rect width="590" height="60" rx="12" fill="rgba(255,255,255,0.02)" />
+            <text x="15" y="25" font-family="monospace" font-size="9" fill="${accentCyan}">USER_REQUEST</text>
+            <text x="15" y="44" font-family="-apple-system, sans-serif" font-size="12" fill="#f8fafc">Suggest 3 top Michelin star restaurants in central Paris for dinner.</text>
+          </g>
+
+          <g transform="translate(20, 135)">
+            <rect width="590" height="40" rx="10" fill="rgba(239, 68, 68, 0.05)" stroke="rgba(239, 68, 68, 0.15)" stroke-width="1" />
+            <circle cx="20" cy="20" r="5" fill="#ef4444" />
+            <text x="35" y="24" font-family="monospace" font-size="10" fill="#fca5a5" font-weight="bold">PRIMARY MODEL: GEMINI 2.5 PRO (HTTP 503 ERROR) — ACTIVATING FALLBACK...</text>
+          </g>
+
+          <g transform="translate(20, 190)">
+            <rect width="590" height="150" rx="12" fill="rgba(16, 185, 129, 0.03)" stroke="rgba(16, 185, 129, 0.15)" stroke-width="1.5" />
+            <text x="15" y="25" font-family="monospace" font-size="9" fill="#10b981">FALLBACK_RESPONSE // GEMINI 3.5 FLASH (ACTIVE)</text>
+            <text x="15" y="50" font-family="-apple-system, sans-serif" font-size="12" fill="#f8fafc">1. L'Ambroisie — Exquisite traditional French haute cuisine on Place des Vosges.</text>
+            <text x="15" y="75" font-family="-apple-system, sans-serif" font-size="12" fill="#f8fafc">2. Guy Savoy — Modern interpretations with exceptional service near Seine.</text>
+            <text x="15" y="100" font-family="-apple-system, sans-serif" font-size="12" fill="#f8fafc">3. Arpège — Chef Alain Passard's vegetable-forward culinary masterpiece.</text>
+          </g>
+        </g>
+      `;
+    } else {
+      diagramContent = `
+        <!-- Coordinate Axes -->
+        <g opacity="0.8">
+          <path d="M 160 400 L 160 740 M 140 720 L 920 720" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+          <path d="M 155 410 L 160 400 L 165 410" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M 910 715 L 920 720 L 910 725" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          
+          <text x="130" y="440" font-family="monospace" font-size="11" fill="#94a3b8" text-anchor="end">100%</text>
+          <text x="130" y="580" font-family="monospace" font-size="11" fill="#94a3b8" text-anchor="end">50%</text>
+          <text x="130" y="725" font-family="monospace" font-size="11" fill="#94a3b8" text-anchor="end">0%</text>
+
+          <text x="350" y="755" font-family="monospace" font-size="11" fill="#94a3b8" text-anchor="middle">BEFORE</text>
+          <text x="750" y="755" font-family="monospace" font-size="11" fill="#94a3b8" text-anchor="middle">AFTER</text>
+        </g>
+
+        <!-- Curve -->
+        <path d="M 160 460 C 350 460, 500 700, 750 700" fill="none" stroke="url(#accentGrad)" stroke-width="6" stroke-linecap="round"/>
+        
+        <!-- Glowing Points & Values -->
+        <g>
+          <circle cx="160" cy="460" r="10" fill="#ef4444" opacity="0.2"/>
+          <circle cx="160" cy="460" r="5" fill="#ef4444"/>
+          <text x="180" y="455" font-family="monospace" font-size="12" fill="#ef4444" font-weight="bold">1200ms</text>
+        </g>
+        
+        <g>
+          <circle cx="750" cy="700" r="10" fill="${accentCyan}" opacity="0.2"/>
+          <circle cx="750" cy="700" r="5" fill="${accentCyan}"/>
+          <text x="770" y="695" font-family="monospace" font-size="12" fill="${accentCyan}" font-weight="bold">85ms (14x Fast)</text>
+        </g>
+
+        <!-- Optimization annotation badge -->
+        <g transform="translate(420, 480)">
+          <rect width="240" height="50" rx="12" fill="#0c121d" fill-opacity="0.85" stroke="rgba(6, 182, 212, 0.3)" stroke-width="1.5"/>
+          <text x="120" y="30" font-family="monospace" font-size="12" fill="${accentCyan}" font-weight="bold" text-anchor="middle" letter-spacing="1">OPTIMIZATION INBOUND</text>
+        </g>
+      `;
+    }
+
+    const titleLines = splitTitleToLines(post.hook, 36);
+    const titleLinesHtml = titleLines.map((line, i) => `
+      <text x="60" y="${175 + i * 56}" class="title-text" font-size="48" font-weight="900" fill="${textPrimary}" letter-spacing="-0.5px">
+        ${line.toUpperCase()}
+      </text>
+    `).join('');
+
+    const gridPattern = gridEnabled ? `
+      <rect width="1080" height="1080" fill="url(#grid)" />
+      <circle cx="540" cy="540" r="400" fill="url(#accentGrad)" opacity="0.04" filter="blur(80px)" />
+    ` : '';
+
+    const hudDecorations = hudEnabled ? `
+      <!-- Sleek HUD Frame & Corner Brackets -->
+      <rect x="50" y="50" width="980" height="980" rx="16" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1.5" />
+      
+      <path d="M 80 50 L 50 50 L 50 80" fill="none" stroke="${accentIndigo}" stroke-width="3.5" stroke-linecap="round" />
+      <path d="M 1000 50 L 1030 50 L 1030 80" fill="none" stroke="${accentIndigo}" stroke-width="3.5" stroke-linecap="round" />
+      <path d="M 50 1000 L 50 1030 L 80 1030" fill="none" stroke="${accentCyan}" stroke-width="3.5" stroke-linecap="round" />
+      <path d="M 1030 1000 L 1030 1030 L 1000 1030" fill="none" stroke="${accentCyan}" stroke-width="3.5" stroke-linecap="round" />
+      
+      <!-- Top labels -->
+      <text x="75" y="115" class="mono-text" font-size="20" fill="${accentCyan}" letter-spacing="3" font-weight="bold">// SYSTEM_PIPELINE // ${post.project.toUpperCase()}</text>
+      <text x="1005" y="115" class="mono-text" font-size="14" fill="${textSecondary}" text-anchor="end" letter-spacing="2">// ${post.post_type.toUpperCase()}</text>
+    ` : `
+      <!-- Simplified Header -->
+      <text x="60" y="100" class="mono-text" font-size="22" fill="${accentCyan}" letter-spacing="3" font-weight="bold">${post.project.toUpperCase()}</text>
+    `;
+
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080" style="background-color: ${bg};">
+        <defs>
+          <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="${accentIndigo}" />
+            <stop offset="100%" stop-color="${accentCyan}" />
+          </linearGradient>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="1"/>
+          </pattern>
+          <linearGradient id="beforeGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.15" />
+            <stop offset="100%" stop-color="#ef4444" stop-opacity="0.0" />
+          </linearGradient>
+          <linearGradient id="afterGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.15" />
+            <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.0" />
+          </linearGradient>
+          <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#6366f1" />
+            <stop offset="100%" stop-color="${accentCyan}" />
+          </linearGradient>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&amp;family=Outfit:wght@500;800;900&amp;display=swap');
+            .title-text {
+              font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+            }
+            .mono-text {
+              font-family: 'JetBrains Mono', monospace;
+            }
+          </style>
+        </defs>
+        
+        ${gridPattern}
+        ${hudDecorations}
+        ${titleLinesHtml}
+        
+        ${diagramContent}
+        
+        <line x1="60" y1="965" x2="1020" y2="965" stroke="rgba(255,255,255,0.05)" stroke-width="1.5"/>
+        <text x="75" y="1005" font-family="-apple-system, BlinkMacSystemFont, 'Inter', sans-serif" font-size="18" fill="${textSecondary}" font-weight="500">bervos.org</text>
+        <g transform="translate(970, 982) scale(0.065)" fill="rgba(255,255,255,0.8)">
+          <path d="M 418.50 562.30 C403.08,560.26 385.97,548.85 379.78,536.49 C373.30,523.57 371.69,508.98 375.38,496.62 C383.35,469.89 410.57,454.86 438.91,461.54 C464.42,467.55 481.19,492.64 477.16,518.75 C472.81,546.93 447.01,566.08 418.50,562.30 ZM 435.59 540.17 C442.16,537.90 446.06,534.71 449.81,528.50 C459.94,511.76 452.94,488.26 436.13,482.53 C430.72,480.68 419.85,480.61 414.90,482.37 C408.95,484.50 403.23,489.86 399.99,496.33 C397.45,501.42 397.00,503.47 397.00,509.98 C397.00,521.35 399.11,527.24 405.45,533.58 C413.52,541.65 424.43,544.03 435.59,540.17 ZM 510.58 561.93 C501.97,560.94 491.12,555.79 485.53,550.04 L 481.56 545.96 L 488.66 538.86 L 495.76 531.76 L 501.19 535.86 C510.27,542.71 520.57,544.88 528.45,541.58 C533.53,539.46 535.47,535.96 534.02,531.55 C532.52,527.03 529.33,524.82 517.84,520.39 C494.57,511.40 488.78,505.21 488.78,489.34 C488.78,472.32 499.98,461.78 519.70,460.27 C532.30,459.30 544.98,463.24 554.00,470.91 L 557.50 473.89 L 551.50 480.02 C543.07,488.62 542.90,488.68 537.58,484.61 C527.05,476.58 511.00,478.50 511.00,487.80 C511.00,491.73 515.89,495.42 526.50,499.48 C541.39,505.19 545.26,507.38 550.26,512.94 C555.67,518.97 557.48,525.04 556.78,534.86 C555.98,545.99 550.63,553.51 540.06,558.39 C537.06,559.77 532.11,561.17 529.06,561.49 C526.00,561.82 522.15,562.23 520.50,562.41 C518.85,562.59 514.38,562.37 510.58,561.93 ZM 20.00 511.71 L 20.00 462.27 L 29.75 461.83 C35.11,461.59 47.38,461.65 57.00,461.95 C73.84,462.49 74.68,462.62 79.23,465.28 C85.55,468.99 89.66,473.57 91.49,478.93 C94.65,488.20 92.93,496.95 86.65,503.51 L 82.42 507.92 L 86.82 511.61 C93.00,516.77 95.98,523.57 95.99,532.55 C96.01,544.61 90.82,552.34 79.00,557.91 C73.58,560.46 73.13,560.50 46.75,560.82 L 20.00 561.15 L 20.00 511.71 ZM 68.39 540.91 C75.94,534.97 75.60,524.78 67.70,519.96 C65.05,518.34 62.65,518.01 53.75,518.00 L 43.00 518.00 L 43.00 530.50 L 43.00 543.00 L 54.37 543.00 C64.38,543.00 66.05,542.75 68.39,540.91 ZM 65.72 498.65 C69.49,496.70 71.06,492.32 69.88,487.03 C68.58,481.15 63.50,479.01 50.82,479.01 L 43.14 479.00 L 42.82 488.39 C42.35,502.31 41.56,501.34 52.85,500.79 C59.11,500.48 63.63,499.73 65.72,498.65 ZM 110.00 511.59 L 110.00 462.15 L 118.75 461.82 C123.56,461.65 139.54,461.66 154.25,461.85 L 181.00 462.19 L 181.00 471.60 L 181.00 481.00 L 157.00 481.00 L 133.00 481.00 L 133.00 491.00 L 133.00 501.00 L 155.04 501.00 L 177.08 501.00 L 176.79 510.25 L 176.50 519.50 L 154.82 519.77 L 133.15 520.04 L 132.82 528.27 C132.27,542.46 129.36,540.92 157.32,541.23 L 181.50 541.50 L 181.50 551.00 L 181.50 560.50 L 145.75 560.76 L 110.00 561.03 L 110.00 511.59 ZM 196.00 511.50 L 196.00 462.00 L 204.25 461.84 C208.79,461.75 219.93,461.80 229.00,461.95 C247.50,462.26 251.73,463.20 259.20,468.66 C267.54,474.76 271.94,488.07 269.11,498.61 C266.74,507.41 258.76,515.49 249.79,518.18 C247.39,518.90 246.10,519.82 246.40,520.60 C246.66,521.29 253.43,530.39 261.44,540.82 C269.45,551.25 276.00,560.06 276.00,560.39 C276.00,560.73 270.04,560.98 262.75,560.97 L 249.50 560.93 L 235.50 541.40 C227.80,530.66 220.94,521.40 220.25,520.81 C219.26,519.97 219.00,523.98 219.00,540.38 L 219.00 561.00 L 207.50 561.00 L 196.00 561.00 L 196.00 511.50 ZM 243.60 499.60 C246.39,496.81 247.00,495.44 247.00,492.00 C247.00,482.72 241.42,479.00 227.48,479.00 L 219.00 479.00 L 219.00 491.00 L 219.00 503.00 L 229.60 503.00 L 240.20 503.00 L 243.60 499.60 ZM 294.69 512.28 C284.38,485.45 275.96,463.16 275.98,462.75 C275.99,462.34 281.33,462.00 287.84,462.00 L 299.67 462.00 L 310.96 493.25 C317.17,510.44 322.55,525.06 322.91,525.73 C323.27,526.41 327.57,516.06 332.46,502.73 C337.36,489.41 342.73,474.79 344.40,470.25 L 347.43 462.00 L 359.21 462.00 C365.70,462.00 370.99,462.34 370.99,462.75 C370.98,463.16 362.46,485.33 352.06,512.00 L 333.14 560.50 L 323.28 560.78 L 313.42 561.07 L 294.69 512.28 ZM 264.53 426.50 C252.05,413.85 234.89,396.49 226.39,387.93 L 210.94 372.37 L 219.95 368.68 C224.90,366.66 230.06,365.00 231.42,365.00 C234.27,365.00 250.54,374.89 259.99,382.37 C263.56,385.19 270.96,391.66 276.45,396.75 C281.93,401.84 286.77,406.00 287.21,406.00 C288.13,406.00 305.00,388.91 305.00,387.97 C305.00,387.25 300.13,385.02 284.44,378.54 C257.79,367.54 232.23,347.35 213.17,322.24 L 206.90 313.98 L 211.33 308.24 C213.76,305.08 216.65,301.70 217.74,300.72 C219.67,298.99 219.82,299.03 222.62,302.29 C224.20,304.14 228.38,309.35 231.90,313.86 C245.48,331.29 268.14,350.21 286.50,359.45 C304.99,368.75 318.84,371.94 344.75,372.88 L 362.00 373.50 L 324.61 411.50 L 287.22 449.50 L 264.53 426.50 ZM 128.00 387.87 C128.00,386.27 146.33,350.47 154.04,337.00 C165.08,317.73 182.44,292.09 196.04,275.00 C209.21,258.43 248.82,217.68 252.64,216.76 C256.55,215.82 257.51,217.33 262.06,231.51 C266.30,244.75 270.86,254.50 277.16,263.76 C280.05,268.02 282.49,271.63 282.58,271.79 C283.09,272.68 296.59,263.64 308.78,254.26 C357.25,216.96 403.29,162.88 438.84,101.50 C443.30,93.80 448.34,85.25 450.04,82.50 L 453.12 77.50 L 452.58 81.50 C451.86,86.83 443.92,110.79 438.35,124.50 C429.89,145.29 417.13,167.46 401.53,188.50 C377.43,220.99 339.40,257.59 307.54,278.97 C301.74,282.86 297.00,286.44 297.00,286.93 C297.00,288.24 306.65,296.68 313.37,301.25 C326.64,310.27 347.99,318.58 364.40,321.13 C374.07,322.63 387.30,321.78 393.50,319.26 L 398.50 317.24 L 394.78 315.68 C392.74,314.83 383.63,312.23 374.53,309.92 C365.44,307.60 358.01,305.44 358.03,305.10 C358.05,304.77 360.17,302.92 362.75,301.00 C379.06,288.80 394.13,269.28 396.31,257.50 C396.61,255.85 397.20,253.62 397.61,252.55 C398.03,251.48 392.09,256.29 384.43,263.23 C366.38,279.58 344.10,297.85 341.29,298.60 C338.59,299.33 322.50,291.12 322.50,289.02 C322.50,287.64 325.96,284.58 344.56,269.50 C358.30,258.36 390.75,225.89 402.50,211.50 C416.74,194.07 416.98,193.96 419.92,203.47 C423.04,213.59 424.23,225.71 423.85,243.56 C423.66,252.60 423.85,260.00 424.27,260.00 C424.69,260.00 433.69,251.47 444.27,241.05 L 463.50 222.11 L 444.25 202.79 C433.66,192.17 425.00,183.09 425.00,182.62 C425.00,182.15 428.70,175.95 433.21,168.85 L 441.42 155.93 L 474.46 189.01 L 507.50 222.09 L 479.50 249.80 C419.32,309.38 402.15,323.67 383.86,329.47 C362.42,336.27 340.52,334.43 318.10,323.92 C289.96,310.74 268.30,289.39 253.52,260.25 C250.08,253.47 247.22,249.00 246.32,249.00 C245.49,249.00 241.15,252.73 236.66,257.28 C214.48,279.79 181.48,323.89 171.96,343.77 C169.78,348.32 168.00,352.21 168.00,352.42 C168.00,353.36 182.60,348.33 194.22,343.39 L 206.94 337.98 L 210.95 342.33 C216.42,348.26 219.31,352.02 218.80,352.53 C217.23,354.11 168.45,374.54 148.97,381.78 C132.71,387.82 128.00,389.19 128.00,387.87 ZM 122.40 360.00 C124.22,347.42 135.19,317.27 145.06,297.73 C158.20,271.71 169.48,255.40 192.57,229.01 C206.79,212.75 232.18,189.45 246.66,179.38 C251.46,176.04 252.07,175.87 255.27,176.92 C258.80,178.09 267.00,184.46 267.00,186.04 C267.00,186.53 259.91,192.87 251.25,200.12 C223.15,223.67 192.66,255.89 172.85,283.00 C157.17,304.46 147.36,320.02 134.05,344.52 C128.98,353.86 124.14,362.17 123.29,363.00 C121.91,364.35 121.82,364.04 122.40,360.00 ZM 322.00 357.57 C307.28,354.48 293.93,348.52 277.95,337.90 C265.12,329.39 245.60,309.80 236.69,296.50 C233.01,291.00 229.99,286.00 229.99,285.38 C230.00,283.99 241.70,272.50 243.11,272.50 C243.68,272.50 245.50,274.98 247.16,278.00 C256.78,295.52 283.21,321.33 303.29,332.82 C316.44,340.34 343.73,348.01 357.30,348.00 C369.00,347.99 391.60,342.76 401.32,337.83 C408.21,334.33 407.51,336.51 400.18,341.38 C391.68,347.03 377.90,353.18 367.20,356.10 C357.25,358.81 331.84,359.64 322.00,357.57 ZM 99.01 254.51 L 66.53 222.02 L 73.02 215.40 C89.82,198.25 133.47,156.96 142.46,149.72 C152.77,141.43 162.47,136.17 175.50,131.83 C182.07,129.64 184.00,129.50 207.00,129.50 C231.20,129.50 231.60,129.53 239.50,132.28 C243.90,133.81 252.90,137.74 259.50,141.01 C281.97,152.16 297.76,166.49 315.38,191.75 C318.55,196.29 321.46,200.00 321.86,200.00 C322.70,200.00 341.63,179.98 351.64,168.50 C376.70,139.76 403.93,100.66 403.99,93.33 C404.00,91.76 393.71,95.00 374.00,102.78 C353.04,111.05 354.30,110.88 348.42,106.23 C338.94,98.72 338.92,97.59 348.14,93.84 C376.91,82.17 432.89,59.87 438.75,57.75 C445.73,55.22 446.00,55.19 446.00,57.09 C446.00,59.57 441.04,69.47 430.41,88.18 C414.53,116.17 396.04,143.57 376.62,167.92 C353.60,196.78 316.68,234.46 315.32,230.48 C315.13,229.94 312.06,224.10 308.49,217.50 C288.60,180.71 258.18,154.77 223.58,145.06 C217.57,143.38 212.15,142.00 211.54,142.00 C209.92,142.00 193.96,157.90 188.61,164.86 C183.40,171.63 176.00,186.22 176.00,189.72 C176.00,191.84 176.55,191.59 182.32,186.77 C185.80,183.87 193.73,176.91 199.93,171.29 C213.18,159.31 215.85,158.07 223.31,160.49 C230.77,162.92 238.00,166.12 238.00,167.00 C238.00,167.42 234.74,170.23 230.75,173.24 C213.50,186.28 180.50,218.94 163.52,239.75 C160.26,243.74 157.26,247.00 156.84,247.00 C155.90,247.00 152.57,236.37 150.97,228.27 C150.21,224.41 149.91,215.32 150.15,203.11 C150.35,192.60 150.16,184.00 149.74,184.00 C149.31,184.00 140.31,192.50 129.74,202.90 L 110.51 221.79 L 126.02 237.65 C134.55,246.37 142.79,255.15 144.33,257.18 C147.08,260.79 147.10,260.92 145.46,264.18 C142.57,269.95 132.52,286.96 131.99,286.98 C131.72,286.99 116.87,272.38 99.01,254.51 ZM 319.58 173.55 C314.60,166.33 295.74,148.16 284.50,139.78 C273.57,131.62 259.07,124.24 245.00,119.67 C229.24,114.56 222.34,113.50 205.00,113.53 C188.90,113.56 183.43,114.36 169.69,118.67 C165.39,120.02 161.34,120.92 160.69,120.67 C159.09,120.07 180.64,109.78 190.31,106.53 C203.57,102.08 219.62,100.96 240.14,103.06 C265.94,105.69 296.63,121.72 319.49,144.50 C329.59,154.57 335.00,162.05 335.00,165.96 C335.00,167.78 333.42,170.13 329.72,173.78 C326.81,176.65 324.19,179.00 323.88,179.00 C323.58,179.00 321.64,176.55 319.58,173.55 ZM 330.50 137.56 C313.31,119.93 302.38,111.46 286.00,103.09 C266.47,93.11 252.43,89.50 227.22,87.98 C218.11,87.43 210.50,86.84 210.32,86.66 C209.49,85.83 286.34,11.00 288.02,11.00 C289.20,11.00 351.46,73.79 351.79,75.31 C352.15,76.97 333.59,85.98 328.33,86.68 C324.95,87.14 323.83,86.68 318.89,82.84 C315.80,80.45 307.53,72.98 300.51,66.24 C293.49,59.51 287.31,54.00 286.78,54.00 C285.44,54.00 266.94,72.31 267.27,73.31 C267.42,73.76 273.44,76.74 280.65,79.92 C312.27,93.88 330.76,106.67 351.30,128.79 C355.54,133.35 359.00,137.43 359.00,137.86 C359.00,138.92 347.07,153.01 346.20,152.98 C345.82,152.96 338.75,146.03 330.50,137.56 Z" fill="rgba(255,255,255,1)"/>
+        </g>
+      </svg>
+    `;
+    
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  };
+
+  const generateImageWithGemini = async (post: SocialPost) => {
+    setGeneratingId(post.id);
+    const steps = [
+      'Initializing gemini-3.1-flash-lite-image agent...',
+      'Parsing brand visual guidelines & palettes...',
+      'Analyzing caption hooks and post context...',
+      'Synthesizing diagram layer vectors...',
+      'Composing HUD borders and alignment nodes...',
+      'Rendering final 1080x1080px frame...',
+      'Saving generated output to memory...'
+    ];
+
+    for (let i = 0; i < steps.length; i++) {
+      setGenerationStep(steps[i]);
+      await new Promise(resolve => setTimeout(resolve, 350));
+    }
+
+    const dataUrl = generateBrandedSvg(post, showGrid, showHud);
+    setGeneratedImages(prev => {
+      const next = { ...prev, [post.id]: dataUrl };
+      try {
+        localStorage.setItem('bervos_social_generated_images', JSON.stringify(next));
+      } catch (e) {
+        console.error('Failed to save to localStorage:', e);
+      }
+      return next;
+    });
+
+    setGeneratingId(null);
+    setGenerationStep('');
+  };
+
+  const deleteGeneratedImage = (postId: string) => {
+    setGeneratedImages(prev => {
+      const next = { ...prev };
+      delete next[postId];
+      try {
+        localStorage.setItem('bervos_social_generated_images', JSON.stringify(next));
+      } catch (e) {
+        console.error('Failed to save to localStorage:', e);
+      }
+      return next;
+    });
+  };
+
+  const runGenerationPipeline = async () => {
+    setGeneratingPipeline(true);
+    setGenerationStatusText('Connecting to content pipeline...');
+    try {
+      const idToken = await user.getIdToken();
+      
+      const steps = [
+        'Fetching existing queue items...',
+        'Checking ecosystem representation...',
+        'Filtering out duplicate project posts...',
+        'Running generation algorithm...',
+        'Saving generated posts to Firestore...'
+      ];
+
+      for (let i = 0; i < steps.length; i++) {
+        setGenerationStatusText(steps[i]);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      const res = await fetch('/api/social/generate', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!res.ok) throw new Error(`Generation pipeline failed (Status: ${res.status})`);
+      const data = await res.json();
+      
+      if (data.generated > 0) {
+        setGenerationStatusText(`Generated ${data.generated} new posts!`);
+        await fetchPosts();
+      } else {
+        setGenerationStatusText('Ecosystem up-to-date. No new posts needed.');
+      }
+      
+      setTimeout(() => {
+        setGeneratingPipeline(false);
+        setGenerationStatusText('');
+      }, 2000);
+    } catch (err) {
+      console.error('[Social] Generation failed:', err);
+      setGenerationStatusText('Generation failed. Please try again.');
+      setTimeout(() => {
+        setGeneratingPipeline(false);
+        setGenerationStatusText('');
+      }, 3000);
+    }
+  };
+
+  const handleApprove = (post: SocialPost) => {
+    updatePost(post.id, { status: 'Approved' });
+  };
+
+  const handleUnapprove = (post: SocialPost) => {
+    updatePost(post.id, { status: 'Draft' });
+  };
+
+  const handlePublish = (post: SocialPost) => {
+    updatePost(post.id, { status: 'Published' });
+  };
+
+  const getPngDataUrl = (post: SocialPost): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const svgDataUrl = generateBrandedSvg(post, showGrid, showHud);
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 2160;
+        canvas.height = 2160;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#080b12';
+          ctx.fillRect(0, 0, 2160, 2160);
+          ctx.drawImage(img, 0, 0, 2160, 2160);
+          try {
+            const pngUrl = canvas.toDataURL('image/png');
+            resolve(pngUrl);
+          } catch (e) {
+            reject(e);
+          }
+        } else {
+          reject(new Error('Canvas 2D context not available'));
+        }
+      };
+      img.onerror = (err) => reject(err);
+      img.src = svgDataUrl;
+    });
+  };
+
+  const handlePublishToInstagram = async (post: SocialPost) => {
+    setPublishingInstagram(true);
+    try {
+      const imageData = await getPngDataUrl(post);
+      const idToken = await user.getIdToken();
+      
+      const res = await fetch(`/api/social/${post.id}/instagram`, {
+         method: 'POST',
+         headers: {
+           'Authorization': `Bearer ${idToken}`,
+           'Content-Type': 'application/json'
+         },
+         body: JSON.stringify({ imageData })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send to Instagram');
+      
+      if (data.success) {
+        alert('Successfully published to Instagram!');
+        setPosts(prev => prev.map(p =>
+          p.id === post.id ? { ...p, status: 'Published', published_at: new Date().toISOString() } : p
+        ));
+        setSelectedPost(prev => prev ? { ...prev, status: 'Published', published_at: new Date().toISOString() } : null);
+      } else if (data.warning) {
+        alert(`Warning: ${data.warning}\n\nGenerated public image URL:\n${data.imageUrl}\n\nDetails:\n${data.details}`);
+      }
+    } catch (err: any) {
+      console.error('[Instagram] Publish failed:', err);
+      alert(`Failed to publish to Instagram: ${err.message}`);
+    } finally {
+      setPublishingInstagram(false);
+    }
+  };
+
+  const handleRequestRevision = (post: SocialPost) => {
+    if (!feedbackText.trim()) return;
+    updatePost(post.id, {
+      status: 'Needs AI Revision',
+      user_feedback: feedbackText.trim()
+    });
+    setFeedbackText('');
+    setShowFeedbackInput(false);
+  };
+
+  const handleSaveCaption = (post: SocialPost) => {
+    updatePost(post.id, {
+      caption_english: editedCaptionEn,
+      caption_spanish: editedCaptionEs,
+    });
+    setEditingCaption(false);
+  };
+
+  const handleSaveVisual = (post: SocialPost) => {
+    updatePost(post.id, {
+      visual_instruction: editedVisualInstruction,
+    });
+    setEditingVisual(false);
+  };
+
+  const filteredPosts = posts
+    .filter(p => {
+      const matchesStatus = filterStatus === 'ALL' || p.status === filterStatus;
+      const matchesSearch = !search ||
+        p.hook.toLowerCase().includes(search.toLowerCase()) ||
+        p.project.toLowerCase().includes(search.toLowerCase()) ||
+        p.caption_english.toLowerCase().includes(search.toLowerCase());
+      return matchesStatus && matchesSearch;
+    })
+    .sort((a, b) => a.suggested_date.localeCompare(b.suggested_date));
+
+  const statusCounts = {
+    ALL: posts.length,
+    Draft: posts.filter(p => p.status === 'Draft').length,
+    Approved: posts.filter(p => p.status === 'Approved').length,
+    Published: posts.filter(p => p.status === 'Published').length,
+    'Needs AI Revision': posts.filter(p => p.status === 'Needs AI Revision').length,
+  };
+
+  if (loading && posts.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3 text-indigo-400 font-mono text-sm">
+          <Loader2 size={16} className="animate-spin" />
+          <span>Loading social queue...</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="tech-card p-6 h-48 bg-white/[0.01] border-white/5 animate-pulse rounded-2xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error && posts.length === 0) {
+    return (
+      <div className="tech-card border-red-500/20 p-8 text-center">
+        <span className="mono-label !text-red-400 block mb-2">// SOCIAL_QUEUE_ERROR</span>
+        <p className="text-slate-400 text-sm font-mono">{error}</p>
+        <button
+          onClick={fetchPosts}
+          className="mt-4 px-4 py-2 bg-white/5 border border-white/10 hover:border-white/20 rounded-lg text-xs font-mono uppercase text-white cursor-pointer"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Header with Stats & Run Button */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 border-b border-white/5 pb-6">
+        <div>
+          <span className="mono-label !text-indigo-400 mb-1 block">Content_Pipeline // Social</span>
+          <h2 className="text-3xl font-black uppercase tracking-tighter glow-text">Social Queue</h2>
+          <p className="text-slate-500 text-xs font-mono mt-1">{posts.length} posts in pipeline</p>
+        </div>
+
+        {/* Stats & Generator Button */}
+        <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+          {/* Stats Boxes */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white/[0.02] border border-white/5 p-2 rounded-xl">
+            <div className="px-4 py-2 text-center min-w-[90px]">
+              <span className="block text-[10px] font-mono text-slate-500 uppercase">Total</span>
+              <span className="text-lg font-bold text-white font-mono">{posts.length}</span>
+            </div>
+            <div className="px-4 py-2 text-center border-l border-white/5 min-w-[90px] sm:border-l sm:border-white/5">
+              <span className="block text-[10px] font-mono text-slate-500 uppercase">Approved</span>
+              <span className="text-lg font-bold text-green-400 font-mono">
+                {posts.filter(p => p.status === 'Approved').length}
+              </span>
+            </div>
+            <div className="px-4 py-2 text-center border-l border-white/5 min-w-[90px] sm:border-l sm:border-white/5">
+              <span className="block text-[10px] font-mono text-slate-500 uppercase">Published</span>
+              <span className="text-lg font-bold text-slate-400 font-mono">
+                {posts.filter(p => p.status === 'Published').length}
+              </span>
+            </div>
+            <div className="px-4 py-2 text-center border-l border-white/5 min-w-[90px] sm:border-l sm:border-white/5">
+              <span className="block text-[10px] font-mono text-slate-500 uppercase">Images</span>
+              <span className="text-lg font-bold text-cyan-400 font-mono">
+                {Object.keys(generatedImages).length}
+              </span>
+            </div>
+          </div>
+
+          {/* Trigger Button */}
+          {generatingPipeline ? (
+            <button
+              disabled
+              className="flex items-center gap-2 px-5 py-4 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl text-xs font-mono uppercase tracking-widest cursor-not-allowed"
+            >
+              <Loader2 size={14} className="animate-spin" />
+              <span>{generationStatusText}</span>
+            </button>
+          ) : (
+            <button
+              onClick={runGenerationPipeline}
+              className="flex items-center gap-2 px-5 py-4 bg-indigo-500 border border-indigo-600 hover:bg-indigo-600 text-white rounded-xl text-xs font-mono uppercase tracking-widest transition-all cursor-pointer shadow-lg hover:shadow-indigo-500/20 hover:scale-[1.02]"
+            >
+              <Sparkles size={14} />
+              Run AI Pipeline
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
+        {/* Search */}
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            placeholder="Search posts by hook, project, or content..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-10 py-2.5 bg-white/5 border border-white/10 focus:border-indigo-500/40 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none transition-all font-mono"
+          />
+          <Search className="absolute left-3.5 top-3 text-slate-500 w-4 h-4" />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-3.5 top-3 text-slate-500 hover:text-white transition-colors cursor-pointer">
+              <X size={16} />
+            </button>
+          )}
+        </div>
+
+        {/* Status Filter */}
+        <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+          {(['ALL', 'Draft', 'Approved', 'Published', 'Needs AI Revision'] as const).map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilterStatus(status)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer whitespace-nowrap ${
+                filterStatus === status
+                  ? 'bg-indigo-500 text-white font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {status === 'Needs AI Revision' ? 'Revision' : status} ({statusCounts[status]})
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Post Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredPosts.map((post) => {
+          const statusConf = STATUS_CONFIG[post.status] || STATUS_CONFIG['Draft'];
+          const typeConf = POST_TYPE_CONFIG[post.post_type] || POST_TYPE_CONFIG['under_the_hood'];
+
+          return (
+            <button
+              key={post.id}
+              onClick={() => {
+                setSelectedPost(post);
+                setEditedCaptionEn(post.caption_english);
+                setEditedCaptionEs(post.caption_spanish);
+                setEditingCaption(false);
+                setShowFeedbackInput(false);
+                setFeedbackText('');
+              }}
+              className="text-left group relative bg-[#080b12] p-6 hover:bg-[#0c121d] transition-all duration-300 overflow-hidden border border-white/5 hover:border-indigo-500/30 rounded-2xl cursor-pointer flex flex-col justify-between min-h-[240px]"
+            >
+              {/* Top bar */}
+              <div className="flex items-center justify-between mb-4">
+                <span className={`px-2 py-0.5 rounded-md text-[9px] font-mono font-bold tracking-wider uppercase ${statusConf.bg} ${statusConf.text} ${statusConf.border} border`}>
+                  {statusConf.label}
+                </span>
+                <span className={`text-[9px] font-mono font-bold uppercase tracking-wider ${typeConf.color}`}>
+                  {typeConf.label}
+                </span>
+              </div>
+
+              {/* Hook */}
+              <div className="flex-1 flex gap-4 items-start">
+                <div className="flex-1">
+                  <h3 className="text-base font-bold text-white leading-snug mb-3 group-hover:text-indigo-300 transition-colors line-clamp-3">
+                    {post.hook}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-md border border-white/5">
+                      {post.project}
+                    </span>
+                    {generatedImages[post.id] && (
+                      <span className="text-[9px] font-mono text-cyan-400 uppercase tracking-wider bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/20 flex items-center gap-1 font-bold animate-pulse">
+                        <Sparkles size={8} /> IMG_READY
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {generatedImages[post.id] && (
+                  <div className="w-12 h-12 rounded-lg overflow-hidden border border-white/10 shrink-0 bg-slate-950/40 relative">
+                    <img src={generatedImages[post.id]} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom bar */}
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5 text-[10px] font-mono text-slate-500">
+                <div className="flex items-center gap-1.5">
+                  <Calendar size={10} />
+                  <span>{post.suggested_date}</span>
+                </div>
+                {post.user_feedback && (
+                  <span className="text-amber-400 flex items-center gap-1">
+                    <MessageSquare size={10} />
+                    Feedback
+                  </span>
+                )}
+              </div>
+
+              {/* Corner accent */}
+              <div className="absolute bottom-0 left-0 w-16 h-px bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
+              <div className="absolute bottom-0 left-0 w-px h-16 bg-indigo-500/0 group-hover:bg-indigo-500/40 transition-all duration-700" />
+            </button>
+          );
+        })}
+      </div>
+
+      {filteredPosts.length === 0 && (
+        <div className="col-span-full py-16 text-center border border-dashed border-white/10 rounded-2xl bg-white/[0.01]">
+          <span className="mono-label !text-slate-500 block mb-2">// NO_POSTS_FOUND</span>
+          <h3 className="text-lg font-bold text-white uppercase tracking-wider mb-2">Queue Empty</h3>
+          <p className="text-slate-400 font-mono text-xs">No posts match your current filter. Try adjusting the status filter or search query.</p>
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {selectedPost && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-[#080b12]/90 backdrop-blur-md"
+          onClick={() => setSelectedPost(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="tech-card p-0 max-w-4xl w-full max-h-[90vh] overflow-hidden relative flex flex-col"
+          >
+            {/* Modal header */}
+            <div className="p-6 border-b border-white/5 flex items-start justify-between gap-4 shrink-0">
+              <div className="space-y-2 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`px-2 py-0.5 rounded-md text-[9px] font-mono font-bold tracking-wider uppercase ${STATUS_CONFIG[selectedPost.status]?.bg} ${STATUS_CONFIG[selectedPost.status]?.text} ${STATUS_CONFIG[selectedPost.status]?.border} border`}>
+                    {STATUS_CONFIG[selectedPost.status]?.label}
+                  </span>
+                  <span className={`text-[9px] font-mono font-bold uppercase tracking-wider ${POST_TYPE_CONFIG[selectedPost.post_type]?.color}`}>
+                    {POST_TYPE_CONFIG[selectedPost.post_type]?.label}
+                  </span>
+                  <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-md border border-white/5">
+                    {selectedPost.project}
+                  </span>
+                  <span className="text-[9px] font-mono text-slate-500 flex items-center gap-1">
+                    <Calendar size={10} /> {selectedPost.suggested_date}
+                  </span>
+                </div>
+                <h2 className="text-xl font-black text-white leading-snug">{selectedPost.hook}</h2>
+              </div>
+              <button
+                onClick={() => setSelectedPost(null)}
+                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Caption */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="mono-label !text-indigo-400">// Caption (English)</span>
+                  <button
+                    onClick={() => {
+                      if (editingCaption) {
+                        handleSaveCaption(selectedPost);
+                      } else {
+                        setEditedCaptionEn(selectedPost.caption_english);
+                        setEditedCaptionEs(selectedPost.caption_spanish);
+                        setEditingCaption(true);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 text-[10px] font-mono text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
+                  >
+                    {editingCaption ? <><Check size={12} /> Save</> : <><Edit3 size={12} /> Edit</>}
+                  </button>
+                </div>
+                {editingCaption ? (
+                  <textarea
+                    value={editedCaptionEn}
+                    onChange={(e) => setEditedCaptionEn(e.target.value)}
+                    rows={10}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-slate-200 font-mono focus:outline-none focus:border-indigo-500/40 resize-none"
+                  />
+                ) : (
+                  <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">
+                    {selectedPost.caption_english}
+                  </div>
+                )}
+              </div>
+
+              {/* Spanish Summary */}
+              <div>
+                <span className="mono-label !text-cyan-400 block mb-2">// Resumen (Español)</span>
+                {editingCaption ? (
+                  <textarea
+                    value={editedCaptionEs}
+                    onChange={(e) => setEditedCaptionEs(e.target.value)}
+                    rows={2}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-slate-200 font-mono focus:outline-none focus:border-indigo-500/40 resize-none"
+                  />
+                ) : (
+                  <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 text-sm text-slate-400 italic">
+                    {selectedPost.caption_spanish}
+                  </div>
+                )}
+              </div>
+
+              {/* Visual Instruction & Image Generation Option */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="mono-label !text-slate-500">// Visual Direction</span>
+                  <button
+                    onClick={() => {
+                      if (editingVisual) {
+                        handleSaveVisual(selectedPost);
+                      } else {
+                        setEditedVisualInstruction(selectedPost.visual_instruction);
+                        setEditingVisual(true);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 text-[10px] font-mono text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+                  >
+                    {editingVisual ? <><Check size={12} /> Save</> : <><Edit3 size={12} /> Edit</>}
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 text-xs text-slate-500 font-mono leading-relaxed flex flex-col justify-between">
+                    <div>
+                      {editingVisual ? (
+                        <textarea
+                          value={editedVisualInstruction}
+                          onChange={(e) => setEditedVisualInstruction(e.target.value)}
+                          rows={4}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-slate-300 font-mono focus:outline-none focus:border-indigo-500/40 resize-none mb-4"
+                        />
+                      ) : (
+                        <p className="mb-4">{selectedPost.visual_instruction}</p>
+                      )}
+                    </div>
+                    
+                    {/* Visual Controls */}
+                    <div className="py-3 border-t border-white/5 flex gap-4 text-[10px] uppercase tracking-wider font-semibold text-slate-400">
+                      <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-200 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={showGrid}
+                          onChange={(e) => {
+                            const val = e.target.checked;
+                            setShowGrid(val);
+                            if (generatedImages[selectedPost.id]) {
+                              const dataUrl = generateBrandedSvg(selectedPost, val, showHud);
+                              setGeneratedImages(prev => ({ ...prev, [selectedPost.id]: dataUrl }));
+                            }
+                          }}
+                          className="rounded border-white/15 bg-black/40 text-cyan-500 focus:ring-0 cursor-pointer"
+                        />
+                        <span>Show Grid</span>
+                      </label>
+                      
+                      <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-200 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={showHud}
+                          onChange={(e) => {
+                            const val = e.target.checked;
+                            setShowHud(val);
+                            if (generatedImages[selectedPost.id]) {
+                              const dataUrl = generateBrandedSvg(selectedPost, showGrid, val);
+                              setGeneratedImages(prev => ({ ...prev, [selectedPost.id]: dataUrl }));
+                            }
+                          }}
+                          className="rounded border-white/15 bg-black/40 text-cyan-500 focus:ring-0 cursor-pointer"
+                        />
+                        <span>HUD Borders</span>
+                      </label>
+                    </div>
+
+                    <div className="pt-4 border-t border-white/5">
+                      {generatingId === selectedPost.id ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-xs font-mono text-cyan-400">
+                            <Loader2 size={14} className="animate-spin" />
+                            <span>{generationStep}</span>
+                          </div>
+                          <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden">
+                            <div className="bg-cyan-500 h-full animate-pulse w-2/3" />
+                          </div>
+                        </div>
+                      ) : (
+                        generatedImages[selectedPost.id] ? (
+                          <div className="flex gap-2 w-full">
+                            <button
+                              onClick={() => generateImageWithGemini(selectedPost)}
+                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 rounded-xl text-xs font-mono uppercase tracking-wider transition-all cursor-pointer font-bold"
+                            >
+                              <Sparkles size={12} />
+                              Re-Generate
+                            </button>
+                            <button
+                              onClick={() => deleteGeneratedImage(selectedPost.id)}
+                              className="flex items-center justify-center gap-2 px-3 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 rounded-xl text-xs font-mono uppercase tracking-wider transition-all cursor-pointer"
+                              title="Delete Image"
+                            >
+                              <Trash2 size={12} /> Delete
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => generateImageWithGemini(selectedPost)}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 rounded-xl text-xs font-mono uppercase tracking-wider transition-all cursor-pointer font-bold"
+                          >
+                            <Sparkles size={12} />
+                            Generate Image (Gemini)
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Image Preview Box */}
+                  <div className="bg-[#0c121d] border border-white/5 rounded-xl p-4 flex flex-col items-center justify-center min-h-[200px] relative overflow-hidden group/preview">
+                    {generatedImages[selectedPost.id] ? (
+                      <>
+                        <img 
+                          src={generatedImages[selectedPost.id]} 
+                          alt="Gemini generated visual" 
+                          className="max-h-[220px] w-auto rounded-lg shadow-lg border border-white/10 cursor-pointer transition-transform hover:scale-[1.02]"
+                          onClick={() => setLightboxImage(generatedImages[selectedPost.id])}
+                        />
+                        <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover/preview:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => setLightboxImage(generatedImages[selectedPost.id])}
+                            title="View Fullsize"
+                            className="p-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-lg text-slate-300 hover:text-white transition-all cursor-pointer"
+                          >
+                            <Maximize2 size={14} />
+                          </button>
+                          <button
+                            onClick={() => downloadPng(selectedPost)}
+                            title="Download PNG"
+                            className="p-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-lg text-slate-300 hover:text-cyan-400 transition-all cursor-pointer"
+                          >
+                            <Download size={14} />
+                          </button>
+                          <button
+                            onClick={() => deleteGeneratedImage(selectedPost.id)}
+                            title="Delete Image"
+                            className="p-2 bg-red-950/80 backdrop-blur-md border border-red-500/30 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-900 transition-all cursor-pointer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center p-6 space-y-2">
+                        <Share2 size={24} className="text-slate-600 mx-auto" />
+                        <p className="text-xs font-mono text-slate-500">No image generated yet.</p>
+                        <p className="text-[10px] font-mono text-slate-600">Click the button to simulate Gemini image synthesis.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Mermaid Code */}
+              {selectedPost.mermaid_code && (
+                <div>
+                  <span className="mono-label !text-indigo-400 block mb-2">// Mermaid Diagram</span>
+                  <pre className="bg-[#0c121d] border border-white/5 rounded-xl p-4 text-xs text-indigo-300 font-mono overflow-x-auto">
+                    {selectedPost.mermaid_code}
+                  </pre>
+                </div>
+              )}
+
+              {/* Feedback */}
+              {selectedPost.user_feedback && (
+                <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
+                  <span className="mono-label !text-amber-400 block mb-2">// Pending Feedback</span>
+                  <p className="text-sm text-amber-300">{selectedPost.user_feedback}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal actions */}
+            <div className="p-6 border-t border-white/5 shrink-0 space-y-4">
+              {showFeedbackInput && (
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    placeholder="Describe what to change..."
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-amber-500/40"
+                    onKeyDown={(e) => e.key === 'Enter' && handleRequestRevision(selectedPost)}
+                  />
+                  <button
+                    onClick={() => handleRequestRevision(selectedPost)}
+                    disabled={!feedbackText.trim() || saving}
+                    className="px-4 py-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl text-xs font-mono uppercase tracking-wider hover:bg-amber-500/20 transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    Send
+                  </button>
+                  <button
+                    onClick={() => { setShowFeedbackInput(false); setFeedbackText(''); }}
+                    className="px-3 py-2.5 bg-white/5 border border-white/10 text-slate-400 rounded-xl text-xs cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-3">
+                {selectedPost.status !== 'Approved' && selectedPost.status !== 'Published' && (
+                  <button
+                    onClick={() => handleApprove(selectedPost)}
+                    disabled={saving}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl text-xs font-mono uppercase tracking-wider hover:bg-green-500/20 transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    <Check size={14} /> Approve
+                  </button>
+                )}
+
+                {selectedPost.status === 'Approved' && (
+                  <>
+                    <button
+                      onClick={() => handlePublish(selectedPost)}
+                      disabled={saving}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl text-xs font-mono uppercase tracking-wider hover:bg-indigo-500/20 transition-all disabled:opacity-50 cursor-pointer"
+                    >
+                      <Eye size={14} /> Mark Published
+                    </button>
+                    <button
+                      onClick={() => handleUnapprove(selectedPost)}
+                      disabled={saving}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-xs font-mono uppercase tracking-wider hover:bg-rose-500/20 transition-all disabled:opacity-50 cursor-pointer"
+                    >
+                      <X size={14} /> Un-approve
+                    </button>
+                  </>
+                )}
+
+                {selectedPost.status !== 'Published' && !showFeedbackInput && (
+                  <button
+                    onClick={() => setShowFeedbackInput(true)}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl text-xs font-mono uppercase tracking-wider hover:bg-amber-500/20 transition-all cursor-pointer"
+                  >
+                    <MessageSquare size={14} /> Request Revision
+                  </button>
+                )}
+
+                <button
+                  onClick={() => handlePublishToInstagram(selectedPost)}
+                  disabled={selectedPost.status !== 'Approved' || publishingInstagram || saving}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider transition-all ml-auto cursor-pointer ${
+                    selectedPost.status === 'Approved'
+                      ? 'bg-indigo-500 text-white hover:bg-indigo-600 border border-indigo-600'
+                      : 'bg-white/5 border border-white/10 text-slate-500 opacity-50 cursor-not-allowed'
+                  }`}
+                >
+                  <Share2 size={14} className={publishingInstagram ? 'animate-spin' : ''} />
+                  {publishingInstagram ? 'Sending...' : 'Send to Instagram'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox Modal */}
+      {lightboxImage && (
+        <div className="fixed inset-0 z-[100] bg-[#080b12]/95 backdrop-blur-md flex flex-col items-center justify-center p-4 transition-all duration-300">
+          <button 
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-6 right-6 text-slate-400 hover:text-white p-2.5 bg-white/5 border border-white/10 rounded-full cursor-pointer hover:bg-white/10 transition-all shadow-lg"
+          >
+            <X size={20} />
+          </button>
+          
+          <div className="max-w-[90vw] max-h-[75vh] aspect-square rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative bg-[#080b12] flex items-center justify-center">
+            <img 
+              src={lightboxImage} 
+              alt="Fullscreen Preview" 
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
+
+          <div className="mt-6 flex gap-4">
+            <button
+              onClick={() => {
+                if (selectedPost) downloadPng(selectedPost);
+              }}
+              className="flex items-center gap-2 px-5 py-3 bg-cyan-500 text-black hover:bg-cyan-400 font-bold rounded-xl text-xs font-mono uppercase tracking-wider transition-all cursor-pointer shadow-lg hover:shadow-cyan-500/10"
+            >
+              <Download size={14} /> Download PNG
+            </button>
+            <button
+              onClick={() => {
+                if (selectedPost) downloadSvg(selectedPost);
+              }}
+              className="flex items-center gap-2 px-5 py-3 bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 rounded-xl text-xs font-mono uppercase tracking-wider transition-all cursor-pointer"
+            >
+              <Share2 size={14} /> Download SVG
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
