@@ -1355,7 +1355,7 @@ app.put('/api/social/:id', authenticateAdmin, async (req, res) => {
     }
     catch (err) {
         console.error('[API] Error updating social post:', err);
-        res.status(500).json({ error: 'Failed to update social post' });
+        res.status(500).json({ error: `Failed to update social post: ${err.message}` });
     }
 });
 /**

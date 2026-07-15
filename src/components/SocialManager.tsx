@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
-import { Search, X, Loader2, Check, MessageSquare, Edit3, Eye, Calendar, Share2, Sparkles, Download, Maximize2, Trash2 } from 'lucide-react';
+import { Search, X, Loader2, Check, MessageSquare, Edit3, Eye, Calendar, Share2, Sparkles, Download, Maximize2, Trash2, ArrowUpDown, ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface SocialPost {
   id: string;
@@ -63,9 +63,17 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
   const [generatingPipeline, setGeneratingPipeline] = useState(false);
   const [generationStatusText, setGenerationStatusText] = useState('');
   const [publishingInstagram, setPublishingInstagram] = useState(false);
+  const [notification, setNotification] = useState<{
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'warning';
+  } | null>(null);
   const [showGrid, setShowGrid] = useState(true);
   const [showHud, setShowHud] = useState(true);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'date_asc' | 'date_desc' | 'project' | 'status' | 'updated'>('date_asc');
+  const [editingDate, setEditingDate] = useState(false);
+  const [editedDate, setEditedDate] = useState('');
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
@@ -100,6 +108,64 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     fetchPosts();
   }, [fetchPosts]);
 
+  // Garbage-collect orphaned images from localStorage when posts change
+  useEffect(() => {
+    if (posts.length === 0) return;
+    setGeneratedImages(prev => {
+      const postIds = new Set(posts.map(p => p.id));
+      const next: Record<string, string> = {};
+      let changed = false;
+      for (const [id, value] of Object.entries(prev)) {
+        if (postIds.has(id)) {
+          next[id] = value;
+        } else {
+          changed = true;
+        }
+      }
+      if (changed) {
+        try {
+          localStorage.setItem('bervos_social_generated_images', JSON.stringify(next));
+        } catch (e) {
+          console.error('[Social] Failed to save garbage-collected images:', e);
+        }
+        return next;
+      }
+      return prev;
+    });
+  }, [posts]);
+
+  const handleDeletePost = async (post: SocialPost) => {
+    setSaving(true);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch(`/api/social/${post.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      if (!res.ok) {
+        let errMsg = `Failed to delete post (Status: ${res.status})`;
+        try {
+          const errData = await res.json();
+          if (errData && errData.error) errMsg = errData.error;
+        } catch (_) { }
+        throw new Error(errMsg);
+      }
+      // Remove from local state
+      setPosts(prev => prev.filter(p => p.id !== post.id));
+      // Clean up generated image
+      deleteGeneratedImage(post.id);
+      // Close detail panel
+      setSelectedPost(null);
+      setNotification({ title: 'Post Deleted', message: `"${post.hook}" has been permanently removed.`, type: 'success' });
+    } catch (err: any) {
+      console.error('[Social] Delete failed:', err);
+      setNotification({ title: 'Delete Failed', message: err.message || 'Unknown error', type: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+
   const updatePost = useCallback(async (postId: string, updates: Partial<SocialPost>) => {
     setSaving(true);
     try {
@@ -112,7 +178,16 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
         },
         body: JSON.stringify(updates)
       });
-      if (!res.ok) throw new Error(`Failed to update post (Status: ${res.status})`);
+      if (!res.ok) {
+        let errMsg = `Failed to update post (Status: ${res.status})`;
+        try {
+          const errData = await res.json();
+          if (errData && errData.error) {
+            errMsg = errData.error;
+          }
+        } catch (_) { }
+        throw new Error(errMsg);
+      }
 
       setPosts(prev => prev.map(p =>
         p.id === postId ? { ...p, ...updates, updated_at: new Date().toISOString() } : p
@@ -120,14 +195,13 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
       if (selectedPost?.id === postId) {
         setSelectedPost(prev => prev ? { ...prev, ...updates, updated_at: new Date().toISOString() } : null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Social] Update failed:', err);
-      setPosts(prev => prev.map(p =>
-        p.id === postId ? { ...p, ...updates, updated_at: new Date().toISOString() } : p
-      ));
-      if (selectedPost?.id === postId) {
-        setSelectedPost(prev => prev ? { ...prev, ...updates, updated_at: new Date().toISOString() } : null);
-      }
+      setNotification({
+        title: 'Update Failed',
+        message: `Failed to save changes: ${err.message || 'Unknown network error'}`,
+        type: 'error'
+      });
     } finally {
       setSaving(false);
     }
@@ -194,10 +268,10 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     const accentCyan = '#06b6d4';
     const textPrimary = '#f1f5f9';
     const textSecondary = '#94a3b8';
-    
+
     let diagramContent = '';
     const proj = post.project.toLowerCase();
-    
+
     if (proj === 'billio') {
       diagramContent = `
         <!-- Connection 1 -->
@@ -643,6 +717,96 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
           </g>
         </g>
       `;
+    } else if (proj === 'chessverse') {
+      diagramContent = `
+        <g transform="translate(160, 400)">
+          <!-- Chess Board 6x6 -->
+          ${Array.from({length: 6}, (_, r) =>
+            Array.from({length: 6}, (_, c) => {
+              const dark = (r + c) % 2 === 1;
+              const x = c * 120;
+              const y = r * 55;
+              return `<rect x="${x}" y="${y}" width="120" height="55" fill="${dark ? '#1e1b4b' : '#0c121d'}" stroke="rgba(99,102,241,0.15)" stroke-width="0.5"/>`;
+            }).join('')
+          ).join('')}
+          
+          <!-- Coordinate labels -->
+          ${['a','b','c','d','e','f'].map((l, i) =>
+            `<text x="${i * 120 + 60}" y="350" font-family="monospace" font-size="11" fill="${accentIndigo}" text-anchor="middle" opacity="0.6">${l}</text>`
+          ).join('')}
+          ${['6','5','4','3','2','1'].map((n, i) =>
+            `<text x="-15" y="${i * 55 + 32}" font-family="monospace" font-size="11" fill="${accentIndigo}" text-anchor="middle" opacity="0.6">${n}</text>`
+          ).join('')}
+          
+          <!-- Pieces -->
+          <text x="300" y="90" font-size="36" text-anchor="middle" fill="${accentCyan}">♞</text>
+          <text x="180" y="145" font-size="36" text-anchor="middle" fill="${accentCyan}">♜</text>
+          <text x="420" y="200" font-size="36" text-anchor="middle" fill="#f1f5f9">♔</text>
+          <text x="60" y="255" font-size="36" text-anchor="middle" fill="#f1f5f9">♟</text>
+          <text x="540" y="310" font-size="36" text-anchor="middle" fill="${accentCyan}">♛</text>
+          
+          <!-- Attack arrow -->
+          <path d="M 300 95 L 420 190" stroke="${accentCyan}" stroke-width="2" stroke-dasharray="6 3" opacity="0.6"/>
+          <circle cx="420" cy="190" r="20" fill="none" stroke="#ef4444" stroke-width="2" opacity="0.5"/>
+        </g>
+      `;
+    } else if (proj === 'tonaly') {
+      diagramContent = `
+        <g transform="translate(540, 600)">
+          <!-- Circle of Fifths -->
+          <circle cx="0" cy="0" r="200" fill="none" stroke="rgba(99,102,241,0.15)" stroke-width="1.5"/>
+          <circle cx="0" cy="0" r="160" fill="none" stroke="rgba(6,182,212,0.1)" stroke-width="1"/>
+          <circle cx="0" cy="0" r="120" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+          
+          <!-- Note positions around the circle -->
+          ${['C','G','D','A','E','B','F♯','D♭','A♭','E♭','B♭','F'].map((note, i) => {
+            const angle = (i * 30 - 90) * Math.PI / 180;
+            const x = Math.cos(angle) * 200;
+            const y = Math.sin(angle) * 200;
+            const isHighlighted = ['C','G','D','A','E'].includes(note);
+            return `
+              <circle cx="${x}" cy="${y}" r="${isHighlighted ? 22 : 16}" fill="${isHighlighted ? (note === 'C' ? accentCyan : accentIndigo) : '#0c121d'}" stroke="${isHighlighted ? (note === 'C' ? accentCyan : accentIndigo) : 'rgba(255,255,255,0.1)'}" stroke-width="${isHighlighted ? 2 : 1}" opacity="${isHighlighted ? 1 : 0.5}"/>
+              <text x="${x}" y="${y + 4}" font-family="-apple-system, sans-serif" font-size="${isHighlighted ? 12 : 10}" fill="${isHighlighted ? '#fff' : '#94a3b8'}" text-anchor="middle" font-weight="${isHighlighted ? 'bold' : 'normal'}">${note}</text>
+            `;
+          }).join('')}
+          
+          <!-- Active key indicator -->
+          <text x="0" y="-5" font-family="monospace" font-size="14" fill="${accentCyan}" text-anchor="middle" font-weight="bold">KEY: C MAJOR</text>
+          <text x="0" y="15" font-family="monospace" font-size="10" fill="${textSecondary}" text-anchor="middle">I → V → ii → IV</text>
+        </g>
+      `;
+    } else if (proj === 'laresdj') {
+      diagramContent = `
+        <g transform="translate(130, 420)">
+          <!-- Mixer Channels -->
+          ${[0, 1, 2, 3].map(ch => {
+            const x = ch * 200;
+            const labels = ['DECK A', 'DECK B', 'FX BUS', 'MASTER'];
+            const levels = [0.7, 0.55, 0.4, 0.85];
+            return `
+              <g transform="translate(${x}, 0)">
+                <rect x="0" y="0" width="170" height="340" rx="12" fill="#0c121d" stroke="rgba(255,255,255,0.04)" stroke-width="1.5"/>
+                <text x="85" y="25" font-family="monospace" font-size="10" fill="${ch === 3 ? accentCyan : textSecondary}" text-anchor="middle" font-weight="bold">${labels[ch]}</text>
+                
+                <!-- Fader track -->
+                <rect x="75" y="50" width="20" height="220" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+                <!-- Fader fill -->
+                <rect x="75" y="${50 + 220 * (1 - levels[ch])}" width="20" height="${220 * levels[ch]}" rx="10" fill="url(#accentGrad)" opacity="0.3"/>
+                <!-- Fader knob -->
+                <rect x="70" y="${50 + 220 * (1 - levels[ch]) - 8}" width="30" height="16" rx="4" fill="${ch === 3 ? accentCyan : accentIndigo}" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+                
+                <!-- Level meter -->
+                <rect x="25" y="50" width="8" height="220" rx="4" fill="rgba(255,255,255,0.03)"/>
+                <rect x="25" y="${50 + 220 * (1 - levels[ch])}" width="8" height="${220 * levels[ch]}" rx="4" fill="${levels[ch] > 0.8 ? '#ef4444' : accentCyan}"/>
+                
+                <!-- BPM -->
+                <text x="85" y="300" font-family="monospace" font-size="18" fill="${textPrimary}" text-anchor="middle" font-weight="bold">${ch < 2 ? (ch === 0 ? '128.0' : '127.8') : ''}</text>
+                ${ch < 2 ? `<text x="85" y="320" font-family="monospace" font-size="9" fill="${accentCyan}" text-anchor="middle">BPM</text>` : ''}
+              </g>
+            `;
+          }).join('')}
+        </g>
+      `;
     } else {
       diagramContent = `
         <!-- Coordinate Axes -->
@@ -758,7 +922,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
         </g>
       </svg>
     `;
-    
+
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
   };
 
@@ -812,7 +976,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     setGenerationStatusText('Connecting to content pipeline...');
     try {
       const idToken = await user.getIdToken();
-      
+
       const steps = [
         'Fetching existing queue items...',
         'Checking ecosystem representation...',
@@ -836,14 +1000,14 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
 
       if (!res.ok) throw new Error(`Generation pipeline failed (Status: ${res.status})`);
       const data = await res.json();
-      
+
       if (data.generated > 0) {
         setGenerationStatusText(`Generated ${data.generated} new posts!`);
         await fetchPosts();
       } else {
         setGenerationStatusText('Ecosystem up-to-date. No new posts needed.');
       }
-      
+
       setTimeout(() => {
         setGeneratingPipeline(false);
         setGenerationStatusText('');
@@ -904,31 +1068,46 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     try {
       const imageData = await getPngDataUrl(post);
       const idToken = await user.getIdToken();
-      
+
       const res = await fetch(`/api/social/${post.id}/instagram`, {
-         method: 'POST',
-         headers: {
-           'Authorization': `Bearer ${idToken}`,
-           'Content-Type': 'application/json'
-         },
-         body: JSON.stringify({ imageData })
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ imageData })
       });
-      
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to send to Instagram');
-      
+      if (!res.ok) {
+        const errMsg = data.details ? `${data.error}: ${data.details}` : (data.error || 'Failed to send to Instagram');
+        throw new Error(errMsg);
+      }
+
       if (data.success) {
-        alert('Successfully published to Instagram!');
+        setNotification({
+          title: 'Publish Success',
+          message: 'Successfully published your branded post to Instagram!',
+          type: 'success'
+        });
         setPosts(prev => prev.map(p =>
           p.id === post.id ? { ...p, status: 'Published', published_at: new Date().toISOString() } : p
         ));
         setSelectedPost(prev => prev ? { ...prev, status: 'Published', published_at: new Date().toISOString() } : null);
       } else if (data.warning) {
-        alert(`Warning: ${data.warning}\n\nGenerated public image URL:\n${data.imageUrl}\n\nDetails:\n${data.details}`);
+        setNotification({
+          title: 'Instagram Warning',
+          message: `${data.warning}\n\nGenerated public image URL:\n${data.imageUrl}\n\nDetails:\n${data.details}`,
+          type: 'warning'
+        });
       }
     } catch (err: any) {
       console.error('[Instagram] Publish failed:', err);
-      alert(`Failed to publish to Instagram: ${err.message}`);
+      setNotification({
+        title: 'Publish Failed',
+        message: err.message,
+        type: 'error'
+      });
     } finally {
       setPublishingInstagram(false);
     }
@@ -968,7 +1147,70 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
         p.caption_english.toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesSearch;
     })
-    .sort((a, b) => a.suggested_date.localeCompare(b.suggested_date));
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'date_asc': return a.suggested_date.localeCompare(b.suggested_date);
+        case 'date_desc': return b.suggested_date.localeCompare(a.suggested_date);
+        case 'project': return a.project.localeCompare(b.project) || a.suggested_date.localeCompare(b.suggested_date);
+        case 'status': {
+          const order = ['Draft', 'Needs AI Revision', 'Approved', 'Published'];
+          return (order.indexOf(a.status) - order.indexOf(b.status)) || a.suggested_date.localeCompare(b.suggested_date);
+        }
+        case 'updated': return b.updated_at.localeCompare(a.updated_at);
+        default: return 0;
+      }
+    });
+
+  const handlePrevPost = useCallback(() => {
+    if (!selectedPost) return;
+    const currentIndex = filteredPosts.findIndex(p => p.id === selectedPost.id);
+    if (currentIndex > 0) {
+      const prevPost = filteredPosts[currentIndex - 1];
+      setSelectedPost(prevPost);
+      setEditedCaptionEn(prevPost.caption_english);
+      setEditedCaptionEs(prevPost.caption_spanish);
+      setEditingCaption(false);
+      setEditingDate(false);
+      setShowFeedbackInput(false);
+      setFeedbackText('');
+    }
+  }, [selectedPost, filteredPosts]);
+
+  const handleNextPost = useCallback(() => {
+    if (!selectedPost) return;
+    const currentIndex = filteredPosts.findIndex(p => p.id === selectedPost.id);
+    if (currentIndex >= 0 && currentIndex < filteredPosts.length - 1) {
+      const nextPost = filteredPosts[currentIndex + 1];
+      setSelectedPost(nextPost);
+      setEditedCaptionEn(nextPost.caption_english);
+      setEditedCaptionEs(nextPost.caption_spanish);
+      setEditingCaption(false);
+      setEditingDate(false);
+      setShowFeedbackInput(false);
+      setFeedbackText('');
+    }
+  }, [selectedPost, filteredPosts]);
+
+  // Keyboard navigation for post detail and lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (lightboxImage) {
+        if (e.key === 'Escape') setLightboxImage(null);
+        return;
+      }
+      if (selectedPost && !editingCaption && !editingDate && !showFeedbackInput) {
+        if (e.key === 'ArrowLeft') {
+          handlePrevPost();
+        } else if (e.key === 'ArrowRight') {
+          handleNextPost();
+        } else if (e.key === 'Escape') {
+          setSelectedPost(null);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPost, editingCaption, editingDate, showFeedbackInput, lightboxImage, handlePrevPost, handleNextPost]);
 
   const statusCounts = {
     ALL: posts.length,
@@ -1042,7 +1284,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
             <div className="px-4 py-2 text-center border-l border-white/5 min-w-[90px] sm:border-l sm:border-white/5">
               <span className="block text-[10px] font-mono text-slate-500 uppercase">Images</span>
               <span className="text-lg font-bold text-cyan-400 font-mono">
-                {Object.keys(generatedImages).length}
+                {posts.filter(p => generatedImages[p.id]).length}
               </span>
             </div>
           </div>
@@ -1062,7 +1304,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
               className="flex items-center gap-2 px-5 py-4 bg-indigo-500 border border-indigo-600 hover:bg-indigo-600 text-white rounded-xl text-xs font-mono uppercase tracking-widest transition-all cursor-pointer shadow-lg hover:shadow-indigo-500/20 hover:scale-[1.02]"
             >
               <Sparkles size={14} />
-              Run AI Pipeline
+              Run Pipeline
             </button>
           )}
         </div>
@@ -1093,16 +1335,40 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer whitespace-nowrap ${
-                filterStatus === status
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer whitespace-nowrap ${filterStatus === status
                   ? 'bg-indigo-500 text-white font-bold'
                   : 'text-slate-400 hover:text-slate-200'
-              }`}
+                }`}
             >
               {status === 'Needs AI Revision' ? 'Revision' : status} ({statusCounts[status]})
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Sort Bar */}
+      <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+        <ArrowUpDown size={12} className="text-slate-600" />
+        <span className="text-slate-600 mr-1">Sort:</span>
+        {[
+          { key: 'date_asc' as const, label: 'Date', icon: <ArrowUp size={10} /> },
+          { key: 'date_desc' as const, label: 'Date', icon: <ArrowDown size={10} /> },
+          { key: 'project' as const, label: 'Project', icon: null },
+          { key: 'status' as const, label: 'Status', icon: null },
+          { key: 'updated' as const, label: 'Recent', icon: null },
+        ].map(opt => (
+          <button
+            key={opt.key}
+            onClick={() => setSortBy(opt.key)}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+              sortBy === opt.key
+                ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 font-bold'
+                : 'bg-white/[0.02] text-slate-500 border border-white/5 hover:text-slate-300 hover:bg-white/5'
+            }`}
+          >
+            {opt.label}{opt.icon && <span className="inline-flex">{opt.icon}</span>}
+          </button>
+        ))}
       </div>
 
       {/* Post Grid */}
@@ -1119,6 +1385,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                 setEditedCaptionEn(post.caption_english);
                 setEditedCaptionEs(post.caption_spanish);
                 setEditingCaption(false);
+                setEditingDate(false);
                 setShowFeedbackInput(false);
                 setFeedbackText('');
               }}
@@ -1211,18 +1478,69 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                   <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-md border border-white/5">
                     {selectedPost.project}
                   </span>
-                  <span className="text-[9px] font-mono text-slate-500 flex items-center gap-1">
-                    <Calendar size={10} /> {selectedPost.suggested_date}
-                  </span>
+                  {editingDate ? (
+                    <span className="flex items-center gap-1.5">
+                      <input
+                        type="date"
+                        value={editedDate}
+                        onChange={(e) => setEditedDate(e.target.value)}
+                        className="bg-white/5 border border-indigo-500/30 rounded-md px-2 py-0.5 text-[11px] font-mono text-slate-200 focus:outline-none focus:border-indigo-500/60 transition-colors [color-scheme:dark]"
+                      />
+                      <button
+                        onClick={async () => {
+                          if (editedDate && editedDate !== selectedPost.suggested_date) {
+                            await updatePost(selectedPost.id, { suggested_date: editedDate });
+                          }
+                          setEditingDate(false);
+                        }}
+                        className="p-1 rounded-md bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors cursor-pointer"
+                      >
+                        <Check size={10} />
+                      </button>
+                      <button
+                        onClick={() => setEditingDate(false)}
+                        className="p-1 rounded-md bg-white/5 text-slate-400 hover:bg-white/10 transition-colors cursor-pointer"
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => { setEditedDate(selectedPost.suggested_date); setEditingDate(true); }}
+                      className="text-[9px] font-mono text-slate-500 flex items-center gap-1 hover:text-indigo-400 transition-colors cursor-pointer group/date"
+                      title="Click to edit date"
+                    >
+                      <Calendar size={10} /> {selectedPost.suggested_date}
+                      <Edit3 size={8} className="opacity-0 group-hover/date:opacity-100 transition-opacity" />
+                    </button>
+                  )}
                 </div>
                 <h2 className="text-xl font-black text-white leading-snug">{selectedPost.hook}</h2>
               </div>
-              <button
-                onClick={() => setSelectedPost(null)}
-                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
-              >
-                <X size={18} />
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  disabled={filteredPosts.findIndex(p => p.id === selectedPost.id) <= 0}
+                  onClick={handlePrevPost}
+                  title="Previous Post (Left Arrow)"
+                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer text-slate-400 hover:text-white"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  disabled={filteredPosts.findIndex(p => p.id === selectedPost.id) >= filteredPosts.length - 1}
+                  onClick={handleNextPost}
+                  title="Next Post (Right Arrow)"
+                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer text-slate-400 hover:text-white mr-1"
+                >
+                  <ChevronRight size={18} />
+                </button>
+                <button
+                  onClick={() => setSelectedPost(null)}
+                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer text-slate-400 hover:text-white"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
             {/* Modal body */}
@@ -1309,7 +1627,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                         <p className="mb-4">{selectedPost.visual_instruction}</p>
                       )}
                     </div>
-                    
+
                     {/* Visual Controls */}
                     <div className="py-3 border-t border-white/5 flex gap-4 text-[10px] uppercase tracking-wider font-semibold text-slate-400">
                       <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-200 transition-colors">
@@ -1328,7 +1646,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                         />
                         <span>Show Grid</span>
                       </label>
-                      
+
                       <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-200 transition-colors">
                         <input
                           type="checkbox"
@@ -1393,9 +1711,9 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                   <div className="bg-[#0c121d] border border-white/5 rounded-xl p-4 flex flex-col items-center justify-center min-h-[200px] relative overflow-hidden group/preview">
                     {generatedImages[selectedPost.id] ? (
                       <>
-                        <img 
-                          src={generatedImages[selectedPost.id]} 
-                          alt="Gemini generated visual" 
+                        <img
+                          src={generatedImages[selectedPost.id]}
+                          alt="Gemini generated visual"
                           className="max-h-[220px] w-auto rounded-lg shadow-lg border border-white/10 cursor-pointer transition-transform hover:scale-[1.02]"
                           onClick={() => setLightboxImage(generatedImages[selectedPost.id])}
                         />
@@ -1521,13 +1839,20 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                 )}
 
                 <button
+                  onClick={() => handleDeletePost(selectedPost)}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-xs font-mono uppercase tracking-wider hover:bg-rose-500/20 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  <Trash2 size={14} /> Delete
+                </button>
+
+                <button
                   onClick={() => handlePublishToInstagram(selectedPost)}
                   disabled={selectedPost.status !== 'Approved' || publishingInstagram || saving}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider transition-all ml-auto cursor-pointer ${
-                    selectedPost.status === 'Approved'
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider transition-all ml-auto cursor-pointer ${selectedPost.status === 'Approved'
                       ? 'bg-indigo-500 text-white hover:bg-indigo-600 border border-indigo-600'
                       : 'bg-white/5 border border-white/10 text-slate-500 opacity-50 cursor-not-allowed'
-                  }`}
+                    }`}
                 >
                   <Share2 size={14} className={publishingInstagram ? 'animate-spin' : ''} />
                   {publishingInstagram ? 'Sending...' : 'Send to Instagram'}
@@ -1540,23 +1865,29 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
 
       {/* Lightbox Modal */}
       {lightboxImage && (
-        <div className="fixed inset-0 z-[100] bg-[#080b12]/95 backdrop-blur-md flex flex-col items-center justify-center p-4 transition-all duration-300">
-          <button 
+        <div
+          onClick={() => setLightboxImage(null)}
+          className="fixed inset-0 z-[100] bg-[#080b12]/95 backdrop-blur-md flex flex-col items-center justify-center p-4 transition-all duration-300 cursor-zoom-out"
+        >
+          <button
             onClick={() => setLightboxImage(null)}
             className="absolute top-6 right-6 text-slate-400 hover:text-white p-2.5 bg-white/5 border border-white/10 rounded-full cursor-pointer hover:bg-white/10 transition-all shadow-lg"
           >
             <X size={20} />
           </button>
-          
-          <div className="max-w-[90vw] max-h-[75vh] aspect-square rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative bg-[#080b12] flex items-center justify-center">
-            <img 
-              src={lightboxImage} 
-              alt="Fullscreen Preview" 
+
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-[90vw] max-h-[75vh] aspect-square rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative bg-[#080b12] flex items-center justify-center cursor-default"
+          >
+            <img
+              src={lightboxImage}
+              alt="Fullscreen Preview"
               className="max-w-full max-h-full object-contain"
             />
           </div>
 
-          <div className="mt-6 flex gap-4">
+          <div onClick={(e) => e.stopPropagation()} className="mt-6 flex gap-4">
             <button
               onClick={() => {
                 if (selectedPost) downloadPng(selectedPost);
@@ -1573,6 +1904,40 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
             >
               <Share2 size={14} /> Download SVG
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Custom HUD Notification Modal */}
+      {notification && (
+        <div className="fixed inset-0 z-[110] bg-[#080b12]/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-[#0c121d] border border-white/10 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+            {/* Type indicator glow */}
+            <div className={`absolute top-0 left-0 right-0 h-1.5 ${notification.type === 'success' ? 'bg-emerald-500' :
+                notification.type === 'error' ? 'bg-rose-500' : 'bg-amber-500'
+              }`} />
+
+            <h3 className={`text-sm font-mono uppercase tracking-widest mb-3 font-bold ${notification.type === 'success' ? 'text-emerald-400' :
+                notification.type === 'error' ? 'text-rose-400' : 'text-amber-400'
+              }`}>
+              // {notification.title}
+            </h3>
+
+            <div className="text-slate-300 text-xs font-mono mb-6 whitespace-pre-wrap leading-relaxed max-h-[40vh] overflow-y-auto bg-[#080b12] p-4 rounded-xl border border-white/5">
+              {notification.message}
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setNotification(null)}
+                className={`px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider cursor-pointer transition-all ${notification.type === 'success' ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20' :
+                    notification.type === 'error' ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20' :
+                      'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20'
+                  }`}
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
         </div>
       )}

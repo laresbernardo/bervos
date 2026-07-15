@@ -1392,9 +1392,9 @@ app.put('/api/social/:id', authenticateAdmin, async (req: express.Request, res: 
 
     await db.collection('social_posts').doc(id).update(filtered);
     res.json({ success: true, id });
-  } catch (err) {
+  } catch (err: any) {
     console.error('[API] Error updating social post:', err);
-    res.status(500).json({ error: 'Failed to update social post' });
+    res.status(500).json({ error: `Failed to update social post: ${err.message}` });
   }
 });
 
