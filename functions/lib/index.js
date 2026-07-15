@@ -47,7 +47,9 @@ const child_process_1 = require("child_process");
 const os = __importStar(require("os"));
 const https = __importStar(require("https"));
 // Initialize the default admin SDK app (for bervos-official)
-admin.initializeApp();
+admin.initializeApp({
+    storageBucket: 'bervos-official.firebasestorage.app'
+});
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({ origin: true }));
 app.use(express_1.default.json());
@@ -1493,7 +1495,7 @@ app.post('/api/social/:id/instagram', authenticateAdmin, async (req, res) => {
         }
         const post = doc.data();
         // 1. Upload base64 image to Firebase Storage
-        const bucket = admin.storage().bucket();
+        const bucket = admin.storage().bucket('bervos-official.firebasestorage.app');
         const base64Data = imageData.replace(/^data:image\/png;base64,/, '');
         const buffer = Buffer.from(base64Data, 'base64');
         const file = bucket.file(`social_posts/${id}.png`);

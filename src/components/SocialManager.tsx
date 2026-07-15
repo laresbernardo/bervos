@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
-import { Search, X, Loader2, Check, MessageSquare, Edit3, Eye, Calendar, Share2, Sparkles, Download, Maximize2, Trash2, ArrowUpDown, ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, X, Loader2, Check, MessageSquare, Edit3, Eye, Calendar, Share2, Sparkles, Download, Maximize2, Trash2, ArrowUpDown, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 
 interface SocialPost {
   id: string;
@@ -21,6 +21,20 @@ interface SocialPost {
 interface SocialManagerProps {
   user: User;
 }
+
+const ORIGINAL_VISUAL_DIRECTIONS: Record<string, string> = {
+  'billio': 'Show a simplified flow: [Home icon] -> [Terminal Bridge] -> [Server] -> [Firestore]',
+  'bervos': 'Show a simplified flow: [ecosystem.json] -> [generate_ai_metadata.py] -> [JSON-LD Schema] -> [llms.txt]',
+  'hub': 'Show a simplified flow: [ecosystem.json] -> [generate_ai_metadata.py] -> [JSON-LD Schema] -> [llms.txt]',
+  'pinmage': 'Show a simplified flow: [Fetch Pinterest Boards] -> [Match Pins] -> [Resolve Synced DB] -> [Firestore Sync]',
+  'aura': 'Show a simplified flow: [SF Node] -> [Paris Node] -> [Tokyo Node] -> [Sydney Node]',
+  'tripitdown': 'Show a simplified flow: [User Request] -> [Gemini 2.5 Pro] -> [Auto-Retry Fallback] -> [Gemini 3.5 Flash]',
+  'scribo': 'Show a simplified flow: [Practice session] -> [Type detection] -> [Morse Display] -> [Unicode text]',
+  'yt2mp3': 'Show a simplified flow: [Chrome extension] -> [Node.js server] -> [yt-dlp engine] -> [iTunes Tagging] -> [LRCLIB Lyrics]',
+  'chessverse': 'Show a simplified flow: [Input Repertoire] -> [Variation Shuffle] -> [Offline Puzzles] -> [Sumi-black UI]',
+  'tonaly': 'Show a simplified flow: [Interval Selector] -> [Web Audio Synth] -> [User Response Match] -> [Performance Charts]',
+  'laresdj': 'Show a simplified flow: [Mixer Deck A] -> [Mixer Deck B] -> [FX Bus] -> [Master Output]'
+};
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; label: string }> = {
   'Draft': { bg: 'bg-indigo-500/10', text: 'text-indigo-400', border: 'border-indigo-500/20', label: 'DRAFT' },
@@ -272,7 +286,142 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     let diagramContent = '';
     const proj = post.project.toLowerCase();
 
-    if (proj === 'billio') {
+    // Parse list of steps from visual_instruction text
+    const parseVisualInstructionSteps = (text: string): string[] => {
+      if (!text) return [];
+      const lines = text.split('\n');
+      const steps: string[] = [];
+      const stepRegex = /^(?:slide\s*\d+\s*[:\-]|step\s*\d+\s*[:\-]|\d+\s*[\.\-]|[\-\*]\s*)(.+)$/i;
+      
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        
+        const match = trimmed.match(stepRegex);
+        if (match) {
+          steps.push(match[1].trim());
+        } else if (trimmed.includes('→') || trimmed.includes('->')) {
+          // Extract only the bracketed items if present in the line (e.g. [Home] -> [Server])
+          const bracketMatches = [...trimmed.matchAll(/\[([^\]]+)\]/g)].map(m => m[1].trim());
+          if (bracketMatches.length > 1) {
+            return bracketMatches;
+          }
+          
+          const parts = trimmed.split(/\s*(?:→|->)\s*/);
+          if (parts.length > 1) {
+            return parts.map(p => p.trim());
+          }
+        }
+      }
+      
+      if (steps.length === 0) {
+        if (text.includes(',') && !text.includes('.')) {
+          const parts = text.split(',');
+          if (parts.length > 1 && parts.length <= 6 && parts.every(p => p.trim().length < 30)) {
+            return parts.map(p => p.trim());
+          }
+        }
+      }
+      
+      return steps;
+    };
+
+    const parsedSteps = parseVisualInstructionSteps(post.visual_instruction);
+
+    if (parsedSteps.length > 0) {
+      const N = parsedSteps.length;
+      let stepsHtml = '';
+      
+      if (N <= 4) {
+        // Horizontal flow
+        const cardWidth = Math.min(220, (900 - (N - 1) * 40) / N);
+        const startX = 540 - ((N * cardWidth + (N - 1) * 40) / 2);
+        const y = 460;
+        const height = 240;
+        
+        for (let i = 0; i < N; i++) {
+          const x = startX + i * (cardWidth + 40);
+          const labelLines = splitTitleToLines(parsedSteps[i], 16);
+          let linesHtml = '';
+          const lineCount = labelLines.length;
+          const startTextY = (height / 2) + 12 - ((lineCount - 1) * 8);
+          
+          for (let j = 0; j < lineCount; j++) {
+            linesHtml += `
+              <text x="${cardWidth / 2}" y="${startTextY + j * 16}" font-family="-apple-system, sans-serif" font-size="12" fill="#f8fafc" font-weight="bold" text-anchor="middle">
+                ${labelLines[j]}
+              </text>
+            `;
+          }
+          
+          stepsHtml += `
+            <g transform="translate(${x}, ${y})">
+              <rect x="0" y="0" width="${cardWidth}" height="${height}" rx="16" fill="#0c121d" stroke="${i === 0 ? accentCyan : (i === N - 1 ? '#10b981' : accentIndigo)}" stroke-width="1.5" />
+              <rect x="0" y="0" width="${cardWidth}" height="40" rx="16" fill="rgba(255,255,255,0.02)"/>
+              <text x="15" y="24" font-family="monospace" font-size="9" fill="${textSecondary}">STEP 0${i + 1}</text>
+              ${linesHtml}
+            </g>
+          `;
+          
+          if (i < N - 1) {
+            const arrowX = x + cardWidth;
+            const arrowY = y + height / 2;
+            stepsHtml += `
+              <g>
+                <path d="M ${arrowX} ${arrowY} L ${arrowX + 40} ${arrowY}" stroke="${accentIndigo}" stroke-width="2" stroke-dasharray="4 2"/>
+                <polygon points="${arrowX + 40},${arrowY - 4} ${arrowX + 40},${arrowY + 4} ${arrowX + 44},${arrowY}" fill="${accentIndigo}" />
+              </g>
+            `;
+          }
+        }
+      } else {
+        // Vertical flow for more steps
+        const cardWidth = 380;
+        const cardHeight = 70;
+        const startX = 540 - cardWidth / 2;
+        const startY = 400;
+        const gap = 20;
+        
+        for (let i = 0; i < N; i++) {
+          const x = startX;
+          const y = startY + i * (cardHeight + gap);
+          const labelLines = splitTitleToLines(parsedSteps[i], 28);
+          let linesHtml = '';
+          const lineCount = labelLines.length;
+          const startTextY = (cardHeight / 2) + 4 - ((lineCount - 1) * 7);
+          
+          for (let j = 0; j < lineCount; j++) {
+            linesHtml += `
+              <text x="210" y="${startTextY + j * 14}" font-family="-apple-system, sans-serif" font-size="12" fill="#f8fafc" font-weight="bold" text-anchor="middle">
+                ${labelLines[j]}
+              </text>
+            `;
+          }
+          
+          stepsHtml += `
+            <g transform="translate(${x}, ${y})">
+              <rect x="0" y="0" width="${cardWidth}" height="${cardHeight}" rx="12" fill="#0c121d" stroke="${i === 0 ? accentCyan : (i === N - 1 ? '#10b981' : accentIndigo)}" stroke-width="1.5" />
+              <rect x="0" y="0" width="60" height="${cardHeight}" rx="12" fill="rgba(255,255,255,0.02)"/>
+              <text x="30" y="40" font-family="monospace" font-size="12" fill="${textSecondary}" text-anchor="middle">0${i + 1}</text>
+              ${linesHtml}
+            </g>
+          `;
+          
+          if (i < N - 1) {
+            const arrowX = x + cardWidth / 2;
+            const arrowY = y + cardHeight;
+            stepsHtml += `
+              <g>
+                <path d="M ${arrowX} ${arrowY} L ${arrowX} ${arrowY + gap}" stroke="${accentIndigo}" stroke-width="2" stroke-dasharray="4 2"/>
+                <polygon points="${arrowX - 4},${arrowY + gap} ${arrowX + 4},${arrowY + gap} ${arrowX},${arrowY + gap + 4}" fill="${accentIndigo}" />
+              </g>
+            `;
+          }
+        }
+      }
+      
+      diagramContent = stepsHtml;
+    } else if (proj === 'billio') {
       diagramContent = `
         <!-- Connection 1 -->
         <g>
@@ -1599,19 +1748,41 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="mono-label !text-slate-500">// Visual Direction</span>
-                  <button
-                    onClick={() => {
-                      if (editingVisual) {
-                        handleSaveVisual(selectedPost);
-                      } else {
-                        setEditedVisualInstruction(selectedPost.visual_instruction);
-                        setEditingVisual(true);
-                      }
-                    }}
-                    className="flex items-center gap-1.5 text-[10px] font-mono text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
-                  >
-                    {editingVisual ? <><Check size={12} /> Save</> : <><Edit3 size={12} /> Edit</>}
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={async () => {
+                        const projectKey = selectedPost.project.toLowerCase();
+                        const defaultText = ORIGINAL_VISUAL_DIRECTIONS[projectKey] || 'Show a simplified flow: [Step 1] -> [Step 2] -> [Step 3]';
+                        if (editingVisual) {
+                          setEditedVisualInstruction(defaultText);
+                        } else {
+                          await updatePost(selectedPost.id, { visual_instruction: defaultText });
+                        }
+                        setNotification({
+                          title: 'Reset Success',
+                          message: 'Visual Direction reset to clean flowchart template.',
+                          type: 'success'
+                        });
+                      }}
+                      className="flex items-center gap-1 text-[10px] font-mono text-slate-500 hover:text-indigo-400 transition-colors cursor-pointer"
+                      title="Reset to default clean template"
+                    >
+                      <RotateCcw size={10} /> Reset
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (editingVisual) {
+                          handleSaveVisual(selectedPost);
+                        } else {
+                          setEditedVisualInstruction(selectedPost.visual_instruction);
+                          setEditingVisual(true);
+                        }
+                      }}
+                      className="flex items-center gap-1.5 text-[10px] font-mono text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+                    >
+                      {editingVisual ? <><Check size={12} /> Save</> : <><Edit3 size={12} /> Edit</>}
+                    </button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 text-xs text-slate-500 font-mono leading-relaxed flex flex-col justify-between">
