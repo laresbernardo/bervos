@@ -582,7 +582,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
                 className={`px-3 py-1.5 rounded-lg border font-mono text-[10px] tracking-wider uppercase ${cacheStatus === 'HIT'
                   ? 'bg-green-500/5 text-green-400 border-green-500/20'
                   : cacheStatus === 'STALE'
-                    ? 'bg-yellow-500/5 text-yellow-400 border-yellow-500/20 animate-pulse'
+                    ? 'bg-yellow-500/5 text-yellow-400 border-yellow-500/20'
                     : 'bg-indigo-500/5 text-indigo-400 border-indigo-500/20'
                   }`}
                 title="SWR Cache Status. HIT = Served from cache. STALE = Served cache and refreshing backend. MISS = Cache empty."

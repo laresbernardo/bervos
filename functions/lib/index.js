@@ -631,11 +631,11 @@ function getLocalProjectVersion(projectName) {
         'tripitdown': 'tripitdown',
         'aura': 'Aura',
         'scribo': 'Scribo',
-        'laresdj': 'LaresDJ',
+        'laresdj': 'LaresDJ.com',
         'pinmage': 'Pinmage',
         'tonaly': 'Tonaly',
         'yt2mp3': 'YT2MP3',
-        'bervos': 'BERVOS/BERVOS.org'
+        'bervos': 'BERVOS.org'
     };
     const folderName = directoryNames[normalizedName] || projectName;
     const projectFolderPath = path.join(parentDir, folderName);
@@ -1344,7 +1344,7 @@ app.put('/api/social/:id', authenticateAdmin, async (req, res) => {
         const updates = req.body;
         const db = admin.firestore();
         // Only allow specific fields to be updated
-        const allowedFields = ['status', 'user_feedback', 'caption_english', 'caption_spanish', 'hook', 'visual_instruction', 'mermaid_code', 'suggested_date'];
+        const allowedFields = ['status', 'user_feedback', 'caption_english', 'caption_spanish', 'hook', 'visual_instruction', 'mermaid_code', 'suggested_date', 'screenshots', 'instagram_media_id', 'published_at', 'slides'];
         const filtered = {};
         for (const key of allowedFields) {
             if (updates[key] !== undefined) {
@@ -1352,8 +1352,59 @@ app.put('/api/social/:id', authenticateAdmin, async (req, res) => {
             }
         }
         filtered['updated_at'] = new Date().toISOString();
+        if (filtered.status === 'Published') {
+            filtered.suggested_date = new Date().toISOString().split('T')[0];
+        }
+        // Process screenshots if provided
+        if (updates.screenshots !== undefined && Array.isArray(updates.screenshots)) {
+            const processedUrls = [];
+            const base64ToUrlMap = new Map();
+            const bucket = admin.storage().bucket('bervos-official.firebasestorage.app');
+            for (let i = 0; i < updates.screenshots.length; i++) {
+                const item = updates.screenshots[i];
+                if (typeof item === 'string' && item.startsWith('data:image/')) {
+                    const match = item.match(/^data:image\/(\w+);base64,(.+)$/);
+                    if (match) {
+                        const ext = match[1];
+                        const base64Data = match[2];
+                        const buffer = Buffer.from(base64Data, 'base64');
+                        // Store under social_posts/{id}/screenshot_{timestamp}_{index}.{ext}
+                        const fileName = `social_posts/${id}/screenshot_${Date.now()}_${i}.${ext}`;
+                        const file = bucket.file(fileName);
+                        await file.save(buffer, {
+                            metadata: { contentType: `image/${ext}` },
+                            public: true,
+                            resumable: false
+                        });
+                        await file.makePublic();
+                        const imageUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+                        processedUrls.push(imageUrl);
+                        base64ToUrlMap.set(item, imageUrl);
+                    }
+                    else {
+                        processedUrls.push(item);
+                    }
+                }
+                else if (typeof item === 'string') {
+                    processedUrls.push(item);
+                }
+            }
+            filtered['screenshots'] = processedUrls;
+            // Map base64 strings in updates.slides to public URLs
+            if (updates.slides !== undefined && Array.isArray(updates.slides)) {
+                filtered['slides'] = updates.slides.map((slide) => {
+                    if (base64ToUrlMap.has(slide)) {
+                        return base64ToUrlMap.get(slide);
+                    }
+                    return slide;
+                });
+            }
+        }
+        else if (updates.slides !== undefined && Array.isArray(updates.slides)) {
+            filtered['slides'] = updates.slides;
+        }
         await db.collection('social_posts').doc(id).update(filtered);
-        res.json({ success: true, id });
+        res.json({ success: true, id, updatedFields: filtered });
     }
     catch (err) {
         console.error('[API] Error updating social post:', err);
@@ -1416,7 +1467,7 @@ app.post('/api/social/generate', authenticateAdmin, async (_req, res) => {
                 post_type: "vibe_coding_reality",
                 project: "Chessverse",
                 hook: "Mastering openings requires repetition. Puzzles require context.",
-                caption_english: "Mastering openings requires repetition. Puzzles require context.\n\nChessverse is a modern PWA designed to let you practice chess openings and puzzles offline. Our recent update brings custom opening tree tracking: you input your repertoire, and the engine shuffles variations to test your responses.\n\nWhy Chessverse?\n• Immersive Opening Repertoire Practice\n• Thousands of offline-enabled tactical puzzles\n• LocalStorage performance metrics tracking\n• Minimalist UI matching the sumi-black theme\n\nNo server lag. Pure chess opening memorization, direct in your pocket.\n\nMore at chessverse.bervos.org\n\n#BuildInPublic #Chessverse #IndieHacker #PWA #React",
+                caption_english: "Mastering openings requires repetition. Puzzles require context.\n\nChessverse is a modern #PWA designed to let you practice chess openings and puzzles offline. Our recent update brings custom opening tree tracking: you input your repertoire, and the engine shuffles variations to test your responses.\n\nWhy Chessverse?\n• Immersive Opening Repertoire Practice\n• Thousands of offline-enabled tactical puzzles\n• LocalStorage performance metrics tracking\n• Minimalist UI matching the sumi-black theme\n\nNo server lag. Pure chess opening memorization, built with #React and direct in your pocket.\n\nMore at chessverse.bervos.org\n\n#Chessverse #React #PWA #TypeScript #TailwindCSS",
                 caption_spanish: "Chessverse ahora te permite entrenar tu repertorio de aperturas y resolver tácticas sin conexión.",
                 visual_instruction: "Generate a dark Chess board design with glowing indigo coordinates, showcasing a tactical opening fork. Top label '// VIBE_CODING_REALITY // CHESSVERSE'.",
                 mermaid_code: null,
@@ -1431,7 +1482,7 @@ app.post('/api/social/generate', authenticateAdmin, async (_req, res) => {
                 post_type: "under_the_hood",
                 project: "Tonaly",
                 hook: "Can you identify a perfect fifth by ear?",
-                caption_english: "Can you identify a perfect fifth by ear?\n\nTonaly is a web-based ear training studio built to bridge the gap between music theory and instinct. Our audio generation pipeline uses the Web Audio API to synthesize clean waveforms (sine, square, triangle) directly in the browser. No pre-recorded MP3 samples.\n\nHow it works under the hood:\n1. Choose your training module: intervals, chords, or note recognition\n2. The system generates randomized musical keys and plays the progression dynamically\n3. Responsive keyboard UI matches your input\n4. Performance insights calculated locally, showing interval reaction times\n\nPure Web Audio API, zero latency, offline-ready.\n\nMore at tonaly.bervos.org\n\n#BuildInPublic #Tonaly #WebAudioAPI #EarTraining #MusicTheory",
+                caption_english: "Can you identify a perfect fifth by ear?\n\nTonaly is a web-based ear training studio built to bridge the gap between music theory and instinct. Our audio generation pipeline uses the #WebAudio API to synthesize clean waveforms (sine, square, triangle) directly in the browser. No pre-recorded MP3 samples.\n\nHow it works under the hood:\n1. Choose your training module: intervals, chords, or note recognition\n2. The system generates randomized musical keys and plays the progression dynamically\n3. Responsive keyboard UI matches your input\n4. Performance insights calculated locally, showing interval reaction times\n\nPure Web Audio API, zero latency, offline-ready #PWA.\n\nMore at tonaly.bervos.org\n\n#WebAudioAPI #Tonaly #MusicTheory #TypeScript #WebDev",
                 caption_spanish: "Tonaly entrena tu oído musical generando sintetizadores en tiempo real usando el Web Audio API del navegador.",
                 visual_instruction: "Branded design showing a circular music wheel of fifths with glowing indigo and cyan accents. Label '// UNDER_THE_HOOD // TONALY'.",
                 mermaid_code: "graph TD\n    A[Interval Selector] --> B[Web Audio Synth]\n    B -->|Sine / Square Wave| C[Audio Node Link]\n    C --> D[User Response Match]\n    D -->|Correct / Incorrect| E[Reaction Logger]\n    E --> F[Performance Charts]",
@@ -1446,7 +1497,7 @@ app.post('/api/social/generate', authenticateAdmin, async (_req, res) => {
                 post_type: "carousel_before_after",
                 project: "LaresDJ",
                 hook: "DJs need gear. Producers need resources. Finding both in one place shouldn't be hard.",
-                caption_english: "DJs need gear. Producers need resources. Finding both in one place shouldn't be hard.\n\n[SLIDE 1 — THE BOTTLENECK]\nDJs and music producers spend hours searching for custom skins, mapping configs, gear reviews, and localized DJ equipment rental shops. Most info is scattered across outdated forums.\n\n[SLIDE 2 — THE APPROACH]\nCreated LaresDJ:\n• Centralized DJI/Traktor controller mapping database\n• Immersive equipment rental map using OpenStreetMap\n• High-quality curated download packs for DJs\n• Integrated community forum backend\n\n[SLIDE 3 — THE RESULT]\nOne central portal for DJs and music producers to level up their gear setup, grab controller mapping files instantly, and rent equipment locally. Custom skins for Traktor downloaded over 5,000 times.\n\nMore at laresdj.bervos.org\n\n#BuildInPublic #LaresDJ #DJCommunity #OpenSource #MusicProduction",
+                caption_english: "DJs need gear. Producers need resources. Finding both in one place shouldn't be hard.\n\nDJs and music producers spend hours searching for custom skins, mapping configs, gear reviews, and localized DJ equipment rental shops. Most info is scattered across outdated forums.\n\nSo we created LaresDJ:\n• Centralized controller mapping database for Traktor and Pioneer\n• Immersive equipment rental map using #OpenStreetMap\n• High-quality curated download packs for DJs\n• Integrated community forum backend\n\nNow there's one central #React portal for DJs and music producers to level up their gear setup, grab controller mapping files instantly, and rent equipment locally. Custom skins downloaded over 5,000 times.\n\nMore at laresdj.bervos.org\n\n#LaresDJ #OpenStreetMap #Traktor #PioneerDJ #React",
                 caption_spanish: "LaresDJ consolida recursos para productores y DJs, incluyendo mapeos de controladores y mapas de equipamiento en un portal centralizado.",
                 visual_instruction: "3-slide carousel. Slide 1: Scattered folder icons. Slide 2: Interactive map wireframe. Slide 3: DJ mixer controller screenshot. Label '// BEFORE_AND_AFTER // LARESDJ'.",
                 mermaid_code: null,
@@ -1475,6 +1526,85 @@ app.post('/api/social/generate', authenticateAdmin, async (_req, res) => {
     catch (err) {
         console.error('[API] Error running generation pipeline:', err);
         res.status(500).json({ error: 'Failed to run generation pipeline' });
+    }
+});
+/**
+ * POST /api/social/detect-email — Detect positions of laresbernardo@gmail.com to redact them
+ */
+app.post('/api/social/detect-email', authenticateAdmin, async (req, res) => {
+    try {
+        const { imageBase64 } = req.body;
+        if (!imageBase64) {
+            return res.status(400).json({ error: 'Missing imageBase64 payload' });
+        }
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            return res.status(500).json({ error: 'Gemini API key is not configured' });
+        }
+        // Strip out base64 header if present
+        const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+        const prompt = `Identify all occurrences of the email address 'laresbernardo@gmail.com' (including substrings containing 'laresbernardo@gmail.com', such as 'GoogleDrive-laresbernardo@gmail.com') in the attached image.
+Return a list of bounding boxes enclosing these occurrences. Each box should have:
+- xmin: left edge as percentage (0-100) of image width
+- ymin: top edge as percentage (0-100) of image height
+- xmax: right edge as percentage (0-100) of image width
+- ymax: bottom edge as percentage (0-100) of image height
+
+Be extremely precise to ensure we can blur these exact regions.`;
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{
+                        parts: [
+                            { text: prompt },
+                            {
+                                inlineData: {
+                                    mimeType: "image/png",
+                                    data: base64Data
+                                }
+                            }
+                        ]
+                    }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            boxes: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        xmin: { type: "NUMBER" },
+                                        ymin: { type: "NUMBER" },
+                                        xmax: { type: "NUMBER" },
+                                        ymax: { type: "NUMBER" }
+                                    },
+                                    required: ["xmin", "ymin", "xmax", "ymax"]
+                                }
+                            }
+                        },
+                        required: ["boxes"]
+                    }
+                }
+            })
+        });
+        if (!response.ok) {
+            const errText = await response.text();
+            return res.status(500).json({ error: `Gemini API call failed: ${errText}` });
+        }
+        const data = await response.json();
+        const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!textResult) {
+            return res.json({ success: true, boxes: [] });
+        }
+        const resultObj = JSON.parse(textResult);
+        return res.json({ success: true, boxes: resultObj.boxes || [] });
+    }
+    catch (err) {
+        console.error('[Detect Email] Error:', err);
+        return res.status(500).json({ error: err.message });
     }
 });
 /**
@@ -1519,22 +1649,69 @@ app.post('/api/social/:id/instagram', authenticateAdmin, async (req, res) => {
             });
         }
         // 3. Instagram Content Publishing API Flow
-        // Step A: Create Media Container
         const caption = post?.caption_english || '';
-        const containerRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                image_url: imageUrl,
-                caption,
-                access_token: facebookAccessToken
-            })
-        });
-        const containerData = await containerRes.json();
-        if (!containerRes.ok || !containerData.id) {
-            throw new Error(`Failed to create media container: ${JSON.stringify(containerData)}`);
+        let creationId;
+        const screenshots = post?.screenshots || [];
+        const resolvedSlides = post?.slides !== undefined && Array.isArray(post.slides)
+            ? post.slides.map((slide) => slide === '__generated__' ? imageUrl : slide)
+            : [imageUrl, ...screenshots];
+        if (resolvedSlides.length === 0) {
+            throw new Error('At least one image/slide is required to publish to Instagram.');
         }
-        const creationId = containerData.id;
+        if (resolvedSlides.length > 1) {
+            // Carousel post
+            const itemContainerIds = [];
+            for (const url of resolvedSlides) {
+                const itemRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image_url: url,
+                        is_carousel_item: true,
+                        access_token: facebookAccessToken
+                    })
+                });
+                const itemData = await itemRes.json();
+                if (!itemRes.ok || !itemData.id) {
+                    throw new Error(`Failed to create carousel item container for ${url}: ${JSON.stringify(itemData)}`);
+                }
+                itemContainerIds.push(itemData.id);
+            }
+            // Create carousel container
+            const carouselRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    media_type: 'CAROUSEL',
+                    children: itemContainerIds,
+                    caption,
+                    access_token: facebookAccessToken
+                })
+            });
+            const carouselData = await carouselRes.json();
+            if (!carouselRes.ok || !carouselData.id) {
+                throw new Error(`Failed to create carousel container: ${JSON.stringify(carouselData)}`);
+            }
+            creationId = carouselData.id;
+        }
+        else {
+            // Single image post
+            const singleImageUrl = resolvedSlides[0];
+            const containerRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    image_url: singleImageUrl,
+                    caption,
+                    access_token: facebookAccessToken
+                })
+            });
+            const containerData = await containerRes.json();
+            if (!containerRes.ok || !containerData.id) {
+                throw new Error(`Failed to create media container: ${JSON.stringify(containerData)}`);
+            }
+            creationId = containerData.id;
+        }
         // Step B: Publish Media Container
         const publishRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media_publish`, {
             method: 'POST',
@@ -1549,10 +1726,12 @@ app.post('/api/social/:id/instagram', authenticateAdmin, async (req, res) => {
             throw new Error(`Failed to publish media: ${JSON.stringify(publishData)}`);
         }
         // 4. Update status in Firestore
+        const todayStr = new Date().toISOString().split('T')[0];
         await docRef.update({
             status: 'Published',
             instagram_media_id: publishData.id,
-            published_at: new Date().toISOString()
+            published_at: new Date().toISOString(),
+            suggested_date: todayStr
         });
         return res.json({
             success: true,
@@ -1564,6 +1743,102 @@ app.post('/api/social/:id/instagram', authenticateAdmin, async (req, res) => {
         console.error('[API] Error publishing to Instagram:', err);
         return res.status(500).json({
             error: 'Failed to publish to Instagram',
+            details: err.message
+        });
+    }
+});
+/**
+ * POST /api/social/:id/regenerate — Regenerate caption using Gemini AI
+ */
+app.post('/api/social/:id/regenerate', authenticateAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const db = admin.firestore();
+        const docRef = db.collection('social_posts').doc(id);
+        const doc = await docRef.get();
+        if (!doc.exists) {
+            return res.status(404).json({ error: 'Social post not found' });
+        }
+        const post = doc.data();
+        const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+        if (!apiKey) {
+            return res.status(400).json({
+                error: 'Missing Gemini API Key',
+                details: 'Please add GEMINI_API_KEY to functions/.env to use AI caption regeneration.'
+            });
+        }
+        const prompt = `
+You are an expert copywriter writing an Instagram post for a technical project.
+Here is the project and the current post details:
+- Project: ${post?.project}
+- Description/Hook: ${post?.hook}
+- Current Caption: ${post?.caption_english}
+- Notes / Revision History: ${post?.user_feedback || 'None'}
+
+Please write a fresh, high-quality, engaging Instagram caption for this update.
+Follow these strict instructions:
+1. Start with a strong technical hook (1 line, attention-grabbing).
+2. Follow the hook with a double line break, then a short, clear paragraph (2-3 sentences) describing the problem, bottleneck, or context.
+3. Use a bulleted list (using clear Unicode bullets like '•') to highlight 3-4 key technical features, implementation steps, or performance improvements. This keeps the text highly structured and easy to read. Each bullet point MUST be on a new line.
+4. Conclude with a short, 1-2 sentence closing statement/call-to-action (e.g. "More at bervos.org" or project URL).
+5. The tone must be professional, direct, and transparent. Do NOT use any generic marketing jargon like "revolutionize", "game-changer", "unlock", "supercharge", "cutting-edge", or "elevate".
+6. Do NOT include slide headers like "[SLIDE 1]" or "[THE BOTTLENECK]".
+7. Add 2-3 hashtags inline on key words in the text (e.g. #Firebase, #Ollama, #SwiftUI).
+8. At the very end of the caption, add 3-5 relevant, specific, niche hashtags focusing on tools, platforms, or AI models (no general tags like #BuildInPublic or #SideProject).
+9. Separately, write a 1-2 sentence concise Summary in English (no Spanish) of what this update is about.
+
+CRITICAL JSON FORMATTING RULE: You must use literal '\\n' escape sequences in the JSON string value for 'caption_english' to represent all line breaks and vertical spacing. Each block (hook, introduction, each bullet point, conclusion, and hashtag block) MUST be separated by literal '\\n' or '\\n\\n' so it renders as multiple paragraphs/lines. Do not output it as a single line of text.
+
+Return the result as a JSON object matching this structure:
+{
+  "caption_english": "The full English caption with inline hashtags, end hashtags, and literal \\n escape sequences for newlines",
+  "summary_english": "The 1-2 sentence English summary"
+}
+`;
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            caption_english: { type: "STRING" },
+                            summary_english: { type: "STRING" }
+                        },
+                        required: ["caption_english", "summary_english"]
+                    }
+                }
+            })
+        });
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Gemini API call failed: ${errText}`);
+        }
+        const data = await response.json();
+        const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!textResult) {
+            throw new Error('Gemini API returned an empty response.');
+        }
+        const parsed = JSON.parse(textResult);
+        const updates = {
+            caption_english: parsed.caption_english,
+            caption_spanish: parsed.summary_english, // store English summary in caption_spanish field
+            updated_at: new Date().toISOString()
+        };
+        await docRef.update(updates);
+        return res.json({
+            success: true,
+            caption_english: updates.caption_english,
+            caption_spanish: updates.caption_spanish
+        });
+    }
+    catch (err) {
+        console.error('[API] Error regenerating caption:', err);
+        return res.status(500).json({
+            error: 'Failed to regenerate caption',
             details: err.message
         });
     }
