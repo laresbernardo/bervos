@@ -4,7 +4,7 @@ import { Search, X, Loader2, Check, MessageSquare, Edit3, Eye, Calendar, Share2,
 
 interface SocialPost {
   id: string;
-  status: 'Draft' | 'Approved' | 'Published' | 'Needs AI Revision';
+  status: 'Draft' | 'Approved' | 'Published' | 'Scheduled' | 'Needs AI Revision';
   post_type: 'carousel_before_after' | 'under_the_hood' | 'vibe_coding_reality';
   project: string;
   hook: string;
@@ -20,6 +20,7 @@ interface SocialPost {
   slides?: string[];
   instagram_media_id?: string | null;
   published_at?: string | null;
+  instagram_scheduled_id?: string | null;
 }
 
 interface SocialManagerProps {
@@ -43,6 +44,7 @@ const ORIGINAL_VISUAL_DIRECTIONS: Record<string, string> = {
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; label: string }> = {
   'Draft': { bg: 'bg-indigo-500/10', text: 'text-indigo-400', border: 'border-indigo-500/20', label: 'DRAFT' },
   'Approved': { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20', label: 'APPROVED' },
+  'Scheduled': { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20', label: 'SCHEDULED' },
   'Published': { bg: 'bg-slate-500/10', text: 'text-slate-400', border: 'border-slate-500/20', label: 'PUBLISHED' },
   'Needs AI Revision': { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20', label: 'NEEDS_REVISION' },
 };
@@ -319,7 +321,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPost, setSelectedPost] = useState<SocialPost | null>(null);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['Draft', 'Approved', 'Needs AI Revision']);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['Draft', 'Approved', 'Scheduled', 'Needs AI Revision']);
   const [search, setSearch] = useState('');
   const [feedbackText, setFeedbackText] = useState('');
   const [showFeedbackInput, setShowFeedbackInput] = useState(false);
@@ -1707,15 +1709,19 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     setPublishingInstagram(true);
     try {
       const todayStr = new Date().toISOString().split('T')[0];
-      let currentPost = post;
-
-      if (post.suggested_date !== todayStr) {
-        await updatePost(post.id, { suggested_date: todayStr });
-        currentPost = { ...post, suggested_date: todayStr };
-      }
-
-      const imageData = await getPngDataUrl(currentPost);
+      const imageData = await getPngDataUrl(post);
       const idToken = await user.getIdToken();
+
+      const payload: Record<string, any> = { imageData };
+
+      // Check if the post date is in the future
+      if (post.suggested_date > todayStr) {
+        // Schedule for 9:00 AM local time on the suggested date
+        const scheduleDate = new Date(post.suggested_date + 'T09:00:00');
+        const scheduledPublishTime = Math.floor(scheduleDate.getTime() / 1000);
+        payload.scheduledPublishTime = scheduledPublishTime;
+        payload.scheduledDate = post.suggested_date;
+      }
 
       const res = await fetch(`/api/social/${post.id}/instagram`, {
         method: 'POST',
@@ -1723,7 +1729,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
           'Authorization': `Bearer ${idToken}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ imageData })
+        body: JSON.stringify(payload)
       });
 
       const data = await res.json();
@@ -1733,16 +1739,30 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
       }
 
       if (data.success) {
-        setNotification({
-          title: 'Publish Success',
-          message: 'Successfully published your branded post to Instagram!',
-          type: 'success',
-          ...(data.permalink ? { link: { url: data.permalink, label: 'Visit Post' } } : {})
-        });
-        setPosts(prev => prev.map(p =>
-          p.id === post.id ? { ...p, status: 'Published', published_at: new Date().toISOString(), suggested_date: todayStr } : p
-        ));
-        setSelectedPost(prev => prev ? { ...prev, status: 'Published', published_at: new Date().toISOString(), suggested_date: todayStr } : null);
+        if (data.scheduled) {
+          // Scheduled successfully
+          setNotification({
+            title: 'Schedule Success',
+            message: `Post scheduled for ${data.scheduledDate} at 9:00 AM`,
+            type: 'success'
+          });
+          setPosts(prev => prev.map(p =>
+            p.id === post.id ? { ...p, status: 'Scheduled', instagram_scheduled_id: data.containerId, suggested_date: data.scheduledDate } : p
+          ));
+          setSelectedPost(prev => prev ? { ...prev, status: 'Scheduled', instagram_scheduled_id: data.containerId, suggested_date: data.scheduledDate } : null);
+        } else {
+          // Published immediately
+          setNotification({
+            title: 'Publish Success',
+            message: 'Successfully published your branded post to Instagram!',
+            type: 'success',
+            ...(data.permalink ? { link: { url: data.permalink, label: 'Visit Post' } } : {})
+          });
+          setPosts(prev => prev.map(p =>
+            p.id === post.id ? { ...p, status: 'Published', published_at: new Date().toISOString(), suggested_date: todayStr } : p
+          ));
+          setSelectedPost(prev => prev ? { ...prev, status: 'Published', published_at: new Date().toISOString(), suggested_date: todayStr } : null);
+        }
       } else if (data.warning) {
         setNotification({
           title: 'Instagram Warning',
@@ -1754,6 +1774,53 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
       console.error('[Instagram] Publish failed:', err);
       setNotification({
         title: 'Publish Failed',
+        message: err.message,
+        type: 'error'
+      });
+    } finally {
+      setPublishingInstagram(false);
+    }
+  };
+
+  const handleCancelSchedule = async (post: SocialPost) => {
+    setPublishingInstagram(true);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch(`/api/social/${post.id}/instagram/schedule`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        const errMsg = data.details ? `${data.error}: ${data.details}` : (data.error || 'Failed to cancel schedule');
+        throw new Error(errMsg);
+      }
+
+      if (data.success) {
+        setNotification({
+          title: 'Schedule Cancelled',
+          message: 'Successfully cancelled the scheduled Instagram post',
+          type: 'success'
+        });
+        setPosts(prev => prev.map(p =>
+          p.id === post.id ? { ...p, status: 'Approved', instagram_scheduled_id: null } : p
+        ));
+        setSelectedPost(prev => prev ? { ...prev, status: 'Approved', instagram_scheduled_id: null } : null);
+      } else if (data.warning) {
+        setNotification({
+          title: 'Instagram Warning',
+          message: data.warning,
+          type: 'warning'
+        });
+      }
+    } catch (err: any) {
+      console.error('[Instagram] Cancel schedule failed:', err);
+      setNotification({
+        title: 'Cancel Failed',
         message: err.message,
         type: 'error'
       });
@@ -1855,7 +1922,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
         case 'date_desc': return b.suggested_date.localeCompare(a.suggested_date);
         case 'project': return a.project.localeCompare(b.project) || a.suggested_date.localeCompare(b.suggested_date);
         case 'status': {
-          const order = ['Draft', 'Needs AI Revision', 'Approved', 'Published'];
+          const order = ['Draft', 'Needs AI Revision', 'Approved', 'Scheduled', 'Published'];
           return (order.indexOf(a.status) - order.indexOf(b.status)) || a.suggested_date.localeCompare(b.suggested_date);
         }
         case 'updated': return b.updated_at.localeCompare(a.updated_at);
@@ -1924,6 +1991,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
   const statusCounts = {
     Draft: posts.filter(p => p.status === 'Draft').length,
     Approved: posts.filter(p => p.status === 'Approved').length,
+    Scheduled: posts.filter(p => p.status === 'Scheduled').length,
     Published: posts.filter(p => p.status === 'Published').length,
     'Needs AI Revision': posts.filter(p => p.status === 'Needs AI Revision').length,
   };
@@ -2033,23 +2101,26 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
 
         {/* Status Filter */}
         <div className="flex bg-white/5 p-1 rounded-xl border border-white/5 gap-1 overflow-x-auto max-w-full">
-          <button
-            onClick={() => {
-              if (selectedStatuses.length === 4) {
-                setSelectedStatuses(['Draft', 'Approved', 'Needs AI Revision']);
-              } else {
-                setSelectedStatuses(['Draft', 'Approved', 'Published', 'Needs AI Revision']);
-              }
-            }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer whitespace-nowrap ${
-              selectedStatuses.length === 4
-                ? 'bg-indigo-500 text-white font-bold animate-pulse'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            ALL ({posts.length})
-          </button>
-          {(['Draft', 'Approved', 'Published', 'Needs AI Revision'] as const).map((status) => {
+          {(['Draft', 'Approved', 'Scheduled', 'Published', 'Needs AI Revision'] as const).filter(status => statusCounts[status] > 0).length > 1 && (
+            <button
+              onClick={() => {
+                const activeStatuses = (['Draft', 'Approved', 'Scheduled', 'Published', 'Needs AI Revision'] as const).filter(status => statusCounts[status] > 0);
+                if (selectedStatuses.length === activeStatuses.length) {
+                  setSelectedStatuses(activeStatuses.filter(s => s !== 'Published'));
+                } else {
+                  setSelectedStatuses(activeStatuses);
+                }
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer whitespace-nowrap ${
+                selectedStatuses.length === (['Draft', 'Approved', 'Scheduled', 'Published', 'Needs AI Revision'] as const).filter(status => statusCounts[status] > 0).length
+                  ? 'bg-indigo-500 text-white font-bold animate-pulse'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              ALL ({posts.length})
+            </button>
+          )}
+          {(['Draft', 'Approved', 'Scheduled', 'Published', 'Needs AI Revision'] as const).filter(status => statusCounts[status] > 0).map((status) => {
             const isSelected = selectedStatuses.includes(status);
             return (
               <button
@@ -2739,7 +2810,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
               )}
 
               <div className="flex flex-wrap gap-3">
-                {selectedPost.status !== 'Approved' && selectedPost.status !== 'Published' && (
+                {selectedPost.status !== 'Approved' && selectedPost.status !== 'Published' && selectedPost.status !== 'Scheduled' && (
                   <button
                     onClick={() => handleApprove(selectedPost)}
                     disabled={saving}
@@ -2814,17 +2885,39 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                   <Trash2 size={14} /> Delete
                 </button>
 
-                <button
-                  onClick={() => handlePublishToInstagram(selectedPost)}
-                  disabled={selectedPost.status !== 'Approved' || publishingInstagram || saving}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider transition-all ml-auto cursor-pointer ${selectedPost.status === 'Approved'
-                      ? 'bg-indigo-500 text-white hover:bg-indigo-600 border border-indigo-600'
-                      : 'bg-white/5 border border-white/10 text-slate-500 opacity-50 cursor-not-allowed'
-                    }`}
-                >
-                  <Share2 size={14} className={publishingInstagram ? 'animate-spin' : ''} />
-                  {publishingInstagram ? 'Sending...' : 'Send to Instagram'}
-                </button>
+                {selectedPost.status === 'Scheduled' ? (
+                  <button
+                    onClick={() => handleCancelSchedule(selectedPost)}
+                    disabled={publishingInstagram || saving}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider transition-all ml-auto cursor-pointer ${publishingInstagram
+                        ? 'bg-white/5 border border-white/10 text-slate-500 opacity-50 cursor-not-allowed'
+                        : 'bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20'
+                      }`}
+                  >
+                    <Share2 size={14} className={publishingInstagram ? 'animate-spin' : ''} />
+                    {publishingInstagram ? 'Cancelling...' : 'Cancel Schedule'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handlePublishToInstagram(selectedPost)}
+                    disabled={selectedPost.status !== 'Approved' || publishingInstagram || saving}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider transition-all ml-auto cursor-pointer ${selectedPost.status === 'Approved'
+                        ? 'bg-indigo-500 text-white hover:bg-indigo-600 border border-indigo-600'
+                        : 'bg-white/5 border border-white/10 text-slate-500 opacity-50 cursor-not-allowed'
+                      }`}
+                  >
+                    <Share2 size={14} className={publishingInstagram ? 'animate-spin' : ''} />
+                    {publishingInstagram
+                      ? 'Publishing...'
+                      : (() => {
+                          const todayStr = new Date().toISOString().split('T')[0];
+                          if (selectedPost.suggested_date > todayStr) {
+                            return `Schedule for ${selectedPost.suggested_date}`;
+                          }
+                          return 'Publish Now';
+                        })()}
+                  </button>
+                )}
               </div>
             </div>
           </div>

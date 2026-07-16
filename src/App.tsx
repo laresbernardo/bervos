@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Star, Users, ArrowUpRight, X, GitFork, Download, Search, Loader2 } from 'lucide-react';
-import { FaGithub, FaLinkedin } from 'react-icons/fa';
+import { FaGithub, FaLinkedin, FaInstagram } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import DecryptedText from './components/DecryptedText';
 
@@ -715,12 +715,16 @@ function HomePage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => trackEvent('project_click', 'engagement', project.title + ' Logo')}
-                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white/5 border border-white/10 overflow-hidden shadow-2xl transition-all duration-500 hover:scale-105 hover:border-indigo-500/50 block cursor-pointer"
+                        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden shadow-2xl transition-all duration-500 hover:scale-105 hover:border-indigo-500/50 block cursor-pointer ${
+                          project.title === 'BERVOS'
+                            ? 'bg-[#0c121d] border border-white/10 p-2'
+                            : 'bg-white/5 border border-white/10'
+                        }`}
                       >
                         <img
                           src={project.logo}
                           alt={project.title}
-                          className="w-full h-full object-cover"
+                          className={`w-full h-full ${project.title === 'BERVOS' ? 'object-contain' : 'object-cover'}`}
                           loading="lazy"
                         />
                       </a>
@@ -979,15 +983,6 @@ function HomePage() {
 
             <div className="flex flex-col sm:flex-row gap-4 relative">
               <a
-                href="https://github.com/laresbernardo"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-4 px-10 py-5 rounded-xl bg-white text-black font-black hover:bg-slate-200 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-white/5"
-              >
-                <FaGithub size={20} />
-                GITHUB
-              </a>
-              <a
                 href="https://linkedin.com/in/laresbernardo"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -995,6 +990,24 @@ function HomePage() {
               >
                 <FaLinkedin size={20} />
                 LINKEDIN
+              </a>
+              <a
+                href="https://www.instagram.com/bervosorg"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-4 px-10 py-5 rounded-xl border border-white/10 hover:bg-white/5 transition-all font-black hover:scale-105 active:scale-95"
+              >
+                <FaInstagram size={20} />
+                INSTAGRAM
+              </a>
+              <a
+                href="https://github.com/laresbernardo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-4 px-10 py-5 rounded-xl bg-white text-black font-black hover:bg-slate-200 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-white/5"
+              >
+                <FaGithub size={20} />
+                GITHUB
               </a>
             </div>
           </motion.div>
