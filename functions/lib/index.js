@@ -2008,11 +2008,11 @@ Here is the project and the current post details:
 
 Please write a fresh, high-quality, engaging Instagram caption for this update.
 Follow these strict instructions:
-1. Start with a strong technical hook (1 line, attention-grabbing).
-2. Follow the hook with a double line break, then a short, clear paragraph (2-3 sentences) describing the problem, bottleneck, or context.
+1. Start with a strong technical hook (1 line, attention-grabbing). Start the hook with a technical compromise, bottleneck, or a highly specific engineering observation (e.g., "Web Audio latency in Safari is a nightmare. Here is how we bypassed it...").
+2. Follow the hook with a double line break, then a short, clear paragraph (2-3 sentences) describing the problem, bottleneck, or context. Focus on concrete engineering metrics, size improvements, or latency reductions where possible.
 3. Use a bulleted list (using clear Unicode bullets like '•') to highlight 3-4 key technical features, implementation steps, or performance improvements. This keeps the text highly structured and easy to read. Each bullet point MUST be on a new line.
-4. Conclude with a short, 1-2 sentence closing statement/call-to-action (e.g. "More at bervos.org" or project URL).
-5. The tone must be professional, direct, and transparent. Do NOT use any generic marketing jargon like "revolutionize", "game-changer", "unlock", "supercharge", "cutting-edge", or "elevate".
+4. Conclude with an open-ended, technical question inviting developers in the comments to share their own experiences or setup preferences (e.g. "How are you handling local state sync in your React PWA?"), then add a short 1-sentence call-to-action with the project URL.
+5. The tone must be that of an engineering lead sharing a raw, transparent tech update in a "Build in Public" format. Do NOT use generic marketing jargon (e.g., "revolutionise", "seamlessly", "game-changer", "unlock", "supercharge", "elevate").
 6. Do NOT include slide headers like "[SLIDE 1]" or "[THE BOTTLENECK]".
 7. Add 2-3 hashtags inline on key words in the text (e.g. #Firebase, #Ollama, #SwiftUI).
 8. At the very end of the caption, add 3-5 relevant, specific, niche hashtags focusing on tools, platforms, or AI models (no general tags like #BuildInPublic or #SideProject).
@@ -2123,11 +2123,11 @@ ${commitsText}
 
 Please write a fresh, high-quality, engaging, and detailed post caption.
 Follow these strict instructions:
-1. Start with a strong technical hook (1 line, attention-grabbing, matching the selected Post Type).
-2. Follow the hook with a double line break, then a short, clear paragraph (2-3 sentences) describing the problem, bottleneck, or context.
+1. Start with a strong technical hook (1 line, attention-grabbing, matching the selected Post Type). Start the hook with a technical compromise, bottleneck, or a highly specific engineering observation (e.g., "Web Audio latency in Safari is a nightmare. Here is how we bypassed it...").
+2. Follow the hook with a double line break, then a short, clear paragraph (2-3 sentences) describing the problem, bottleneck, or context. Focus on concrete engineering metrics, size improvements, or latency reductions where possible.
 3. Use a bulleted list (using clear Unicode bullets like '•') to highlight 3-4 key technical features, implementation steps, or performance improvements. This keeps the text highly structured and easy to read. Each bullet point MUST be on a new line. You should be smart and pull context from the recent commits and the user's prompt to make these bullets highly relevant, realistic, and technically detailed.
-4. Conclude with a short, 1-2 sentence closing statement/call-to-action (e.g. "More at bervos.org" or project URL).
-5. The tone must be professional, direct, and transparent. Do NOT use any generic marketing jargon like "revolutionize", "game-changer", "unlock", "supercharge", "cutting-edge", or "elevate".
+4. Conclude with an open-ended, technical question inviting developers in the comments to share their own experiences or setup preferences (e.g. "How are you handling local state sync in your React PWA?"), then add a short 1-sentence call-to-action with the project URL.
+5. The tone must be that of an engineering lead sharing a raw, transparent tech update in a "Build in Public" format. Do NOT use generic marketing jargon (e.g., "revolutionise", "seamlessly", "game-changer", "unlock", "supercharge", "elevate").
 6. Do NOT include slide headers like "[SLIDE 1]".
 7. Add 2-3 hashtags inline on key words in the text (e.g. #Firebase, #Ollama, #SwiftUI).
 8. At the very end of the caption, add 3-5 relevant, specific, niche hashtags focusing on tools, platforms, or AI models (no general tags like #BuildInPublic or #SideProject).
