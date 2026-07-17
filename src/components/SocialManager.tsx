@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
-import { Search, X, Loader2, Check, MessageSquare, Edit3, Eye, Calendar, Share2, Sparkles, Download, Maximize2, Trash2, ArrowUpDown, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RotateCcw, Upload } from 'lucide-react';
+import { Search, X, Loader2, Check, MessageSquare, Edit3, Eye, Calendar, Share2, Sparkles, Download, Maximize2, Trash2, ArrowUpDown, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RotateCcw, Upload, Plus } from 'lucide-react';
+import ecosystemData from '../data/ecosystem.json';
 
 interface SocialPost {
   id: string;
@@ -344,6 +345,21 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
   const [generatingPipeline, setGeneratingPipeline] = useState(false);
   const [generationStatusText, setGenerationStatusText] = useState('');
   const [publishingInstagram, setPublishingInstagram] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createProject, setCreateProject] = useState('None');
+  const [createPrompt, setCreatePrompt] = useState('');
+  const [createPostType, setCreatePostType] = useState<'carousel_before_after' | 'under_the_hood' | 'vibe_coding_reality'>('vibe_coding_reality');
+  const [generatingCustomDraft, setGeneratingCustomDraft] = useState(false);
+  const [customDraft, setCustomDraft] = useState<{
+    project: string;
+    post_type: 'carousel_before_after' | 'under_the_hood' | 'vibe_coding_reality';
+    hook: string;
+    caption_english: string;
+    caption_spanish: string;
+    visual_instruction: string;
+    mermaid_code: string | null;
+  } | null>(null);
+  const [savingCustomPost, setSavingCustomPost] = useState(false);
   const [notification, setNotification] = useState<{
     title: string;
     message: string;
@@ -1613,6 +1629,75 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     });
   };
 
+  const generateCustomDraft = async () => {
+    if (!createPrompt.trim()) return;
+    setGeneratingCustomDraft(true);
+    setCustomDraft(null);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/social/custom-draft', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          project: createProject,
+          prompt: createPrompt,
+          postType: createPostType
+        })
+      });
+      if (!res.ok) throw new Error(`Draft generation failed (Status: ${res.status})`);
+      const data = await res.json();
+      setCustomDraft(data.draft);
+    } catch (err: any) {
+      console.error('[Social] Custom draft generation failed:', err);
+      setNotification({
+        title: 'Generation Failed',
+        message: err.message || 'Failed to generate post draft. Please check your API key.',
+        type: 'error'
+      });
+    } finally {
+      setGeneratingCustomDraft(false);
+    }
+  };
+
+  const saveCustomPost = async () => {
+    if (!customDraft) return;
+    setSavingCustomPost(true);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/social', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(customDraft)
+      });
+      if (!res.ok) throw new Error(`Saving post failed (Status: ${res.status})`);
+      await fetchPosts();
+      setNotification({
+        title: 'Post Created',
+        message: 'Successfully generated and added a custom post draft to the queue.',
+        type: 'success'
+      });
+      setShowCreateModal(false);
+      setCreatePrompt('');
+      setCreateProject('None');
+      setCustomDraft(null);
+    } catch (err: any) {
+      console.error('[Social] Saving post failed:', err);
+      setNotification({
+        title: 'Save Failed',
+        message: err.message || 'Failed to save post to the queue.',
+        type: 'error'
+      });
+    } finally {
+      setSavingCustomPost(false);
+    }
+  };
+
   const runGenerationPipeline = async () => {
     setGeneratingPipeline(true);
     setGenerationStatusText('Connecting to content pipeline...');
@@ -2060,23 +2145,36 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
           </div>
 
           {/* Trigger Button */}
-          {generatingPipeline ? (
+          <div className="flex items-center gap-2">
+            {generatingPipeline ? (
+              <button
+                disabled
+                className="flex items-center gap-2 px-5 py-4 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl text-xs font-mono uppercase tracking-widest cursor-not-allowed"
+              >
+                <Loader2 size={14} className="animate-spin" />
+                <span>{generationStatusText}</span>
+              </button>
+            ) : (
+              <button
+                onClick={runGenerationPipeline}
+                className="flex items-center gap-2 px-5 py-4 bg-indigo-500 border border-indigo-600 hover:bg-indigo-600 text-white rounded-xl text-xs font-mono uppercase tracking-widest transition-all cursor-pointer shadow-lg hover:shadow-indigo-500/20 hover:scale-[1.02]"
+              >
+                <Sparkles size={14} />
+                Run Pipeline
+              </button>
+            )}
+
             <button
-              disabled
-              className="flex items-center gap-2 px-5 py-4 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl text-xs font-mono uppercase tracking-widest cursor-not-allowed"
+              onClick={() => {
+                setShowCreateModal(true);
+                setCustomDraft(null);
+              }}
+              className="flex items-center justify-center p-4 bg-slate-800 border border-slate-700 hover:bg-slate-750 hover:border-slate-600 text-slate-300 hover:text-white rounded-xl transition-all cursor-pointer shadow-lg hover:scale-[1.02]"
+              title="Create Custom Post"
             >
-              <Loader2 size={14} className="animate-spin" />
-              <span>{generationStatusText}</span>
+              <Plus size={16} />
             </button>
-          ) : (
-            <button
-              onClick={runGenerationPipeline}
-              className="flex items-center gap-2 px-5 py-4 bg-indigo-500 border border-indigo-600 hover:bg-indigo-600 text-white rounded-xl text-xs font-mono uppercase tracking-widest transition-all cursor-pointer shadow-lg hover:shadow-indigo-500/20 hover:scale-[1.02]"
-            >
-              <Sparkles size={14} />
-              Run Pipeline
-            </button>
-          )}
+          </div>
         </div>
       </div>
 
@@ -3026,6 +3124,202 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
           </div>
         );
       })()}
+
+      {/* Create Custom Post Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-[#080b12]/90 backdrop-blur-md">
+          <div className="tech-card p-0 max-w-3xl w-full max-h-[90vh] overflow-hidden relative flex flex-col">
+            {/* Modal header */}
+            <div className="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
+              <div>
+                <span className="mono-label !text-slate-500 block mb-1">// DRAFT_ENGINE</span>
+                <h3 className="text-lg font-bold text-white uppercase tracking-wider">Build Custom Post</h3>
+              </div>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-slate-500 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 min-h-0 custom-scrollbar">
+              {!customDraft ? (
+                // Input Form
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-2">Select Project</label>
+                      <select
+                        value={createProject}
+                        onChange={(e) => setCreateProject(e.target.value)}
+                        className="w-full bg-[#080b12] border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors font-mono"
+                      >
+                        <option value="None">None (General Post)</option>
+                        {ecosystemData.projects.map((proj) => (
+                          <option key={proj.title} value={proj.title}>
+                            {proj.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-2">Post Type</label>
+                      <select
+                        value={createPostType}
+                        onChange={(e) => setCreatePostType(e.target.value as any)}
+                        className="w-full bg-[#080b12] border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors font-mono"
+                      >
+                        <option value="vibe_coding_reality">Vibe Coding</option>
+                        <option value="under_the_hood">Under the Hood</option>
+                        <option value="carousel_before_after">Before & After</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-2">What is this post about?</label>
+                    <textarea
+                      value={createPrompt}
+                      onChange={(e) => setCreatePrompt(e.target.value)}
+                      placeholder="e.g., I just refactored the router fallback to prevent blank pages during model failures, and it works perfectly."
+                      rows={5}
+                      className="w-full bg-[#080b12] border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors font-mono resize-none"
+                    />
+                    <p className="mt-2 text-[10px] text-slate-500 font-mono leading-relaxed">
+                      AI will analyze your description, look up project description, pull recent git commit messages, and draft a high-quality post.
+                    </p>
+                  </div>
+
+                  <div className="pt-4 flex justify-end gap-3">
+                    <button
+                      onClick={() => setShowCreateModal(false)}
+                      className="px-5 py-3 bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 rounded-xl text-xs font-mono uppercase tracking-wider cursor-pointer transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={generateCustomDraft}
+                      disabled={generatingCustomDraft || !createPrompt.trim()}
+                      className="flex items-center gap-2 px-6 py-3 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white font-mono rounded-xl text-xs uppercase tracking-widest transition-all cursor-pointer shadow-lg hover:shadow-indigo-500/20"
+                    >
+                      {generatingCustomDraft ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          <span>Generating Draft...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={14} />
+                          <span>Generate Draft</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                // Draft Preview & Editing
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-1">Project</span>
+                      <span className="text-xs font-bold text-white font-mono bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 block">
+                        {customDraft.project}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-1">Post Type</span>
+                      <span className="text-xs font-bold text-white font-mono bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 block">
+                        {customDraft.post_type}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-2">Hook (English)</label>
+                    <input
+                      type="text"
+                      value={customDraft.hook}
+                      onChange={(e) => setCustomDraft({ ...customDraft, hook: e.target.value })}
+                      className="w-full bg-[#080b12] border border-white/10 rounded-xl px-4 py-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-2">Caption (English)</label>
+                    <textarea
+                      value={customDraft.caption_english}
+                      onChange={(e) => setCustomDraft({ ...customDraft, caption_english: e.target.value })}
+                      rows={8}
+                      className="w-full bg-[#080b12] border border-white/10 rounded-xl px-4 py-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-2">Caption (Spanish)</label>
+                    <textarea
+                      value={customDraft.caption_spanish}
+                      onChange={(e) => setCustomDraft({ ...customDraft, caption_spanish: e.target.value })}
+                      rows={3}
+                      className="w-full bg-[#080b12] border border-white/10 rounded-xl px-4 py-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-2">Visual Prompt / Graphics Instruction</label>
+                    <textarea
+                      value={customDraft.visual_instruction}
+                      onChange={(e) => setCustomDraft({ ...customDraft, visual_instruction: e.target.value })}
+                      rows={3}
+                      className="w-full bg-[#080b12] border border-white/10 rounded-xl px-4 py-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-2">Mermaid Code (Optional)</label>
+                    <textarea
+                      value={customDraft.mermaid_code || ''}
+                      onChange={(e) => setCustomDraft({ ...customDraft, mermaid_code: e.target.value || null })}
+                      placeholder="graph TD..."
+                      rows={4}
+                      className="w-full bg-[#080b12] border border-white/10 rounded-xl px-4 py-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors font-mono"
+                    />
+                  </div>
+
+                  <div className="pt-4 flex justify-between gap-3">
+                    <button
+                      onClick={() => setCustomDraft(null)}
+                      className="px-5 py-3 bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 rounded-xl text-xs font-mono uppercase tracking-wider cursor-pointer transition-colors"
+                    >
+                      Back to Inputs
+                    </button>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={generateCustomDraft}
+                        disabled={generatingCustomDraft}
+                        className="flex items-center gap-2 px-5 py-3 bg-white/5 border border-white/10 hover:bg-white/10 text-indigo-400 font-mono rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                      >
+                        {generatingCustomDraft ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                        Regenerate
+                      </button>
+                      <button
+                        onClick={saveCustomPost}
+                        disabled={savingCustomPost}
+                        className="flex items-center gap-2 px-6 py-3 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white font-mono rounded-xl text-xs uppercase tracking-widest transition-all cursor-pointer shadow-lg hover:shadow-indigo-500/20"
+                      >
+                        {savingCustomPost ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                        Save Draft
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Custom HUD Notification Modal */}
       {notification && (

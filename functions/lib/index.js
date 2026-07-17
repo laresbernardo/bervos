@@ -1936,6 +1936,166 @@ Return the result as a JSON object matching this structure:
     }
 });
 /**
+ * POST /api/social/custom-draft — Generate a custom social post draft using Gemini AI
+ */
+app.post('/api/social/custom-draft', authenticateAdmin, async (req, res) => {
+    try {
+        const { project, prompt: userPrompt, postType } = req.body;
+        const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+        if (!apiKey) {
+            return res.status(400).json({
+                error: 'Missing Gemini API Key',
+                details: 'Please add GEMINI_API_KEY to functions/.env to use AI custom draft generation.'
+            });
+        }
+        let projectItem = null;
+        let commitsText = 'None';
+        if (project && project.toLowerCase() !== 'none') {
+            const initiatives = await getInitiativesFromSchema();
+            projectItem = initiatives.find(item => item.name.toLowerCase() === project.toLowerCase());
+            if (projectItem) {
+                const url = projectItem.url || projectItem.codeRepository;
+                const commitUrl = projectItem.codeRepository || url;
+                try {
+                    const commits = await getRepoCommits(project, commitUrl, 10);
+                    if (commits && commits.length > 0) {
+                        commitsText = commits.map(c => `[${c.date}] ${c.message} (by ${c.author})`).join('\n');
+                    }
+                }
+                catch (e) {
+                    console.warn(`[Custom Draft] Could not load commits for ${project}:`, e);
+                }
+            }
+        }
+        const geminiPrompt = `
+You are an expert copywriter writing a post for an ecosystem/project updates feed.
+The user wants to write about a specific topic related to a project.
+
+Here are the details:
+- Project Name: ${projectItem ? projectItem.name : 'General / Other'}
+- Project Description: ${projectItem ? projectItem.description : 'N/A'}
+- Project URL: ${projectItem ? (projectItem.url || projectItem.codeRepository) : 'N/A'}
+- Post Type Requested: ${postType || 'vibe_coding_reality'}
+- Topic/Prompt from User: "${userPrompt}"
+
+${projectItem ? `Here are some recent git commit messages from the project repository for context:
+${commitsText}
+` : ''}
+
+Please write a fresh, high-quality, engaging, and detailed post caption.
+Follow these strict instructions:
+1. Start with a strong technical hook (1 line, attention-grabbing, matching the selected Post Type).
+2. Follow the hook with a double line break, then a short, clear paragraph (2-3 sentences) describing the problem, bottleneck, or context.
+3. Use a bulleted list (using clear Unicode bullets like '•') to highlight 3-4 key technical features, implementation steps, or performance improvements. This keeps the text highly structured and easy to read. Each bullet point MUST be on a new line. You should be smart and pull context from the recent commits and the user's prompt to make these bullets highly relevant, realistic, and technically detailed.
+4. Conclude with a short, 1-2 sentence closing statement/call-to-action (e.g. "More at bervos.org" or project URL).
+5. The tone must be professional, direct, and transparent. Do NOT use any generic marketing jargon like "revolutionize", "game-changer", "unlock", "supercharge", "cutting-edge", or "elevate".
+6. Do NOT include slide headers like "[SLIDE 1]".
+7. Add 2-3 hashtags inline on key words in the text (e.g. #Firebase, #Ollama, #SwiftUI).
+8. At the very end of the caption, add 3-5 relevant, specific, niche hashtags focusing on tools, platforms, or AI models (no general tags like #BuildInPublic or #SideProject).
+9. Also generate a short (1-2 sentences) Spanish summary/caption for translation/localization.
+10. Generate a detailed "visual_instruction" describing what graphic or diagram should be generated to represent this post visually.
+11. Generate a "mermaid_code" diagram representing the flow or architecture if it is relevant/insightful for the post (especially for under_the_hood posts). If not relevant, set to null.
+
+CRITICAL JSON FORMATTING RULE: You must use literal '\\n' escape sequences in the JSON string values to represent all line breaks and vertical spacing. Do not output actual newlines in JSON values.
+
+Return the result as a JSON object matching this structure:
+{
+  "hook": "Strong technical hook (1 line)",
+  "caption_english": "The full English caption with inline hashtags, end hashtags, and literal \\n escape sequences",
+  "caption_spanish": "The 1-2 sentence Spanish summary/caption",
+  "visual_instruction": "Description of the visual graphic/diagram",
+  "mermaid_code": "Mermaid diagram code, or null if not applicable"
+}
+`;
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: geminiPrompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            hook: { type: "STRING" },
+                            caption_english: { type: "STRING" },
+                            caption_spanish: { type: "STRING" },
+                            visual_instruction: { type: "STRING" },
+                            mermaid_code: { type: "STRING", nullable: true }
+                        },
+                        required: ["hook", "caption_english", "caption_spanish", "visual_instruction"]
+                    }
+                }
+            })
+        });
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Gemini API call failed: ${errText}`);
+        }
+        const data = await response.json();
+        const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!textResult) {
+            throw new Error('Gemini API returned an empty response.');
+        }
+        const parsed = JSON.parse(textResult);
+        return res.json({
+            success: true,
+            draft: {
+                project: projectItem ? projectItem.name : 'General',
+                post_type: postType || 'vibe_coding_reality',
+                hook: parsed.hook,
+                caption_english: parsed.caption_english,
+                caption_spanish: parsed.caption_spanish,
+                visual_instruction: parsed.visual_instruction,
+                mermaid_code: parsed.mermaid_code || null
+            }
+        });
+    }
+    catch (err) {
+        console.error('[API] Error generating custom draft:', err);
+        return res.status(500).json({
+            error: 'Failed to generate custom draft',
+            details: err.message
+        });
+    }
+});
+/**
+ * POST /api/social — Create a new social post manually or from draft
+ */
+app.post('/api/social', authenticateAdmin, async (req, res) => {
+    try {
+        const { project, post_type, hook, caption_english, caption_spanish, visual_instruction, mermaid_code, suggested_date } = req.body;
+        const db = admin.firestore();
+        const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+        const randomId = Math.random().toString(36).substring(2, 6);
+        const id = `${dateStr}-custom-${(project || 'general').toLowerCase().replace(/[^a-z0-9]/g, '')}-${randomId}`;
+        const now = new Date().toISOString();
+        const postData = {
+            id,
+            status: 'Draft',
+            project: project || 'General',
+            post_type: post_type || 'vibe_coding_reality',
+            hook: hook || '',
+            caption_english: caption_english || '',
+            caption_spanish: caption_spanish || '',
+            visual_instruction: visual_instruction || '',
+            mermaid_code: mermaid_code || null,
+            suggested_date: suggested_date || new Date().toISOString().split('T')[0],
+            user_feedback: '',
+            created_at: now,
+            updated_at: now,
+            slides: ['__generated__'],
+            screenshots: []
+        };
+        await db.collection('social_posts').doc(id).set(postData);
+        return res.json({ success: true, post: postData });
+    }
+    catch (err) {
+        console.error('[API] Error creating social post:', err);
+        return res.status(500).json({ error: 'Failed to create social post', details: err.message });
+    }
+});
+/**
  * DELETE /api/social/:id — Delete a social post
  */
 app.delete('/api/social/:id', authenticateAdmin, async (req, res) => {

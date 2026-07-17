@@ -19,7 +19,7 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5001/bervos-official/us-central1/hubApi',
+        target: 'https://us-central1-bervos-official.cloudfunctions.net/hubApi',
         changeOrigin: true,
         secure: false,
       }
