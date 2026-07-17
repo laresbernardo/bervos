@@ -1,9 +1,8 @@
 ## Social
-- By default the posts drafts shouldn’t have any date defined. Let them have no date until they are approved. Then, let the user post now or schedule. If scheduled, let’s build and internal system with schedules posts given the instagram scheduling system is not reliable. We must have a module or space where we can easily see which posts are scheduled to when (timestamp and how long until than timestamp) and easy to modify. And of course make sure those get triggered once that timestamp is reached. Build a robust efficient and reliable system for this. Remember to make it absolutely easy and clear to use.
 
 ## Hub
-- Feat: Enable a global log that shows when new users join any of the projects and when a download happens, in chronological descending order.
+- Feat: Enable a global log that nicely shows when new users join and in which of the projects and when a download of which tool happens, in chronological descending order. To see this new modal, the user can click on the "Total Projects" box (similar to the users box). Let's also add like a notification system where we see a number of new logs that the user hasn't seen yet. Once the user opens the modal then that notification should disappear. Remember this should be very very intuitive and easy to use and nice and useful to track.
+- Add Rosa as a project with its own site? Use the Google Docs I already developed on product, pricing, requirements, etc. Dont add pricing but get your quote button that sends me an email.
 
 ## Evaluate
-- Add Rosa as a project with its own site? Use the Google Docs I already developed on product, pricing, requirements, etc. Dont add pricing but get your quote button that sends me an email.
-- How can we make the content in the instagram posts more viral and interesting?
+- How can we make the content in the instagram posts more viral (without being cheesy) and interesting? 

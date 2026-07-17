@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
 import { Search, X, Loader2, Check, MessageSquare, Edit3, Eye, Calendar, Share2, Sparkles, Download, Maximize2, Trash2, ArrowUpDown, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RotateCcw, Upload, Plus } from 'lucide-react';
+import { FaInstagram } from 'react-icons/fa';
 import ecosystemData from '../data/ecosystem.json';
 
 interface SocialPost {
@@ -22,6 +23,8 @@ interface SocialPost {
   instagram_media_id?: string | null;
   published_at?: string | null;
   instagram_scheduled_id?: string | null;
+  scheduled_at?: string | null;
+  instagram_permalink?: string | null;
 }
 
 interface SocialManagerProps {
@@ -374,7 +377,8 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<'date_asc' | 'date_desc' | 'project' | 'status' | 'updated'>('date_asc');
   const [editingDate, setEditingDate] = useState(false);
-  const [editedDate, setEditedDate] = useState('');
+  const [editedScheduledAt, setEditedScheduledAt] = useState('');
+  const [showQueue, setShowQueue] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [processingScreenshot, setProcessingScreenshot] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -1793,7 +1797,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     });
   };
 
-  const handlePublishToInstagram = async (post: SocialPost) => {
+  const handlePublishToInstagram = async (post: SocialPost, forceImmediate = false) => {
     setPublishingInstagram(true);
     try {
       const todayStr = new Date().toISOString().split('T')[0];
@@ -1802,13 +1806,8 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
 
       const payload: Record<string, any> = { imageData };
 
-      // Check if the post date is in the future
-      if (post.suggested_date > todayStr) {
-        // Schedule for 9:00 AM local time on the suggested date
-        const scheduleDate = new Date(post.suggested_date + 'T09:00:00');
-        const scheduledPublishTime = Math.floor(scheduleDate.getTime() / 1000);
-        payload.scheduledPublishTime = scheduledPublishTime;
-        payload.scheduledDate = post.suggested_date;
+      if (!forceImmediate && post.scheduled_at) {
+        payload.scheduled_at = post.scheduled_at;
       }
 
       const res = await fetch(`/api/social/${post.id}/instagram`, {
@@ -1831,13 +1830,13 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
           // Scheduled successfully
           setNotification({
             title: 'Schedule Success',
-            message: `Post scheduled for ${data.scheduledDate} at 9:00 AM`,
+            message: `Post scheduled for ${data.scheduledDate}`,
             type: 'success'
           });
           setPosts(prev => prev.map(p =>
-            p.id === post.id ? { ...p, status: 'Scheduled', instagram_scheduled_id: data.containerId, suggested_date: data.scheduledDate } : p
+            p.id === post.id ? { ...p, status: 'Scheduled', scheduled_at: data.scheduled_at, suggested_date: data.scheduledDate } : p
           ));
-          setSelectedPost(prev => prev ? { ...prev, status: 'Scheduled', instagram_scheduled_id: data.containerId, suggested_date: data.scheduledDate } : null);
+          setSelectedPost(prev => prev ? { ...prev, status: 'Scheduled', scheduled_at: data.scheduled_at, suggested_date: data.scheduledDate } : null);
         } else {
           // Published immediately
           setNotification({
@@ -1847,9 +1846,9 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
             ...(data.permalink ? { link: { url: data.permalink, label: 'Visit Post' } } : {})
           });
           setPosts(prev => prev.map(p =>
-            p.id === post.id ? { ...p, status: 'Published', published_at: new Date().toISOString(), suggested_date: todayStr } : p
+            p.id === post.id ? { ...p, status: 'Published', published_at: new Date().toISOString(), suggested_date: todayStr, scheduled_at: null, instagram_permalink: data.permalink || null } : p
           ));
-          setSelectedPost(prev => prev ? { ...prev, status: 'Published', published_at: new Date().toISOString(), suggested_date: todayStr } : null);
+          setSelectedPost(prev => prev ? { ...prev, status: 'Published', published_at: new Date().toISOString(), suggested_date: todayStr, scheduled_at: null, instagram_permalink: data.permalink || null } : null);
         }
       } else if (data.warning) {
         setNotification({
@@ -1895,9 +1894,9 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
           type: 'success'
         });
         setPosts(prev => prev.map(p =>
-          p.id === post.id ? { ...p, status: 'Approved', instagram_scheduled_id: null } : p
+          p.id === post.id ? { ...p, status: 'Approved', instagram_scheduled_id: null, scheduled_at: null } : p
         ));
-        setSelectedPost(prev => prev ? { ...prev, status: 'Approved', instagram_scheduled_id: null } : null);
+        setSelectedPost(prev => prev ? { ...prev, status: 'Approved', instagram_scheduled_id: null, scheduled_at: null } : null);
       } else if (data.warning) {
         setNotification({
           title: 'Instagram Warning',
@@ -2006,12 +2005,28 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     })
     .sort((a, b) => {
       switch (sortBy) {
-        case 'date_asc': return a.suggested_date.localeCompare(b.suggested_date);
-        case 'date_desc': return b.suggested_date.localeCompare(a.suggested_date);
-        case 'project': return a.project.localeCompare(b.project) || a.suggested_date.localeCompare(b.suggested_date);
+        case 'date_asc':
+          if (!a.suggested_date) return 1;
+          if (!b.suggested_date) return -1;
+          return a.suggested_date.localeCompare(b.suggested_date);
+        case 'date_desc':
+          if (!a.suggested_date) return 1;
+          if (!b.suggested_date) return -1;
+          return b.suggested_date.localeCompare(a.suggested_date);
+        case 'project': {
+          const projCmp = a.project.localeCompare(b.project);
+          if (projCmp !== 0) return projCmp;
+          if (!a.suggested_date) return 1;
+          if (!b.suggested_date) return -1;
+          return a.suggested_date.localeCompare(b.suggested_date);
+        }
         case 'status': {
           const order = ['Draft', 'Needs AI Revision', 'Approved', 'Scheduled', 'Published'];
-          return (order.indexOf(a.status) - order.indexOf(b.status)) || a.suggested_date.localeCompare(b.suggested_date);
+          const statusCmp = order.indexOf(a.status) - order.indexOf(b.status);
+          if (statusCmp !== 0) return statusCmp;
+          if (!a.suggested_date) return 1;
+          if (!b.suggested_date) return -1;
+          return a.suggested_date.localeCompare(b.suggested_date);
         }
         case 'updated': return b.updated_at.localeCompare(a.updated_at);
         default: return 0;
@@ -2177,6 +2192,15 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
             >
               <Plus size={16} />
             </button>
+
+            <button
+              onClick={() => setShowQueue(true)}
+              className="flex items-center gap-2 px-4 py-4 bg-slate-800 border border-slate-700 hover:bg-slate-750 hover:border-slate-600 text-indigo-400 hover:text-indigo-300 rounded-xl text-xs font-mono uppercase tracking-widest transition-all cursor-pointer shadow-lg hover:scale-[1.02]"
+              title="View Scheduled Queue"
+            >
+              <Calendar size={16} />
+              <span>Queue ({posts.filter(p => p.status === 'Scheduled').length})</span>
+            </button>
           </div>
         </div>
       </div>
@@ -2329,16 +2353,37 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
 
               {/* Bottom bar */}
               <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5 text-[10px] font-mono text-slate-500">
-                <div className="flex items-center gap-1.5">
-                  <Calendar size={10} />
-                  <span>{post.suggested_date}</span>
-                </div>
-                {post.user_feedback && (
-                  <span className="text-amber-400 flex items-center gap-1">
-                    <MessageSquare size={10} />
-                    Feedback
-                  </span>
+                {post.status !== 'Draft' && post.status !== 'Needs AI Revision' && post.suggested_date ? (
+                  <div className="flex items-center gap-1.5">
+                    <Calendar size={10} />
+                    <span>{post.suggested_date}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 opacity-40 select-none">
+                    <Calendar size={10} />
+                    <span>No date set</span>
+                  </div>
                 )}
+                <div className="flex items-center gap-2">
+                  {post.user_feedback && (
+                    <span className="text-amber-400 flex items-center gap-1">
+                      <MessageSquare size={10} />
+                      Feedback
+                    </span>
+                  )}
+                  {post.status === 'Published' && (
+                    <a
+                      href={post.instagram_permalink || 'https://www.instagram.com/bervosorg'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-1 rounded-md bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300 transition-all cursor-pointer flex items-center justify-center border border-indigo-500/20"
+                      title="Open on Instagram"
+                    >
+                      <FaInstagram size={10} />
+                    </a>
+                  )}
+                </div>
               </div>
 
               {/* Corner accent */}
@@ -2380,19 +2425,42 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                   <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-md border border-white/5">
                     {selectedPost.project}
                   </span>
+                  {selectedPost.status === 'Published' && (
+                    <a
+                      href={selectedPost.instagram_permalink || 'https://www.instagram.com/bervosorg'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] font-mono font-bold tracking-wider uppercase bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300 border border-indigo-500/20 transition-all cursor-pointer"
+                    >
+                      <FaInstagram size={10} /> Visit Post
+                    </a>
+                  )}
                   {editingDate && selectedPost.status !== 'Published' ? (
                     <span className="flex items-center gap-1.5">
                       <input
-                        type="date"
-                        value={editedDate}
-                        onChange={(e) => setEditedDate(e.target.value)}
+                        type="datetime-local"
+                        value={editedScheduledAt}
+                        onChange={(e) => setEditedScheduledAt(e.target.value)}
                         className="bg-white/5 border border-indigo-500/30 rounded-md px-2 py-0.5 text-[11px] font-mono text-slate-200 focus:outline-none focus:border-indigo-500/60 transition-colors [color-scheme:dark]"
                       />
                       <button
                         onClick={async () => {
-                          if (editedDate && editedDate !== selectedPost.suggested_date) {
-                            await updatePost(selectedPost.id, { suggested_date: editedDate });
+                          if (editedScheduledAt) {
+                            const localNow = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                            if (editedScheduledAt < localNow) {
+                              setNotification({
+                                title: 'Invalid Date',
+                                message: 'Cannot schedule a post in the past. Please select a future date and time.',
+                                type: 'error'
+                              });
+                              return;
+                            }
                           }
+                          const updates: Partial<SocialPost> = {
+                            scheduled_at: editedScheduledAt || null,
+                            suggested_date: editedScheduledAt ? editedScheduledAt.split('T')[0] : ''
+                          };
+                          await updatePost(selectedPost.id, updates);
                           setEditingDate(false);
                         }}
                         className="p-1 rounded-md bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors cursor-pointer"
@@ -2409,15 +2477,23 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                   ) : (
                     selectedPost.status === 'Published' ? (
                       <span className="text-[9px] font-mono text-slate-500 flex items-center gap-1">
-                        <Calendar size={10} /> {selectedPost.suggested_date}
+                        <Calendar size={10} /> {selectedPost.suggested_date || 'No Date'}
+                      </span>
+                    ) : selectedPost.status === 'Draft' || selectedPost.status === 'Needs AI Revision' ? (
+                      <span className="text-[9px] font-mono text-slate-500/40 flex items-center gap-1 select-none">
+                        <Calendar size={10} /> No date set
                       </span>
                     ) : (
                       <button
-                        onClick={() => { setEditedDate(selectedPost.suggested_date); setEditingDate(true); }}
+                        onClick={() => {
+                          const defaultDt = selectedPost.scheduled_at || (selectedPost.suggested_date ? `${selectedPost.suggested_date}T09:00` : '');
+                          setEditedScheduledAt(defaultDt);
+                          setEditingDate(true);
+                        }}
                         className="text-[9px] font-mono text-slate-500 flex items-center gap-1 hover:text-indigo-400 transition-colors cursor-pointer group/date"
-                        title="Click to edit date"
+                        title="Click to edit schedule"
                       >
-                        <Calendar size={10} /> {selectedPost.suggested_date}
+                        <Calendar size={10} /> {selectedPost.scheduled_at ? new Date(selectedPost.scheduled_at).toLocaleString() : (selectedPost.suggested_date || 'No date set')}
                         <Edit3 size={8} className="opacity-0 group-hover/date:opacity-100 transition-opacity" />
                       </button>
                     )
@@ -2986,38 +3062,56 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                   <Trash2 size={14} /> Delete
                 </button>
 
-                {selectedPost.status === 'Scheduled' ? (
+                {selectedPost.status === 'Scheduled' && (
                   <button
                     onClick={() => handleCancelSchedule(selectedPost)}
                     disabled={publishingInstagram || saving}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider transition-all ml-auto cursor-pointer ${publishingInstagram
-                        ? 'bg-white/5 border border-white/10 text-slate-500 opacity-50 cursor-not-allowed'
-                        : 'bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20'
-                      }`}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-mono uppercase tracking-wider transition-all ml-auto cursor-pointer"
                   >
-                    <Share2 size={14} className={publishingInstagram ? 'animate-spin' : ''} />
-                    {publishingInstagram ? 'Cancelling...' : 'Cancel Schedule'}
+                    <X size={14} /> Cancel Schedule
                   </button>
-                ) : (
-                  <button
-                    onClick={() => handlePublishToInstagram(selectedPost)}
-                    disabled={selectedPost.status !== 'Approved' || publishingInstagram || saving}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider transition-all ml-auto cursor-pointer ${selectedPost.status === 'Approved'
-                        ? 'bg-indigo-500 text-white hover:bg-indigo-600 border border-indigo-600'
-                        : 'bg-white/5 border border-white/10 text-slate-500 opacity-50 cursor-not-allowed'
-                      }`}
-                  >
-                    <Share2 size={14} className={publishingInstagram ? 'animate-spin' : ''} />
-                    {publishingInstagram
-                      ? 'Publishing...'
-                      : (() => {
-                          const todayStr = new Date().toISOString().split('T')[0];
-                          if (selectedPost.suggested_date > todayStr) {
-                            return `Schedule for ${selectedPost.suggested_date}`;
+                )}
+
+                {selectedPost.status === 'Approved' && (
+                  <div className="flex items-center gap-3 ml-auto">
+                    <button
+                      onClick={() => handlePublishToInstagram(selectedPost, true)}
+                      disabled={publishingInstagram || saving}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 border border-indigo-600 text-white rounded-xl text-xs font-mono uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      {publishingInstagram ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
+                      Publish Now
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (selectedPost.scheduled_at) {
+                          const localNow = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                          if (selectedPost.scheduled_at < localNow) {
+                            setNotification({
+                              title: 'Invalid Date',
+                              message: 'The scheduled time has already passed. Please update it to a future time before scheduling.',
+                              type: 'error'
+                            });
+                            return;
                           }
-                          return 'Publish Now';
-                        })()}
-                  </button>
+                          handlePublishToInstagram(selectedPost, false);
+                        } else {
+                          const defaultDt = `${new Date().toISOString().split('T')[0]}T09:00`;
+                          setEditedScheduledAt(defaultDt);
+                          setEditingDate(true);
+                        }
+                      }}
+                      disabled={publishingInstagram || saving}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider transition-all cursor-pointer ${
+                        selectedPost.scheduled_at
+                          ? 'bg-blue-500 hover:bg-blue-600 border border-blue-600 text-white'
+                          : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {publishingInstagram ? <Loader2 size={14} className="animate-spin" /> : <Calendar size={14} />}
+                      {selectedPost.scheduled_at ? 'Schedule Post' : 'Set Schedule Date'}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -3422,6 +3516,122 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
           </div>
         </div>
       )}
+      {/* Scheduled Queue Drawer */}
+      {showQueue && (
+        <div
+          className="fixed inset-0 z-[100] flex justify-end bg-[#080b12]/80 backdrop-blur-md"
+          onClick={() => setShowQueue(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md h-full bg-[#0c121d] border-l border-white/5 flex flex-col relative shadow-2xl animate-in slide-in-from-right duration-300"
+          >
+            {/* Header */}
+            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+              <div>
+                <span className="mono-label !text-indigo-400 mb-0.5 block">// QUEUE</span>
+                <h3 className="text-lg font-bold text-white uppercase tracking-wider">Scheduled Posts</h3>
+              </div>
+              <button
+                onClick={() => setShowQueue(false)}
+                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {posts.filter(p => p.status === 'Scheduled').length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500">
+                  <Calendar size={32} className="text-slate-700 mb-3" />
+                  <p className="text-xs font-mono">No posts scheduled in the queue.</p>
+                </div>
+              ) : (
+                posts
+                  .filter(p => p.status === 'Scheduled')
+                  .sort((a, b) => (a.scheduled_at || '').localeCompare(b.scheduled_at || ''))
+                  .map(post => {
+                    const timeLeft = getRelativeTime(post.scheduled_at);
+                    return (
+                      <div
+                        key={post.id}
+                        onClick={() => {
+                          setSelectedPost(post);
+                          setEditedCaptionEn(post.caption_english);
+                          setEditedCaptionEs(post.caption_spanish);
+                          setEditingCaption(false);
+                          setEditingDate(false);
+                          setShowFeedbackInput(false);
+                          setFeedbackText('');
+                          setShowQueue(false);
+                        }}
+                        className="p-4 bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 hover:bg-white/[0.04] transition-all rounded-xl cursor-pointer group space-y-3 text-left"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-mono font-bold text-indigo-400 uppercase tracking-wider">
+                            {post.project}
+                          </span>
+                          <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
+                            {timeLeft}
+                          </span>
+                        </div>
+                        <h4 className="text-xs font-bold text-white line-clamp-2 group-hover:text-indigo-300 transition-colors">
+                          {post.hook}
+                        </h4>
+                        <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[9px] font-mono text-slate-500 font-bold">
+                          <span className="flex items-center gap-1">
+                            <Calendar size={10} />
+                            {post.scheduled_at ? new Date(post.scheduled_at).toLocaleString() : 'Date missing'}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelSchedule(post);
+                            }}
+                            className="text-rose-400 hover:text-rose-300 hover:underline cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+function getRelativeTime(timestamp: string | null | undefined): string {
+  if (!timestamp) return 'No time';
+  const target = new Date(timestamp).getTime();
+  const now = new Date().getTime();
+  const diff = target - now;
+
+  if (diff <= 0) {
+    return 'due now';
+  }
+
+  const secs = Math.floor(diff / 1000);
+  const mins = Math.floor(secs / 60);
+  const hours = Math.floor(mins / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) {
+    const remainingHours = hours % 24;
+    return `in ${days}d ${remainingHours}h`;
+  }
+  if (hours > 0) {
+    const remainingMins = mins % 60;
+    return `in ${hours}h ${remainingMins}m`;
+  }
+  if (mins > 0) {
+    return `in ${mins}m`;
+  }
+  return `in ${secs}s`;
+}
+

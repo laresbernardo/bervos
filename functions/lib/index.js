@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.hubApi = void 0;
+exports.triggerScheduledPosts = exports.hubApi = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
@@ -1327,7 +1327,31 @@ app.get('/api/social', authenticateAdmin, async (_req, res) => {
     try {
         const db = admin.firestore();
         const snapshot = await db.collection('social_posts').orderBy('suggested_date', 'asc').get();
-        const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const facebookAccessToken = process.env.FACEBOOK_ACCESS_TOKEN;
+        const posts = [];
+        const batch = db.batch();
+        let hasUpdates = false;
+        for (const doc of snapshot.docs) {
+            const data = doc.data();
+            if (data.status === 'Published' && data.instagram_media_id && !data.instagram_permalink && facebookAccessToken) {
+                try {
+                    const permalinkRes = await fetch(`https://graph.facebook.com/v19.0/${data.instagram_media_id}?fields=permalink&access_token=${facebookAccessToken}`);
+                    const permalinkData = await permalinkRes.json();
+                    if (permalinkRes.ok && permalinkData.permalink) {
+                        data.instagram_permalink = permalinkData.permalink;
+                        batch.update(doc.ref, { instagram_permalink: permalinkData.permalink });
+                        hasUpdates = true;
+                    }
+                }
+                catch (e) {
+                    console.warn(`[API] Could not heal permalink for post ${doc.id}:`, e);
+                }
+            }
+            posts.push({ id: doc.id, ...data });
+        }
+        if (hasUpdates) {
+            await batch.commit();
+        }
         res.json(posts);
     }
     catch (err) {
@@ -1344,7 +1368,7 @@ app.put('/api/social/:id', authenticateAdmin, async (req, res) => {
         const updates = req.body;
         const db = admin.firestore();
         // Only allow specific fields to be updated
-        const allowedFields = ['status', 'user_feedback', 'caption_english', 'caption_spanish', 'hook', 'visual_instruction', 'mermaid_code', 'suggested_date', 'screenshots', 'instagram_media_id', 'published_at', 'slides', 'instagram_scheduled_id'];
+        const allowedFields = ['status', 'user_feedback', 'caption_english', 'caption_spanish', 'hook', 'visual_instruction', 'mermaid_code', 'suggested_date', 'screenshots', 'instagram_media_id', 'published_at', 'slides', 'instagram_scheduled_id', 'scheduled_at', 'instagram_permalink'];
         const filtered = {};
         for (const key of allowedFields) {
             if (updates[key] !== undefined) {
@@ -1354,6 +1378,10 @@ app.put('/api/social/:id', authenticateAdmin, async (req, res) => {
         filtered['updated_at'] = new Date().toISOString();
         if (filtered.status === 'Published') {
             filtered.suggested_date = new Date().toISOString().split('T')[0];
+        }
+        else if (filtered.status === 'Draft' || filtered.status === 'Needs AI Revision') {
+            filtered.suggested_date = '';
+            filtered.scheduled_at = null;
         }
         // Process screenshots if provided
         if (updates.screenshots !== undefined && Array.isArray(updates.screenshots)) {
@@ -1471,7 +1499,7 @@ app.post('/api/social/generate', authenticateAdmin, async (_req, res) => {
                 caption_spanish: "Chessverse ahora te permite entrenar tu repertorio de aperturas y resolver tácticas sin conexión.",
                 visual_instruction: "Generate a dark Chess board design with glowing indigo coordinates, showcasing a tactical opening fork. Top label '// VIBE_CODING_REALITY // CHESSVERSE'.",
                 mermaid_code: null,
-                suggested_date: "2026-08-15",
+                suggested_date: "",
                 user_feedback: "",
                 created_at: now,
                 updated_at: now
@@ -1486,7 +1514,7 @@ app.post('/api/social/generate', authenticateAdmin, async (_req, res) => {
                 caption_spanish: "Tonaly entrena tu oído musical generando sintetizadores en tiempo real usando el Web Audio API del navegador.",
                 visual_instruction: "Branded design showing a circular music wheel of fifths with glowing indigo and cyan accents. Label '// UNDER_THE_HOOD // TONALY'.",
                 mermaid_code: "graph TD\n    A[Interval Selector] --> B[Web Audio Synth]\n    B -->|Sine / Square Wave| C[Audio Node Link]\n    C --> D[User Response Match]\n    D -->|Correct / Incorrect| E[Reaction Logger]\n    E --> F[Performance Charts]",
-                suggested_date: "2026-08-18",
+                suggested_date: "",
                 user_feedback: "",
                 created_at: now,
                 updated_at: now
@@ -1501,7 +1529,7 @@ app.post('/api/social/generate', authenticateAdmin, async (_req, res) => {
                 caption_spanish: "LaresDJ consolida recursos para productores y DJs, incluyendo mapeos de controladores y mapas de equipamiento en un portal centralizado.",
                 visual_instruction: "3-slide carousel. Slide 1: Scattered folder icons. Slide 2: Interactive map wireframe. Slide 3: DJ mixer controller screenshot. Label '// BEFORE_AND_AFTER // LARESDJ'.",
                 mermaid_code: null,
-                suggested_date: "2026-08-22",
+                suggested_date: "",
                 user_feedback: "",
                 created_at: now,
                 updated_at: now
@@ -1612,12 +1640,130 @@ Be extremely precise to ensure we can blur these exact regions.`;
     }
 });
 /**
- * POST /api/social/:id/instagram — Publish a social post to Instagram
+ * Helper to publish a post directly to Instagram using the uploaded image in Firebase Storage.
+ */
+async function publishPostToInstagramDirect(postId) {
+    const db = admin.firestore();
+    const docRef = db.collection('social_posts').doc(postId);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+        throw new Error('Social post not found');
+    }
+    const post = doc.data();
+    const bucket = admin.storage().bucket('bervos-official.firebasestorage.app');
+    const imageUrl = `https://storage.googleapis.com/${bucket.name}/social_posts/${postId}.png`;
+    const instagramAccountId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+    const facebookAccessToken = process.env.FACEBOOK_ACCESS_TOKEN;
+    if (!instagramAccountId || !facebookAccessToken) {
+        throw new Error('Instagram credentials not configured. Please add INSTAGRAM_BUSINESS_ACCOUNT_ID and FACEBOOK_ACCESS_TOKEN to functions/.env');
+    }
+    const caption = post.caption_english || '';
+    let creationId;
+    const screenshots = post.screenshots || [];
+    const resolvedSlides = post.slides !== undefined && Array.isArray(post.slides)
+        ? post.slides.map((slide) => slide === '__generated__' ? imageUrl : slide)
+        : [imageUrl, ...screenshots];
+    if (resolvedSlides.length === 0) {
+        throw new Error('At least one image/slide is required to publish to Instagram.');
+    }
+    if (resolvedSlides.length > 1) {
+        // Carousel post
+        const itemContainerIds = [];
+        for (const url of resolvedSlides) {
+            const itemRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    image_url: url,
+                    is_carousel_item: true,
+                    access_token: facebookAccessToken
+                })
+            });
+            const itemData = await itemRes.json();
+            if (!itemRes.ok || !itemData.id) {
+                throw new Error(`Failed to create carousel item container for ${url}: ${JSON.stringify(itemData)}`);
+            }
+            itemContainerIds.push(itemData.id);
+        }
+        // Create carousel container
+        const carouselRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                media_type: 'CAROUSEL',
+                children: itemContainerIds,
+                caption,
+                access_token: facebookAccessToken
+            })
+        });
+        const carouselData = await carouselRes.json();
+        if (!carouselRes.ok || !carouselData.id) {
+            throw new Error(`Failed to create carousel container: ${JSON.stringify(carouselData)}`);
+        }
+        creationId = carouselData.id;
+    }
+    else {
+        // Single image post
+        const singleImageUrl = resolvedSlides[0];
+        const containerRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                image_url: singleImageUrl,
+                caption,
+                access_token: facebookAccessToken
+            })
+        });
+        const containerData = await containerRes.json();
+        if (!containerRes.ok || !containerData.id) {
+            throw new Error(`Failed to create media container: ${JSON.stringify(containerData)}`);
+        }
+        creationId = containerData.id;
+    }
+    // Publish Media Container
+    const publishRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media_publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            creation_id: creationId,
+            access_token: facebookAccessToken
+        })
+    });
+    const publishData = await publishRes.json();
+    if (!publishRes.ok || !publishData.id) {
+        throw new Error(`Failed to publish media: ${JSON.stringify(publishData)}`);
+    }
+    // Fetch post permalink
+    let permalink = null;
+    try {
+        const permalinkRes = await fetch(`https://graph.facebook.com/v19.0/${publishData.id}?fields=permalink&access_token=${facebookAccessToken}`);
+        const permalinkData = await permalinkRes.json();
+        if (permalinkRes.ok && permalinkData.permalink) {
+            permalink = permalinkData.permalink;
+        }
+    }
+    catch (e) {
+        console.warn('[Instagram] Could not fetch permalink:', e);
+    }
+    // Update status in Firestore
+    const todayStr = new Date().toISOString().split('T')[0];
+    await docRef.update({
+        status: 'Published',
+        instagram_media_id: publishData.id,
+        instagram_permalink: permalink,
+        published_at: new Date().toISOString(),
+        suggested_date: todayStr,
+        scheduled_at: null
+    });
+    return { mediaId: publishData.id, permalink };
+}
+/**
+ * POST /api/social/:id/instagram — Publish a social post to Instagram or schedule it internally
  */
 app.post('/api/social/:id/instagram', authenticateAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { imageData, scheduledPublishTime, scheduledDate } = req.body;
+        const { imageData, scheduled_at } = req.body;
         if (!imageData) {
             return res.status(400).json({ error: 'Missing imageData base64 payload' });
         }
@@ -1627,7 +1773,6 @@ app.post('/api/social/:id/instagram', authenticateAdmin, async (req, res) => {
         if (!doc.exists) {
             return res.status(404).json({ error: 'Social post not found' });
         }
-        const post = doc.data();
         // 1. Upload base64 image to Firebase Storage
         const bucket = admin.storage().bucket('bervos-official.firebasestorage.app');
         const base64Data = imageData.replace(/^data:image\/png;base64,/, '');
@@ -1641,149 +1786,30 @@ app.post('/api/social/:id/instagram', authenticateAdmin, async (req, res) => {
         // Make sure the file is public and get the URL
         await file.makePublic();
         const imageUrl = `https://storage.googleapis.com/${bucket.name}/social_posts/${id}.png`;
-        // 2. Read Instagram API Credentials from env
-        const instagramAccountId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
-        const facebookAccessToken = process.env.FACEBOOK_ACCESS_TOKEN;
-        if (!instagramAccountId || !facebookAccessToken) {
-            return res.status(200).json({
-                success: false,
-                warning: 'Instagram credentials not configured. Image uploaded successfully.',
-                imageUrl,
-                details: 'To enable live publishing, please add INSTAGRAM_BUSINESS_ACCOUNT_ID and FACEBOOK_ACCESS_TOKEN to functions/.env'
-            });
-        }
-        // 3. Instagram Content Publishing API Flow
-        const caption = post?.caption_english || '';
-        let creationId;
-        const screenshots = post?.screenshots || [];
-        const resolvedSlides = post?.slides !== undefined && Array.isArray(post.slides)
-            ? post.slides.map((slide) => slide === '__generated__' ? imageUrl : slide)
-            : [imageUrl, ...screenshots];
-        if (resolvedSlides.length === 0) {
-            throw new Error('At least one image/slide is required to publish to Instagram.');
-        }
-        if (resolvedSlides.length > 1) {
-            // Carousel post
-            const itemContainerIds = [];
-            for (const url of resolvedSlides) {
-                const itemRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        image_url: url,
-                        is_carousel_item: true,
-                        access_token: facebookAccessToken
-                    })
-                });
-                const itemData = await itemRes.json();
-                if (!itemRes.ok || !itemData.id) {
-                    throw new Error(`Failed to create carousel item container for ${url}: ${JSON.stringify(itemData)}`);
-                }
-                itemContainerIds.push(itemData.id);
-            }
-            // Create carousel container
-            const carouselPayload = {
-                media_type: 'CAROUSEL',
-                children: itemContainerIds,
-                caption,
-                access_token: facebookAccessToken
-            };
-            if (scheduledPublishTime) {
-                carouselPayload.published = false;
-                carouselPayload.scheduled_publish_time = scheduledPublishTime;
-            }
-            const carouselRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(carouselPayload)
-            });
-            const carouselData = await carouselRes.json();
-            if (!carouselRes.ok || !carouselData.id) {
-                throw new Error(`Failed to create carousel container: ${JSON.stringify(carouselData)}`);
-            }
-            creationId = carouselData.id;
-        }
-        else {
-            // Single image post
-            const singleImageUrl = resolvedSlides[0];
-            const singlePayload = {
-                image_url: singleImageUrl,
-                caption,
-                access_token: facebookAccessToken
-            };
-            if (scheduledPublishTime) {
-                singlePayload.published = false;
-                singlePayload.scheduled_publish_time = scheduledPublishTime;
-            }
-            const containerRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(singlePayload)
-            });
-            const containerData = await containerRes.json();
-            if (!containerRes.ok || !containerData.id) {
-                throw new Error(`Failed to create media container: ${JSON.stringify(containerData)}`);
-            }
-            creationId = containerData.id;
-        }
-        // Step B: Publish or Schedule Media Container
-        if (scheduledPublishTime) {
-            // Scheduled: container already created with published=false, just update Firestore
-            const scheduledDateStr = scheduledDate || new Date(scheduledPublishTime * 1000).toISOString().split('T')[0];
+        // 2. Check if we are scheduling internally
+        if (scheduled_at) {
+            const scheduledDateStr = scheduled_at.split('T')[0];
             await docRef.update({
                 status: 'Scheduled',
-                instagram_scheduled_id: creationId,
+                scheduled_at: scheduled_at,
                 suggested_date: scheduledDateStr
             });
             return res.json({
                 success: true,
                 scheduled: true,
-                containerId: creationId,
+                scheduled_at,
                 scheduledDate: scheduledDateStr,
                 imageUrl
             });
         }
-        else {
-            // Immediate publish
-            const publishRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media_publish`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    creation_id: creationId,
-                    access_token: facebookAccessToken
-                })
-            });
-            const publishData = await publishRes.json();
-            if (!publishRes.ok || !publishData.id) {
-                throw new Error(`Failed to publish media: ${JSON.stringify(publishData)}`);
-            }
-            // Step C: Fetch post permalink
-            let permalink = null;
-            try {
-                const permalinkRes = await fetch(`https://graph.facebook.com/v19.0/${publishData.id}?fields=permalink&access_token=${facebookAccessToken}`);
-                const permalinkData = await permalinkRes.json();
-                if (permalinkRes.ok && permalinkData.permalink) {
-                    permalink = permalinkData.permalink;
-                }
-            }
-            catch (e) {
-                console.warn('[Instagram] Could not fetch permalink:', e);
-            }
-            // Update status in Firestore
-            const todayStr = new Date().toISOString().split('T')[0];
-            await docRef.update({
-                status: 'Published',
-                instagram_media_id: publishData.id,
-                published_at: new Date().toISOString(),
-                suggested_date: todayStr
-            });
-            return res.json({
-                success: true,
-                mediaId: publishData.id,
-                permalink,
-                imageUrl
-            });
-        }
+        // 3. Immediate publish
+        const result = await publishPostToInstagramDirect(id);
+        return res.json({
+            success: true,
+            mediaId: result.mediaId,
+            permalink: result.permalink,
+            imageUrl
+        });
     }
     catch (err) {
         console.error('[API] Error publishing to Instagram:', err);
@@ -1806,29 +1832,33 @@ app.delete('/api/social/:id/instagram/schedule', authenticateAdmin, async (req, 
             return res.status(404).json({ error: 'Social post not found' });
         }
         const post = doc.data();
-        if (post?.status !== 'Scheduled' || !post?.instagram_scheduled_id) {
-            return res.status(400).json({ error: 'Post is not scheduled or missing scheduled container ID' });
+        if (post?.status !== 'Scheduled') {
+            return res.status(400).json({ error: 'Post is not scheduled' });
         }
-        const instagramAccountId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
-        const facebookAccessToken = process.env.FACEBOOK_ACCESS_TOKEN;
-        if (!instagramAccountId || !facebookAccessToken) {
-            return res.status(200).json({
-                success: false,
-                warning: 'Instagram credentials not configured. Cannot cancel scheduled container.'
-            });
+        // If scheduled via legacy Instagram API, delete container from Instagram
+        if (post?.instagram_scheduled_id) {
+            const instagramAccountId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+            const facebookAccessToken = process.env.FACEBOOK_ACCESS_TOKEN;
+            if (instagramAccountId && facebookAccessToken) {
+                try {
+                    const deleteRes = await fetch(`https://graph.facebook.com/v19.0/${post.instagram_scheduled_id}?access_token=${facebookAccessToken}`, {
+                        method: 'DELETE'
+                    });
+                    const deleteData = await deleteRes.json();
+                    if (!deleteRes.ok) {
+                        console.warn(`[API] Failed to delete scheduled container: ${JSON.stringify(deleteData)}`);
+                    }
+                }
+                catch (e) {
+                    console.warn('[API] Error deleting legacy scheduled container:', e);
+                }
+            }
         }
-        // Delete the scheduled container from Instagram
-        const deleteRes = await fetch(`https://graph.facebook.com/v19.0/${post.instagram_scheduled_id}?access_token=${facebookAccessToken}`, {
-            method: 'DELETE'
-        });
-        const deleteData = await deleteRes.json();
-        if (!deleteRes.ok) {
-            throw new Error(`Failed to delete scheduled container: ${JSON.stringify(deleteData)}`);
-        }
-        // Update Firestore
+        // Update Firestore to clear schedule fields
         await docRef.update({
             status: 'Approved',
-            instagram_scheduled_id: null
+            instagram_scheduled_id: null,
+            scheduled_at: null
         });
         return res.json({
             success: true,
@@ -2068,7 +2098,7 @@ Return the result as a JSON object matching this structure:
  */
 app.post('/api/social', authenticateAdmin, async (req, res) => {
     try {
-        const { project, post_type, hook, caption_english, caption_spanish, visual_instruction, mermaid_code, suggested_date } = req.body;
+        const { project, post_type, hook, caption_english, caption_spanish, visual_instruction, mermaid_code, suggested_date, scheduled_at } = req.body;
         const db = admin.firestore();
         const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
         const randomId = Math.random().toString(36).substring(2, 6);
@@ -2084,7 +2114,8 @@ app.post('/api/social', authenticateAdmin, async (req, res) => {
             caption_spanish: caption_spanish || '',
             visual_instruction: visual_instruction || '',
             mermaid_code: mermaid_code || null,
-            suggested_date: suggested_date || new Date().toISOString().split('T')[0],
+            suggested_date: suggested_date || '',
+            scheduled_at: scheduled_at || null,
             user_feedback: '',
             created_at: now,
             updated_at: now,
@@ -2116,4 +2147,49 @@ app.delete('/api/social/:id', authenticateAdmin, async (req, res) => {
 });
 // Export Cloud Function
 exports.hubApi = functions.https.onRequest(app);
+/**
+ * Cron trigger running every 1 hour to find scheduled posts that are due and publish them.
+ */
+exports.triggerScheduledPosts = functions.pubsub
+    .schedule('every 1 hours')
+    .onRun(async (context) => {
+    const db = admin.firestore();
+    const now = new Date().toISOString();
+    console.log(`[Scheduler] Checking for due scheduled posts at ${now}...`);
+    try {
+        const snapshot = await db.collection('social_posts')
+            .where('status', '==', 'Scheduled')
+            .get();
+        const duePosts = snapshot.docs.filter(doc => {
+            const data = doc.data();
+            return data.scheduled_at && data.scheduled_at <= now;
+        });
+        if (duePosts.length === 0) {
+            console.log('[Scheduler] No scheduled posts due at this time.');
+            return null;
+        }
+        console.log(`[Scheduler] Found ${duePosts.length} posts due for publication.`);
+        for (const doc of duePosts) {
+            const postId = doc.id;
+            try {
+                console.log(`[Scheduler] Processing post ${postId}...`);
+                const result = await publishPostToInstagramDirect(postId);
+                console.log(`[Scheduler] Successfully published post ${postId}:`, result);
+            }
+            catch (err) {
+                console.error(`[Scheduler] Failed to publish post ${postId}:`, err);
+                // Revert post back to Approved and log error in user_feedback
+                await doc.ref.update({
+                    status: 'Approved',
+                    user_feedback: `[Scheduler Publish Error at ${now}]: ${err.message || err}`,
+                    updated_at: new Date().toISOString()
+                });
+            }
+        }
+    }
+    catch (err) {
+        console.error('[Scheduler] Error running triggerScheduledPosts:', err);
+    }
+    return null;
+});
 //# sourceMappingURL=index.js.map
