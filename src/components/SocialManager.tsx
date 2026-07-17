@@ -80,6 +80,9 @@ const processScreenshotToSquare = (file: File, project: string, postType: string
           if (res.ok) {
             const data = await res.json();
             boxes = data.boxes || [];
+          } else {
+            const errText = await res.text();
+            console.warn('[Email Redaction] API returned error:', res.status, errText);
           }
         } catch (err) {
           console.error('[Email Redaction] Failed to detect email:', err);
@@ -104,10 +107,10 @@ const processScreenshotToSquare = (file: File, project: string, postType: string
           if (offscreenCtx) {
             offscreenCtx.drawImage(img, 0, 0);
             for (const box of boxes) {
-              const bx = (box.xmin / 100) * img.width;
-              const by = (box.ymin / 100) * img.height;
-              const bw = ((box.xmax - box.xmin) / 100) * img.width;
-              const bh = ((box.ymax - box.ymin) / 100) * img.height;
+              const bx = (box.xmin / 1000) * img.width;
+              const by = (box.ymin / 1000) * img.height;
+              const bw = ((box.xmax - box.xmin) / 1000) * img.width;
+              const bh = ((box.ymax - box.ymin) / 1000) * img.height;
 
               // Apply blur filter on the specific bounding box
               offscreenCtx.save();

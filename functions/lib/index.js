@@ -1537,21 +1537,25 @@ app.post('/api/social/detect-email', authenticateAdmin, async (req, res) => {
         if (!imageBase64) {
             return res.status(400).json({ error: 'Missing imageBase64 payload' });
         }
-        const apiKey = process.env.GEMINI_API_KEY;
+        const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
         if (!apiKey) {
             return res.status(500).json({ error: 'Gemini API key is not configured' });
         }
+        // Extract mime type from base64 header if present, fallback to image/png
+        const mimeTypeMatch = imageBase64.match(/^data:(image\/\w+);base64,/);
+        const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'image/png';
         // Strip out base64 header if present
         const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
         const prompt = `Identify all occurrences of the email address 'laresbernardo@gmail.com' (including substrings containing 'laresbernardo@gmail.com', such as 'GoogleDrive-laresbernardo@gmail.com') in the attached image.
 Return a list of bounding boxes enclosing these occurrences. Each box should have:
-- xmin: left edge as percentage (0-100) of image width
-- ymin: top edge as percentage (0-100) of image height
-- xmax: right edge as percentage (0-100) of image width
-- ymax: bottom edge as percentage (0-100) of image height
+- xmin: left edge of the bounding box (0-1000)
+- ymin: top edge of the bounding box (0-1000)
+- xmax: right edge of the bounding box (0-1000)
+- ymax: bottom edge of the bounding box (0-1000)
 
+The coordinates must be normalized to a 1000x1000 grid relative to the image size, where (0,0) represents the top-left corner and (1000,1000) represents the bottom-right corner.
 Be extremely precise to ensure we can blur these exact regions.`;
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1560,7 +1564,7 @@ Be extremely precise to ensure we can blur these exact regions.`;
                             { text: prompt },
                             {
                                 inlineData: {
-                                    mimeType: "image/png",
+                                    mimeType: mimeType,
                                     data: base64Data
                                 }
                             }
@@ -2007,7 +2011,7 @@ Return the result as a JSON object matching this structure:
   "mermaid_code": "Mermaid diagram code, or null if not applicable"
 }
 `;
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
