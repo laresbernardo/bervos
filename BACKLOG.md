@@ -5,4 +5,3 @@
 - Add Rosa as a project with its own site? Use the Google Docs I already developed on product, pricing, requirements, etc. Dont add pricing but get your quote button that sends me an email.
 
 ## Evaluate
-- How can we make the content in the instagram posts more viral (without being cheesy) and interesting? 

@@ -59,7 +59,7 @@ const POST_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   'vibe_coding_reality': { label: 'Vibe Coding', color: 'text-purple-400' },
 };
 
-const processScreenshotToSquare = (file: File, project: string, postType: string, index: number, idToken: string): Promise<string> => {
+const processScreenshotToSquare = (file: File, project: string, postType: string, _index: number, idToken: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -132,11 +132,16 @@ const processScreenshotToSquare = (file: File, project: string, postType: string
           }
         }
 
+        // --- Branded frame matching generateBrandedSvg template ---
+        const accentIndigo = '#6366f1';
+        const accentCyan = '#06b6d4';
+        const textSecondary = '#94a3b8';
+
         // 1. Draw background
         ctx.fillStyle = '#080b12';
         ctx.fillRect(0, 0, 1080, 1080);
 
-        // 2. Draw grid pattern
+        // 2. Draw grid pattern (matches SVG grid: 40px, rgba(255,255,255,0.025))
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.025)';
         ctx.lineWidth = 1;
         for (let x = 0; x <= 1080; x += 40) {
@@ -152,58 +157,66 @@ const processScreenshotToSquare = (file: File, project: string, postType: string
           ctx.stroke();
         }
 
-        // 3. Draw corner decorations (HUD Borders)
-        const accentIndigo = '#6366f1';
-        const accentCyan = '#06b6d4';
-        const textSecondary = '#94a3b8';
+        // 3. Outer frame rect (matches SVG: x=50 y=50 width=980 height=980 rx=16)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        if (typeof ctx.roundRect === 'function') {
+          ctx.roundRect(50, 50, 980, 980, 16);
+        } else {
+          ctx.rect(50, 50, 980, 980);
+        }
+        ctx.stroke();
 
-        ctx.strokeStyle = accentIndigo;
+        // 4. Corner brackets (matching SVG template exactly)
         ctx.lineWidth = 3.5;
         ctx.lineCap = 'round';
-        
-        // Top-left corner
+
+        // Top-left corner (indigo)
+        ctx.strokeStyle = accentIndigo;
         ctx.beginPath();
         ctx.moveTo(80, 50);
         ctx.lineTo(50, 50);
         ctx.lineTo(50, 80);
         ctx.stroke();
 
-        // Top-right corner
+        // Top-right corner (indigo)
         ctx.beginPath();
         ctx.moveTo(1000, 50);
         ctx.lineTo(1030, 50);
         ctx.lineTo(1030, 80);
         ctx.stroke();
 
+        // Bottom-left corner (cyan)
         ctx.strokeStyle = accentCyan;
-        // Bottom-left corner
         ctx.beginPath();
         ctx.moveTo(50, 1000);
         ctx.lineTo(50, 1030);
         ctx.lineTo(80, 1030);
         ctx.stroke();
 
-        // Bottom-right corner
+        // Bottom-right corner (cyan)
         ctx.beginPath();
         ctx.moveTo(1030, 1000);
         ctx.lineTo(1030, 1030);
         ctx.lineTo(1000, 1030);
         ctx.stroke();
 
-        // 4. Header text
+        // 5. Header text (matches SVG: bold 20px, letter-spacing 3, cyan)
         ctx.fillStyle = accentCyan;
         ctx.font = "bold 20px 'JetBrains Mono', monospace";
-        ctx.letterSpacing = "3px";
+        ctx.letterSpacing = '3px';
         ctx.fillText(`// SCREENSHOT // ${project.toUpperCase()}`, 75, 115);
 
         ctx.fillStyle = textSecondary;
         ctx.font = "14px 'JetBrains Mono', monospace";
-        ctx.letterSpacing = "2px";
+        ctx.letterSpacing = '2px';
         ctx.textAlign = 'right';
-        ctx.fillText(`// SLIDE 0${index + 2} // ${postType.toUpperCase()}`, 1005, 115);
-        ctx.textAlign = 'left'; // Reset
+        ctx.fillText(`// ${postType.toUpperCase()}`, 1005, 115);
+        ctx.textAlign = 'left';
+        ctx.letterSpacing = '0px';
 
-        // 5. Footer line
+        // 6. Footer line (matches SVG: y=965)
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -211,13 +224,14 @@ const processScreenshotToSquare = (file: File, project: string, postType: string
         ctx.lineTo(1020, 965);
         ctx.stroke();
 
+        // Footer text (matches SVG: 18px, -apple-system font, weight 500)
         ctx.fillStyle = textSecondary;
         ctx.font = "500 18px -apple-system, BlinkMacSystemFont, 'Inter', sans-serif";
-        ctx.fillText("bervos.org", 75, 1005);
+        ctx.fillText('bervos.org', 75, 1005);
 
-        // 6. Draw screenshot card with aspect ratio
+        // 7. Draw screenshot card with macOS window chrome
         const maxW = 880;
-        const maxH = 618; // 650 minus title bar (32px)
+        const maxH = 618;
         const imgAspect = img.width / img.height;
         let sw = maxW;
         let sh = maxW / imgAspect;
@@ -228,11 +242,11 @@ const processScreenshotToSquare = (file: File, project: string, postType: string
         }
 
         const cardW = sw;
-        const cardH = sh + 32; // add 32px for window title bar
+        const cardH = sh + 32; // 32px for window title bar
         const cardX = 540 - cardW / 2;
         const cardY = 510 - cardH / 2;
 
-        // Draw shadow glow
+        // Card shadow glow
         ctx.shadowColor = 'rgba(99, 102, 241, 0.2)';
         ctx.shadowBlur = 30;
         ctx.fillStyle = '#0c121d';
@@ -243,9 +257,9 @@ const processScreenshotToSquare = (file: File, project: string, postType: string
           ctx.rect(cardX - 2, cardY - 2, cardW + 4, cardH + 4);
         }
         ctx.fill();
-        ctx.shadowBlur = 0; // Reset shadow
+        ctx.shadowBlur = 0;
 
-        // Draw card body
+        // Card body
         ctx.fillStyle = '#0c121d';
         ctx.beginPath();
         if (typeof ctx.roundRect === 'function') {
@@ -255,12 +269,12 @@ const processScreenshotToSquare = (file: File, project: string, postType: string
         }
         ctx.fill();
 
-        // Stroke card border
+        // Card border (matches SVG card stroke)
         ctx.strokeStyle = 'rgba(99, 102, 241, 0.25)';
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Draw Title Bar Line
+        // Title bar divider line
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -268,33 +282,30 @@ const processScreenshotToSquare = (file: File, project: string, postType: string
         ctx.lineTo(cardX + cardW, cardY + 32);
         ctx.stroke();
 
-        // Draw Window Controls (Three Dots)
+        // Window controls (three dots)
         const dotY = cardY + 16;
-        // Red
         ctx.fillStyle = '#ff5f56';
         ctx.beginPath();
         ctx.arc(cardX + 16, dotY, 5, 0, 2 * Math.PI);
         ctx.fill();
-        // Yellow
         ctx.fillStyle = '#ffbd2e';
         ctx.beginPath();
         ctx.arc(cardX + 30, dotY, 5, 0, 2 * Math.PI);
         ctx.fill();
-        // Green
         ctx.fillStyle = '#27c93f';
         ctx.beginPath();
         ctx.arc(cardX + 44, dotY, 5, 0, 2 * Math.PI);
         ctx.fill();
 
-        // Title text in bar (centered)
+        // Title bar text (centered filename)
         ctx.fillStyle = textSecondary;
         ctx.font = "10px 'JetBrains Mono', monospace";
         ctx.textAlign = 'center';
         const displayFilename = file.name.length > 30 ? file.name.substring(0, 27) + '...' : file.name;
         ctx.fillText(displayFilename.toLowerCase(), cardX + cardW / 2, cardY + 20);
-        ctx.textAlign = 'left'; // Reset
+        ctx.textAlign = 'left';
 
-        // Clip and Draw Image (using roundRect for bottom corners)
+        // Clip and draw screenshot image
         ctx.save();
         ctx.beginPath();
         if (typeof ctx.roundRect === 'function') {
@@ -303,17 +314,33 @@ const processScreenshotToSquare = (file: File, project: string, postType: string
           ctx.rect(cardX, cardY + 32, cardW, cardH - 32);
         }
         ctx.clip();
-
-        // Draw screenshot image
         ctx.drawImage(renderSource, cardX, cardY + 32, sw, sh);
         ctx.restore();
 
-        try {
-          const finalDataUrl = canvas.toDataURL('image/png');
-          resolve(finalDataUrl);
-        } catch (err) {
-          reject(err);
-        }
+        // 8. BERVOS logo in bottom-right (matches SVG: translate(970,982) scale(0.065))
+        const logoImg = new Image();
+        logoImg.onload = () => {
+          ctx.save();
+          ctx.globalAlpha = 0.8;
+          ctx.drawImage(logoImg, 962, 972, 48, 48);
+          ctx.restore();
+          try {
+            const finalDataUrl = canvas.toDataURL('image/png');
+            resolve(finalDataUrl);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        logoImg.onerror = () => {
+          // Fallback: resolve without logo if it fails to load
+          try {
+            const finalDataUrl = canvas.toDataURL('image/png');
+            resolve(finalDataUrl);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        logoImg.src = '/logo-white-alt.png';
       };
       img.onerror = (err) => reject(err);
       img.src = dataUrl;
@@ -378,6 +405,8 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
   const [sortBy, setSortBy] = useState<'date_asc' | 'date_desc' | 'project' | 'status' | 'updated'>('date_asc');
   const [editingDate, setEditingDate] = useState(false);
   const [editedScheduledAt, setEditedScheduledAt] = useState('');
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
   const [showQueue, setShowQueue] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [processingScreenshot, setProcessingScreenshot] = useState(false);
@@ -1994,6 +2023,14 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     setEditingVisual(false);
   };
 
+  const handleSaveTitle = (post: SocialPost) => {
+    if (!editedTitle.trim()) return;
+    updatePost(post.id, {
+      hook: editedTitle.trim(),
+    });
+    setEditingTitle(false);
+  };
+
   const filteredPosts = posts
     .filter(p => {
       const matchesStatus = selectedStatuses.includes(p.status);
@@ -2043,6 +2080,8 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
       setEditedCaptionEs(prevPost.caption_spanish);
       setEditingCaption(false);
       setEditingDate(false);
+      setEditingTitle(false);
+      setEditedTitle(prevPost.hook);
       setShowFeedbackInput(false);
       setFeedbackText('');
     }
@@ -2058,6 +2097,8 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
       setEditedCaptionEs(nextPost.caption_spanish);
       setEditingCaption(false);
       setEditingDate(false);
+      setEditingTitle(false);
+      setEditedTitle(nextPost.hook);
       setShowFeedbackInput(false);
       setFeedbackText('');
     }
@@ -2077,7 +2118,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
         }
         return;
       }
-      if (selectedPost && !editingCaption && !editingDate && !showFeedbackInput) {
+      if (selectedPost && !editingCaption && !editingDate && !editingTitle && !showFeedbackInput) {
         if (e.key === 'ArrowLeft') {
           handlePrevPost();
         } else if (e.key === 'ArrowRight') {
@@ -2089,7 +2130,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPost, editingCaption, editingDate, showFeedbackInput, lightboxIndex, handlePrevPost, handleNextPost]);
+  }, [selectedPost, editingCaption, editingDate, editingTitle, showFeedbackInput, lightboxIndex, handlePrevPost, handleNextPost]);
 
   const statusCounts = {
     Draft: posts.filter(p => p.status === 'Draft').length,
@@ -2312,6 +2353,8 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                 setEditedCaptionEs(post.caption_spanish);
                 setEditingCaption(false);
                 setEditingDate(false);
+                setEditingTitle(false);
+                setEditedTitle(post.hook);
                 setShowFeedbackInput(false);
                 setFeedbackText('');
               }}
@@ -2499,7 +2542,56 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                     )
                   )}
                 </div>
-                <h2 className="text-xl font-black text-white leading-snug">{selectedPost.hook}</h2>
+                {editingTitle ? (
+                  <div className="flex items-start gap-2 mt-1">
+                    <textarea
+                      value={editedTitle}
+                      onChange={(e) => setEditedTitle(e.target.value)}
+                      rows={2}
+                      className="flex-1 bg-white/5 border border-indigo-500/30 rounded-lg px-3 py-2 text-lg font-black text-white leading-snug focus:outline-none focus:border-indigo-500/60 resize-none"
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSaveTitle(selectedPost);
+                        } else if (e.key === 'Escape') {
+                          setEditingTitle(false);
+                        }
+                      }}
+                      autoFocus
+                    />
+                    <div className="flex flex-col gap-1 pt-1">
+                      <button
+                        onClick={() => handleSaveTitle(selectedPost)}
+                        className="p-1.5 rounded-md bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors cursor-pointer"
+                        title="Save title (Enter)"
+                      >
+                        <Check size={12} />
+                      </button>
+                      <button
+                        onClick={() => setEditingTitle(false)}
+                        className="p-1.5 rounded-md bg-white/5 text-slate-400 hover:bg-white/10 transition-colors cursor-pointer"
+                        title="Cancel (Escape)"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="group/title flex items-center gap-2">
+                    <h2 className="text-xl font-black text-white leading-snug">{selectedPost.hook}</h2>
+                    <button
+                      onClick={() => {
+                        setEditedTitle(selectedPost.hook);
+                        setEditingTitle(true);
+                      }}
+                      className="text-slate-500 hover:text-indigo-400 transition-colors opacity-0 group-hover/title:opacity-100 cursor-pointer p-1"
+                      title="Edit Title"
+                    >
+                      <Edit3 size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
@@ -3562,6 +3654,8 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                           setEditedCaptionEs(post.caption_spanish);
                           setEditingCaption(false);
                           setEditingDate(false);
+                          setEditingTitle(false);
+                          setEditedTitle(post.hook);
                           setShowFeedbackInput(false);
                           setFeedbackText('');
                           setShowQueue(false);
