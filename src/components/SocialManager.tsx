@@ -2273,7 +2273,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
       </div>
 
       {/* Sort Bar */}
-      <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+      <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-slate-500 uppercase tracking-wider">
         <ArrowUpDown size={12} className="text-slate-600" />
         <span className="text-slate-600 mr-1">Sort:</span>
         {[

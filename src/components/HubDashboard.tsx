@@ -540,24 +540,26 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
 
         {/* Navigation / Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-5">
-          <div className="flex items-center gap-3">
-            <a
-              href="/"
-              className="flex items-center justify-center p-2 bg-white/5 border border-white/10 hover:border-indigo-500/40 hover:bg-white/10 rounded-xl transition-all cursor-pointer group"
-              title="Back to website"
-            >
-              <img src="/logo.svg" alt="BERVOS Logo" className="h-7 w-auto brightness-200 group-hover:scale-105 transition-all duration-300" />
-            </a>
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-                <span className="mono-label !text-indigo-400">System_Control // {__APP_VERSION__}</span>
+          <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+            <div className="flex items-center gap-3">
+              <a
+                href="/"
+                className="flex items-center justify-center p-2 bg-white/5 border border-white/10 hover:border-indigo-500/40 hover:bg-white/10 rounded-xl transition-all cursor-pointer group"
+                title="Back to website"
+              >
+                <img src="/logo.svg" alt="BERVOS Logo" className="h-7 w-auto brightness-200 group-hover:scale-105 transition-all duration-300" />
+              </a>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                  <span className="mono-label !text-indigo-400">System_Control // {__APP_VERSION__}</span>
+                </div>
+                <h1 className="text-3xl md:text-4xl font-black glow-text tracking-tighter uppercase leading-none">BERVOS Hub</h1>
               </div>
-              <h1 className="text-3xl md:text-4xl font-black glow-text tracking-tighter uppercase leading-none">BERVOS Hub</h1>
             </div>
 
             {/* Section Tabs */}
-            <div className="flex bg-white/5 p-1 rounded-xl border border-white/5 ml-4">
+            <div className="flex bg-white/5 p-1 rounded-xl border border-white/5 sm:ml-2">
               <button
                 onClick={() => setHubSection('projects')}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer ${hubSection === 'projects' ? 'bg-indigo-500 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
