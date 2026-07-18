@@ -1704,7 +1704,7 @@ Be extremely precise to ensure we can blur these exact regions.`;
 /**
  * Helper to publish a post directly to Instagram using the uploaded image in Firebase Storage.
  */
-async function publishPostToInstagramDirect(postId: string) {
+async function publishPostToInstagramDirect(postId: string, hasGeneratedImage = true) {
   const db = admin.firestore();
   const docRef = db.collection('social_posts').doc(postId);
   const doc = await docRef.get();
@@ -1727,9 +1727,10 @@ async function publishPostToInstagramDirect(postId: string) {
   let creationId: string;
 
   const screenshots = post.screenshots || [];
-  const resolvedSlides = post.slides !== undefined && Array.isArray(post.slides)
-    ? post.slides.map((slide: string) => slide === '__generated__' ? imageUrl : slide)
-    : [imageUrl, ...screenshots];
+  const resolvedSlides = (post.slides !== undefined && Array.isArray(post.slides)
+    ? post.slides.map((slide: string) => slide === '__generated__' && hasGeneratedImage ? imageUrl : slide)
+    : [imageUrl, ...screenshots]
+  ).filter((url: string) => url && url !== '__generated__');
 
   if (resolvedSlides.length === 0) {
     throw new Error('At least one image/slide is required to publish to Instagram.');
@@ -1845,10 +1846,6 @@ app.post('/api/social/:id/instagram', authenticateAdmin, async (req: express.Req
     const { id } = req.params;
     const { imageData, scheduled_at } = req.body;
 
-    if (!imageData) {
-      return res.status(400).json({ error: 'Missing imageData base64 payload' });
-    }
-
     const db = admin.firestore();
     const docRef = db.collection('social_posts').doc(id);
     const doc = await docRef.get();
@@ -1856,21 +1853,24 @@ app.post('/api/social/:id/instagram', authenticateAdmin, async (req: express.Req
       return res.status(404).json({ error: 'Social post not found' });
     }
 
-    // 1. Upload base64 image to Firebase Storage
     const bucket = admin.storage().bucket('bervos-official.firebasestorage.app');
-    const base64Data = imageData.replace(/^data:image\/png;base64,/, '');
-    const buffer = Buffer.from(base64Data, 'base64');
+    let imageUrl: string | null = null;
 
-    const file = bucket.file(`social_posts/${id}.png`);
-    await file.save(buffer, {
-      metadata: { contentType: 'image/png' },
-      public: true,
-      resumable: false
-    });
+    // 1. Upload base64 image to Firebase Storage (if provided)
+    if (imageData) {
+      const base64Data = imageData.replace(/^data:image\/png;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
 
-    // Make sure the file is public and get the URL
-    await file.makePublic();
-    const imageUrl = `https://storage.googleapis.com/${bucket.name}/social_posts/${id}.png`;
+      const file = bucket.file(`social_posts/${id}.png`);
+      await file.save(buffer, {
+        metadata: { contentType: 'image/png' },
+        public: true,
+        resumable: false
+      });
+
+      await file.makePublic();
+      imageUrl = `https://storage.googleapis.com/${bucket.name}/social_posts/${id}.png`;
+    }
 
     // 2. Check if we are scheduling internally
     if (scheduled_at) {
@@ -1891,7 +1891,7 @@ app.post('/api/social/:id/instagram', authenticateAdmin, async (req: express.Req
     }
 
     // 3. Immediate publish
-    const result = await publishPostToInstagramDirect(id);
+    const result = await publishPostToInstagramDirect(id, !!imageData);
 
     return res.json({
       success: true,
@@ -2235,7 +2235,7 @@ app.post('/api/social', authenticateAdmin, async (req: express.Request, res: exp
       user_feedback: '',
       created_at: now,
       updated_at: now,
-      slides: ['__generated__'],
+      slides: [],
       screenshots: []
     };
 

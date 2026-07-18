@@ -377,7 +377,8 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
   const [generationStep, setGenerationStep] = useState<string>('');
   const [generatingPipeline, setGeneratingPipeline] = useState(false);
   const [generationStatusText, setGenerationStatusText] = useState('');
-  const [publishingInstagram, setPublishingInstagram] = useState(false);
+  const [publishingNow, setPublishingNow] = useState(false);
+  const [schedulingPost, setSchedulingPost] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createProject, setCreateProject] = useState('None');
   const [createPrompt, setCreatePrompt] = useState('');
@@ -418,6 +419,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     cancelText: string;
     type: 'danger' | 'warning' | 'info';
     onConfirm: () => void | Promise<void>;
+    isLoading: boolean;
   }>({
     isOpen: false,
     title: '',
@@ -425,7 +427,8 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     confirmText: 'Confirm',
     cancelText: 'Cancel',
     type: 'info',
-    onConfirm: () => {}
+    onConfirm: () => {},
+    isLoading: false
   });
 
   const showConfirm = (options: {
@@ -443,7 +446,8 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
       confirmText: options.confirmText || 'Confirm',
       cancelText: options.cancelText || 'Cancel',
       type: options.type || 'info',
-      onConfirm: options.onConfirm
+      onConfirm: options.onConfirm,
+      isLoading: false
     });
   };
 
@@ -476,7 +480,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
   const handleUploadFiles = async (files: FileList, post: SocialPost) => {
     setProcessingScreenshot(true);
     try {
-      const currentSlides = post.slides || ['__generated__', ...(post.screenshots || [])];
+      const currentSlides = post.slides || post.screenshots || [];
       const newSlides = [...currentSlides];
       const currentScreenshots = post.screenshots || [];
       const newScreenshots = [...currentScreenshots];
@@ -527,7 +531,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
   };
 
   const handleMoveSlide = async (post: SocialPost, index: number, direction: 'left' | 'right') => {
-    const currentSlides = post.slides || ['__generated__', ...(post.screenshots || [])];
+    const currentSlides = post.slides || post.screenshots || [];
     const newSlides = [...currentSlides];
     const swapWith = direction === 'left' ? index - 1 : index + 1;
     
@@ -540,7 +544,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
   };
 
   const handleDeleteSlide = async (post: SocialPost, index: number) => {
-    const currentSlides = post.slides || ['__generated__', ...(post.screenshots || [])];
+    const currentSlides = post.slides || post.screenshots || [];
     if (currentSlides.length <= 1) {
       setNotification({
         title: 'Delete Failed',
@@ -1648,11 +1652,16 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
       return next;
     });
 
+    const currentSlides = post.slides || post.screenshots || [];
+    if (!currentSlides.includes('__generated__')) {
+      await updatePost(post.id, { slides: ['__generated__', ...currentSlides] });
+    }
+
     setGeneratingId(null);
     setGenerationStep('');
   };
 
-  const deleteGeneratedImage = (postId: string) => {
+  const deleteGeneratedImage = async (postId: string) => {
     setGeneratedImages(prev => {
       const next = { ...prev };
       delete next[postId];
@@ -1663,6 +1672,15 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
       }
       return next;
     });
+
+    const post = posts.find(p => p.id === postId);
+    if (post) {
+      const currentSlides = post.slides || [];
+      const newSlides = currentSlides.filter((s: string) => s !== '__generated__');
+      if (newSlides.length !== currentSlides.length) {
+        await updatePost(postId, { slides: newSlides });
+      }
+    }
   };
 
   const generateCustomDraft = async () => {
@@ -1827,13 +1845,20 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
   };
 
   const handlePublishToInstagram = async (post: SocialPost, forceImmediate = false) => {
-    setPublishingInstagram(true);
+    if (forceImmediate) {
+      setPublishingNow(true);
+    } else {
+      setSchedulingPost(true);
+    }
     try {
       const todayStr = new Date().toISOString().split('T')[0];
-      const imageData = await getPngDataUrl(post);
+      const slides = post.slides || post.screenshots || [];
+      const hasGeneratedSlide = slides.includes('__generated__');
+      const imageData = hasGeneratedSlide ? await getPngDataUrl(post) : null;
       const idToken = await user.getIdToken();
 
-      const payload: Record<string, any> = { imageData };
+      const payload: Record<string, any> = {};
+      if (imageData) payload.imageData = imageData;
 
       if (!forceImmediate && post.scheduled_at) {
         payload.scheduled_at = post.scheduled_at;
@@ -1894,12 +1919,16 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
         type: 'error'
       });
     } finally {
-      setPublishingInstagram(false);
+      if (forceImmediate) {
+        setPublishingNow(false);
+      } else {
+        setSchedulingPost(false);
+      }
     }
   };
 
   const handleCancelSchedule = async (post: SocialPost) => {
-    setPublishingInstagram(true);
+    setSchedulingPost(true);
     try {
       const idToken = await user.getIdToken();
       const res = await fetch(`/api/social/${post.id}/instagram/schedule`, {
@@ -1941,7 +1970,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
         type: 'error'
       });
     } finally {
-      setPublishingInstagram(false);
+      setSchedulingPost(false);
     }
   };
 
@@ -2113,7 +2142,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
         } else if (e.key === 'ArrowLeft') {
           setLightboxIndex(prev => prev !== null && prev > 0 ? prev - 1 : prev);
         } else if (e.key === 'ArrowRight') {
-          const slidesCount = selectedPost ? (selectedPost.slides || ['__generated__', ...(selectedPost.screenshots || [])]).length : 0;
+          const slidesCount = selectedPost ? (selectedPost.slides || selectedPost.screenshots || []).length : 0;
           setLightboxIndex(prev => prev !== null && prev < slidesCount - 1 ? prev + 1 : prev);
         }
         return;
@@ -2184,7 +2213,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
         {/* Stats & Generator Button */}
         <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
           {/* Stats Boxes */}
-          <div className="grid grid-cols-3 gap-3 bg-white/[0.02] border border-white/5 px-2 py-1.5 rounded-xl">
+          <div className="grid grid-cols-4 gap-3 bg-white/[0.02] border border-white/5 px-2 py-1.5 rounded-xl">
             <div className="px-3 py-1 text-center min-w-[80px]">
               <span className="block text-[9px] font-mono text-slate-500 uppercase">Total</span>
               <span className="text-sm font-bold text-white font-mono">{posts.length}</span>
@@ -2195,6 +2224,15 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                 {posts.filter(p => p.status === 'Approved').length}
               </span>
             </div>
+            <button
+              onClick={() => setShowQueue(true)}
+              className="px-3 py-1 text-center border-l border-white/5 min-w-[80px] hover:bg-white/[0.03] rounded-lg transition-all group cursor-pointer"
+            >
+              <span className="block text-[9px] font-mono text-slate-500 uppercase group-hover:text-indigo-400 transition-colors">Scheduled</span>
+              <span className="text-sm font-bold text-indigo-400 font-mono group-hover:text-indigo-300 transition-colors">
+                {posts.filter(p => p.status === 'Scheduled').length}
+              </span>
+            </button>
             <a href="https://www.instagram.com/bervosorg" target="_blank" rel="noopener noreferrer" className="px-3 py-1 text-center border-l border-white/5 min-w-[80px] hover:bg-white/[0.03] rounded-lg transition-all group">
               <span className="block text-[9px] font-mono text-slate-500 uppercase group-hover:text-slate-400 transition-colors">Published</span>
               <span className="text-sm font-bold text-slate-400 font-mono group-hover:text-white transition-colors">
@@ -2232,15 +2270,6 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
               title="Create Custom Post"
             >
               <Plus size={16} />
-            </button>
-
-            <button
-              onClick={() => setShowQueue(true)}
-              className="flex items-center gap-2 px-4 py-4 bg-slate-800 border border-slate-700 hover:bg-slate-750 hover:border-slate-600 text-indigo-400 hover:text-indigo-300 rounded-xl text-xs font-mono uppercase tracking-widest transition-all cursor-pointer shadow-lg hover:scale-[1.02]"
-              title="View Scheduled Queue"
-            >
-              <Calendar size={16} />
-              <span>Queue ({posts.filter(p => p.status === 'Scheduled').length})</span>
             </button>
           </div>
         </div>
@@ -2536,7 +2565,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                         className="text-[9px] font-mono text-slate-500 flex items-center gap-1 hover:text-indigo-400 transition-colors cursor-pointer group/date"
                         title="Click to edit schedule"
                       >
-                        <Calendar size={10} /> {selectedPost.scheduled_at ? new Date(selectedPost.scheduled_at).toLocaleString() : (selectedPost.suggested_date || 'No date set')}
+                        <Calendar size={10} /> {selectedPost.scheduled_at ? formatDate(selectedPost.scheduled_at) : (selectedPost.suggested_date || 'No date set')}
                         <Edit3 size={8} className="opacity-0 group-hover/date:opacity-100 transition-opacity" />
                       </button>
                     )
@@ -2624,7 +2653,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
               {/* Caption */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="mono-label !text-indigo-400">// Caption (English)</span>
+                  <span className="mono-label !text-indigo-400">// Caption</span>
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleRegenerateCaption(selectedPost)}
@@ -2668,22 +2697,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                 )}
               </div>
 
-              {/* Summary */}
-              <div>
-                <span className="mono-label !text-cyan-400 block mb-2">// Summary</span>
-                {editingCaption ? (
-                  <textarea
-                    value={editedCaptionEs}
-                    onChange={(e) => setEditedCaptionEs(e.target.value)}
-                    rows={2}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-slate-200 font-mono focus:outline-none focus:border-indigo-500/40 resize-none"
-                  />
-                ) : (
-                  <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 text-sm text-slate-400 italic">
-                    {selectedPost.caption_spanish}
-                  </div>
-                )}
-              </div>
+
 
               {/* Visual Instruction & Image Generation Option */}
               <div className="space-y-4">
@@ -2828,7 +2842,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                           alt="Gemini generated visual"
                           className="max-h-[220px] w-auto rounded-lg shadow-lg border border-white/10 cursor-pointer transition-transform hover:scale-[1.02]"
                           onClick={() => {
-                            const activeSlides = selectedPost.slides || ['__generated__', ...(selectedPost.screenshots || [])];
+                            const activeSlides = selectedPost.slides || selectedPost.screenshots || [];
                             const mainIdx = activeSlides.indexOf('__generated__');
                             if (mainIdx !== -1) setLightboxIndex(mainIdx);
                           }}
@@ -2836,7 +2850,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                         <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover/preview:opacity-100 transition-opacity">
                           <button
                             onClick={() => {
-                              const activeSlides = selectedPost.slides || ['__generated__', ...(selectedPost.screenshots || [])];
+                              const activeSlides = selectedPost.slides || selectedPost.screenshots || [];
                               const mainIdx = activeSlides.indexOf('__generated__');
                               if (mainIdx !== -1) setLightboxIndex(mainIdx);
                             }}
@@ -2888,11 +2902,12 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                 >
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {(() => {
-                      const activeSlides = selectedPost.slides || ['__generated__', ...(selectedPost.screenshots || [])];
+                      const allSlides = selectedPost.slides || selectedPost.screenshots || [];
+                      const activeSlides = allSlides.filter((s: string) => s !== '__generated__' || generatedImages[selectedPost.id]);
                       return activeSlides.map((slide: string, idx: number) => {
                         const isGenerated = slide === '__generated__';
                         const imgSrc = isGenerated 
-                          ? (generatedImages[selectedPost.id] ? generateBrandedSvg(selectedPost, showGrid, showHud) : null)
+                          ? generateBrandedSvg(selectedPost, showGrid, showHud)
                           : slide;
 
                         return (
@@ -3157,7 +3172,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                 {selectedPost.status === 'Scheduled' && (
                   <button
                     onClick={() => handleCancelSchedule(selectedPost)}
-                    disabled={publishingInstagram || saving}
+                    disabled={publishingNow || schedulingPost || saving}
                     className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-mono uppercase tracking-wider transition-all ml-auto cursor-pointer"
                   >
                     <X size={14} /> Cancel Schedule
@@ -3168,10 +3183,10 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                   <div className="flex items-center gap-3 ml-auto">
                     <button
                       onClick={() => handlePublishToInstagram(selectedPost, true)}
-                      disabled={publishingInstagram || saving}
+                      disabled={publishingNow || schedulingPost || saving}
                       className="flex items-center gap-2 px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 border border-indigo-600 text-white rounded-xl text-xs font-mono uppercase tracking-wider transition-all cursor-pointer"
                     >
-                      {publishingInstagram ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
+                      {publishingNow ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
                       Publish Now
                     </button>
                     <button
@@ -3193,14 +3208,14 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                           setEditingDate(true);
                         }
                       }}
-                      disabled={publishingInstagram || saving}
+                      disabled={publishingNow || schedulingPost || saving}
                       className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider transition-all cursor-pointer ${
                         selectedPost.scheduled_at
                           ? 'bg-blue-500 hover:bg-blue-600 border border-blue-600 text-white'
                           : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      {publishingInstagram ? <Loader2 size={14} className="animate-spin" /> : <Calendar size={14} />}
+                      {schedulingPost ? <Loader2 size={14} className="animate-spin" /> : <Calendar size={14} />}
                       {selectedPost.scheduled_at ? 'Schedule Post' : 'Set Schedule Date'}
                     </button>
                   </div>
@@ -3213,7 +3228,8 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
 
       {/* Lightbox Modal */}
       {lightboxIndex !== null && selectedPost && (() => {
-        const activeSlides = selectedPost.slides || ['__generated__', ...(selectedPost.screenshots || [])];
+        const allSlides = selectedPost.slides || selectedPost.screenshots || [];
+        const activeSlides = allSlides.filter((s: string) => s !== '__generated__' || generatedImages[selectedPost.id]);
         const slides = activeSlides.map(slide => 
           slide === '__generated__' 
             ? generateBrandedSvg(selectedPost, showGrid, showHud) 
@@ -3573,18 +3589,22 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
 
             <p className="text-slate-300 text-xs font-mono mb-6 leading-relaxed bg-[#080b12] p-4 rounded-xl border border-white/5">
               {confirmDialog.message}
+              {confirmDialog.isLoading && (
+                <span className="block mt-2 text-[10px] text-slate-500">Generating image and publishing...</span>
+              )}
             </p>
 
             <div className="flex justify-end gap-3">
               <button
-                onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
-                className="px-5 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 rounded-xl text-xs font-mono uppercase tracking-wider cursor-pointer transition-all"
+                onClick={() => !confirmDialog.isLoading && setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+                disabled={confirmDialog.isLoading}
+                className="px-5 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 rounded-xl text-xs font-mono uppercase tracking-wider cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {confirmDialog.cancelText}
               </button>
               <button
                 onClick={async () => {
-                  setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                  setConfirmDialog(prev => ({ ...prev, isLoading: true }));
                   try {
                     await confirmDialog.onConfirm();
                   } catch (err: any) {
@@ -3594,15 +3614,19 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                       message: err.message || 'Unknown error occurred during confirmation action.',
                       type: 'error'
                     });
+                  } finally {
+                    setConfirmDialog(prev => ({ ...prev, isOpen: false, isLoading: false }));
                   }
                 }}
-                className={`px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider cursor-pointer transition-all font-bold ${
+                disabled={confirmDialog.isLoading}
+                className={`px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider cursor-pointer transition-all font-bold flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${
                   confirmDialog.type === 'danger' ? 'bg-rose-500 text-white hover:bg-rose-600 border border-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.3)]' :
                   confirmDialog.type === 'warning' ? 'bg-amber-500 text-black hover:bg-amber-400 border border-amber-600' :
                   'bg-cyan-500 text-black hover:bg-cyan-400 border border-cyan-600'
                 }`}
               >
-                {confirmDialog.confirmText}
+                {confirmDialog.isLoading && <Loader2 size={12} className="animate-spin" />}
+                {confirmDialog.isLoading ? 'Processing...' : confirmDialog.confirmText}
               </button>
             </div>
           </div>
@@ -3644,7 +3668,6 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                   .filter(p => p.status === 'Scheduled')
                   .sort((a, b) => (a.scheduled_at || '').localeCompare(b.scheduled_at || ''))
                   .map(post => {
-                    const timeLeft = getRelativeTime(post.scheduled_at);
                     return (
                       <div
                         key={post.id}
@@ -3667,7 +3690,17 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                             {post.project}
                           </span>
                           <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
-                            {timeLeft}
+                            <CountdownClock
+                              scheduledAt={post.scheduled_at}
+                              onClick={() => showConfirm({
+                                title: 'Publish Overdue Post',
+                                message: `This post was scheduled for ${formatDate(post.scheduled_at)} and hasn't been published yet. Would you like to publish it now?`,
+                                confirmText: 'Publish Now',
+                                cancelText: 'Cancel',
+                                type: 'warning',
+                                onConfirm: () => handlePublishToInstagram(post, true)
+                              })}
+                            />
                           </span>
                         </div>
                         <h4 className="text-xs font-bold text-white line-clamp-2 group-hover:text-indigo-300 transition-colors">
@@ -3676,7 +3709,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                         <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[9px] font-mono text-slate-500 font-bold">
                           <span className="flex items-center gap-1">
                             <Calendar size={10} />
-                            {post.scheduled_at ? new Date(post.scheduled_at).toLocaleString() : 'Date missing'}
+                            {post.scheduled_at ? formatDate(post.scheduled_at) : 'Date missing'}
                           </span>
                           <button
                             onClick={(e) => {
@@ -3700,32 +3733,62 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
   );
 };
 
+function CountdownClock({ scheduledAt, onClick }: { scheduledAt: string | null | undefined; onClick?: () => void }) {
+  const [label, setLabel] = useState(() => getRelativeTime(scheduledAt));
+  const isOverdue = scheduledAt && new Date(scheduledAt).getTime() <= Date.now();
+
+  useEffect(() => {
+    if (!scheduledAt) return;
+    const id = setInterval(() => setLabel(getRelativeTime(scheduledAt)), 1000);
+    return () => clearInterval(id);
+  }, [scheduledAt]);
+
+  if (isOverdue && onClick) {
+    return (
+      <button
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        className="hover:underline cursor-pointer"
+      >
+        {label}
+      </button>
+    );
+  }
+
+  return <>{label}</>;
+}
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+}
+
 function getRelativeTime(timestamp: string | null | undefined): string {
   if (!timestamp) return 'No time';
   const target = new Date(timestamp).getTime();
-  const now = new Date().getTime();
+  const now = Date.now();
   const diff = target - now;
 
-  if (diff <= 0) {
-    return 'due now';
-  }
-
-  const secs = Math.floor(diff / 1000);
+  const secs = Math.abs(Math.floor(diff / 1000));
   const mins = Math.floor(secs / 60);
   const hours = Math.floor(mins / 60);
   const days = Math.floor(hours / 24);
 
-  if (days > 0) {
-    const remainingHours = hours % 24;
-    return `in ${days}d ${remainingHours}h`;
+  if (diff <= 0) {
+    if (days > 0) return `overdue ${days}d ${hours % 24}h`;
+    if (hours > 0) return `overdue ${hours}h ${mins % 60}m`;
+    if (mins > 0) return `overdue ${mins}m`;
+    return 'overdue now';
   }
-  if (hours > 0) {
-    const remainingMins = mins % 60;
-    return `in ${hours}h ${remainingMins}m`;
-  }
-  if (mins > 0) {
-    return `in ${mins}m`;
-  }
+
+  if (days > 0) return `in ${days}d ${hours % 24}h`;
+  if (hours > 0) return `in ${hours}h ${mins % 60}m`;
+  if (mins > 0) return `in ${mins}m`;
   return `in ${secs}s`;
 }
 
