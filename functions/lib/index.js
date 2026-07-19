@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.triggerScheduledPosts = exports.hubApi = void 0;
+exports.refreshInstagramToken = exports.triggerScheduledPosts = exports.hubApi = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
@@ -1327,7 +1327,12 @@ app.get('/api/social', authenticateAdmin, async (_req, res) => {
     try {
         const db = admin.firestore();
         const snapshot = await db.collection('social_posts').orderBy('suggested_date', 'asc').get();
-        const facebookAccessToken = process.env.FACEBOOK_ACCESS_TOKEN;
+        let facebookAccessToken = '';
+        try {
+            const creds = await getInstagramCredentials();
+            facebookAccessToken = creds.access_token;
+        }
+        catch (_) { }
         const posts = [];
         const batch = db.batch();
         let hasUpdates = false;
@@ -1640,6 +1645,93 @@ Be extremely precise to ensure we can blur these exact regions.`;
     }
 });
 /**
+ * Helper function to retrieve Instagram credentials from Firestore, falling back to environment variables.
+ */
+async function getInstagramCredentials() {
+    const db = admin.firestore();
+    const configDoc = await db.collection('config').doc('instagram').get();
+    const app_id = process.env.FACEBOOK_APP_ID || '';
+    const app_secret = process.env.FACEBOOK_APP_SECRET || '';
+    if (configDoc.exists) {
+        const data = configDoc.data();
+        if (data && data.access_token && data.instagram_business_account_id) {
+            return {
+                access_token: data.access_token,
+                instagram_business_account_id: data.instagram_business_account_id,
+                app_id: data.app_id || app_id,
+                app_secret: data.app_secret || app_secret
+            };
+        }
+    }
+    // Fallback to env
+    const access_token = process.env.FACEBOOK_ACCESS_TOKEN;
+    const instagram_business_account_id = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+    if (!access_token || !instagram_business_account_id) {
+        throw new Error('Instagram credentials not configured. Please set them up in Firestore or functions/.env');
+    }
+    return { access_token, instagram_business_account_id, app_id, app_secret };
+}
+/**
+ * Helper function to exchange a short-lived user/page token for a long-lived page token and store it in Firestore.
+ */
+async function upgradeAndStoreFacebookToken(shortLivedToken, appId, appSecret, instagramAccountId) {
+    const db = admin.firestore();
+    console.log('[Token Upgrade] Exchanging short-lived token for long-lived user token...');
+    // 1. Exchange short-lived token for long-lived user token
+    const exchangeRes = await fetch(`https://graph.facebook.com/v19.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${shortLivedToken}`);
+    const exchangeData = await exchangeRes.json();
+    if (!exchangeRes.ok || !exchangeData.access_token) {
+        throw new Error(`Failed to exchange token: ${JSON.stringify(exchangeData)}`);
+    }
+    const longLivedUserToken = exchangeData.access_token;
+    console.log('[Token Upgrade] Fetching accounts/pages for the user...');
+    // 2. Fetch pages linked to this user token
+    const accountsRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${longLivedUserToken}`);
+    const accountsData = await accountsRes.json();
+    if (!accountsRes.ok || !accountsData.data) {
+        throw new Error(`Failed to fetch pages: ${JSON.stringify(accountsData)}`);
+    }
+    let pageAccessToken = '';
+    let matchedPageId = '';
+    // Find the page linked to the instagramAccountId
+    for (const page of accountsData.data) {
+        try {
+            const igRes = await fetch(`https://graph.facebook.com/v19.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`);
+            const igData = await igRes.json();
+            if (igRes.ok && igData.instagram_business_account?.id === instagramAccountId) {
+                pageAccessToken = page.access_token;
+                matchedPageId = page.id;
+                console.log(`[Token Upgrade] Found matching page ${page.name} (${page.id}) linked to Instagram Account ${instagramAccountId}.`);
+                break;
+            }
+        }
+        catch (e) {
+            console.warn(`[Token Upgrade] Failed to query Instagram account for page ${page.id}:`, e);
+        }
+    }
+    // Fallback: If no instagram business account matched, use the first page's access token
+    if (!pageAccessToken && accountsData.data.length > 0) {
+        pageAccessToken = accountsData.data[0].access_token;
+        matchedPageId = accountsData.data[0].id;
+        console.warn(`[Token Upgrade] No page matched Instagram Account ${instagramAccountId}. Defaulting to first page ${accountsData.data[0].name} (${matchedPageId}).`);
+    }
+    if (!pageAccessToken) {
+        throw new Error('No Facebook pages found associated with this account token.');
+    }
+    // 3. Save to Firestore config/instagram
+    const configRef = db.collection('config').doc('instagram');
+    await configRef.set({
+        access_token: pageAccessToken,
+        instagram_business_account_id: instagramAccountId,
+        app_id: appId,
+        app_secret: appSecret,
+        facebook_page_id: matchedPageId,
+        last_refreshed: new Date().toISOString()
+    });
+    console.log(`[Token Upgrade] Successfully saved long-lived page token for page ${matchedPageId} to Firestore.`);
+    return pageAccessToken;
+}
+/**
  * Helper to publish a post directly to Instagram using the uploaded image in Firebase Storage.
  */
 async function publishPostToInstagramDirect(postId, hasGeneratedImage = true) {
@@ -1652,11 +1744,7 @@ async function publishPostToInstagramDirect(postId, hasGeneratedImage = true) {
     const post = doc.data();
     const bucket = admin.storage().bucket('bervos-official.firebasestorage.app');
     const imageUrl = `https://storage.googleapis.com/${bucket.name}/social_posts/${postId}.png`;
-    const instagramAccountId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
-    const facebookAccessToken = process.env.FACEBOOK_ACCESS_TOKEN;
-    if (!instagramAccountId || !facebookAccessToken) {
-        throw new Error('Instagram credentials not configured. Please add INSTAGRAM_BUSINESS_ACCOUNT_ID and FACEBOOK_ACCESS_TOKEN to functions/.env');
-    }
+    const { access_token: facebookAccessToken, instagram_business_account_id: instagramAccountId } = await getInstagramCredentials();
     const caption = post.caption_english || '';
     let creationId;
     const screenshots = post.screenshots || [];
@@ -1787,16 +1875,19 @@ app.post('/api/social/:id/instagram', authenticateAdmin, async (req, res) => {
         }
         // 2. Check if we are scheduling internally
         if (scheduled_at) {
-            const scheduledDateStr = scheduled_at.split('T')[0];
+            const utcScheduledAt = new Date(scheduled_at).toISOString();
+            const scheduledDateStr = scheduled_at.includes('T') && !scheduled_at.endsWith('Z')
+                ? scheduled_at.split('T')[0]
+                : utcScheduledAt.split('T')[0];
             await docRef.update({
                 status: 'Scheduled',
-                scheduled_at: scheduled_at,
+                scheduled_at: utcScheduledAt,
                 suggested_date: scheduledDateStr
             });
             return res.json({
                 success: true,
                 scheduled: true,
-                scheduled_at,
+                scheduled_at: utcScheduledAt,
                 scheduledDate: scheduledDateStr,
                 imageUrl
             });
@@ -1836,10 +1927,9 @@ app.delete('/api/social/:id/instagram/schedule', authenticateAdmin, async (req, 
         }
         // If scheduled via legacy Instagram API, delete container from Instagram
         if (post?.instagram_scheduled_id) {
-            const instagramAccountId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
-            const facebookAccessToken = process.env.FACEBOOK_ACCESS_TOKEN;
-            if (instagramAccountId && facebookAccessToken) {
-                try {
+            try {
+                const { access_token: facebookAccessToken, instagram_business_account_id: instagramAccountId } = await getInstagramCredentials();
+                if (instagramAccountId && facebookAccessToken) {
                     const deleteRes = await fetch(`https://graph.facebook.com/v19.0/${post.instagram_scheduled_id}?access_token=${facebookAccessToken}`, {
                         method: 'DELETE'
                     });
@@ -1848,9 +1938,9 @@ app.delete('/api/social/:id/instagram/schedule', authenticateAdmin, async (req, 
                         console.warn(`[API] Failed to delete scheduled container: ${JSON.stringify(deleteData)}`);
                     }
                 }
-                catch (e) {
-                    console.warn('[API] Error deleting legacy scheduled container:', e);
-                }
+            }
+            catch (e) {
+                console.warn('[API] Error deleting legacy scheduled container:', e);
             }
         }
         // Update Firestore to clear schedule fields
@@ -2130,6 +2220,78 @@ app.post('/api/social', authenticateAdmin, async (req, res) => {
     }
 });
 /**
+ * POST /api/social/scheduler/check — Trigger a manual run of the scheduled posts checker
+ */
+app.post('/api/social/scheduler/check', authenticateAdmin, async (req, res) => {
+    try {
+        const result = await checkAndPublishDuePosts();
+        return res.json({
+            success: true,
+            processed: result.processedCount,
+            errors: result.errors
+        });
+    }
+    catch (err) {
+        console.error('[API] Error triggering manual scheduled check:', err);
+        return res.status(500).json({
+            error: 'Failed to run scheduled posts check',
+            details: err.message
+        });
+    }
+});
+/**
+ * GET /api/social/instagram/token — Get token metadata (e.g. last_refreshed date)
+ */
+app.get('/api/social/instagram/token', authenticateAdmin, async (req, res) => {
+    try {
+        const db = admin.firestore();
+        const configDoc = await db.collection('config').doc('instagram').get();
+        if (configDoc.exists) {
+            const data = configDoc.data();
+            return res.json({
+                success: true,
+                last_refreshed: data?.last_refreshed || null
+            });
+        }
+        return res.json({ success: true, last_refreshed: null });
+    }
+    catch (err) {
+        console.error('[API] Error getting Instagram token metadata:', err);
+        return res.status(500).json({ error: 'Failed to get token metadata' });
+    }
+});
+/**
+ * POST /api/social/instagram/token — Exchange and store a long-lived Instagram publishing token
+ */
+app.post('/api/social/instagram/token', authenticateAdmin, async (req, res) => {
+    try {
+        const { short_lived_token, app_id, app_secret, instagram_business_account_id } = req.body;
+        // Fallback to env config if not supplied in body
+        const finalAppId = app_id || process.env.FACEBOOK_APP_ID;
+        const finalAppSecret = app_secret || process.env.FACEBOOK_APP_SECRET;
+        const finalInstagramId = instagram_business_account_id || process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+        if (!short_lived_token) {
+            return res.status(400).json({ error: 'short_lived_token is required' });
+        }
+        if (!finalAppId || !finalAppSecret || !finalInstagramId) {
+            return res.status(400).json({ error: 'App ID, App Secret, and Instagram Account ID must be supplied or configured in .env' });
+        }
+        const longLivedToken = await upgradeAndStoreFacebookToken(short_lived_token, finalAppId, finalAppSecret, finalInstagramId);
+        return res.json({
+            success: true,
+            message: 'Token successfully upgraded to long-lived Page Access Token and stored in Firestore.',
+            token_preview: `${longLivedToken.substring(0, 8)}...`
+        });
+    }
+    catch (err) {
+        console.error('[API] Error upgrading Instagram token:', err);
+        return res.status(500).json({
+            error: 'Failed to upgrade Instagram token',
+            details: err.message
+        });
+    }
+});
+/**
  * DELETE /api/social/:id — Delete a social post
  */
 app.delete('/api/social/:id', authenticateAdmin, async (req, res) => {
@@ -2147,47 +2309,83 @@ app.delete('/api/social/:id', authenticateAdmin, async (req, res) => {
 // Export Cloud Function
 exports.hubApi = functions.https.onRequest(app);
 /**
+ * Helper function to check and publish any due scheduled posts.
+ */
+async function checkAndPublishDuePosts() {
+    const db = admin.firestore();
+    const now = new Date().toISOString();
+    let processedCount = 0;
+    const errors = [];
+    console.log(`[Scheduler] Checking for due scheduled posts at ${now}...`);
+    const snapshot = await db.collection('social_posts')
+        .where('status', '==', 'Scheduled')
+        .get();
+    if (snapshot.empty) {
+        console.log('[Scheduler] No scheduled posts in the queue.');
+        return { processedCount, errors };
+    }
+    const duePosts = snapshot.docs.filter(doc => {
+        const data = doc.data();
+        return data.scheduled_at && data.scheduled_at <= now;
+    });
+    if (duePosts.length === 0) {
+        console.log('[Scheduler] No scheduled posts due at this time.');
+        return { processedCount, errors };
+    }
+    console.log(`[Scheduler] Found ${duePosts.length} posts due for publication.`);
+    for (const doc of duePosts) {
+        const postId = doc.id;
+        try {
+            console.log(`[Scheduler] Processing post ${postId}...`);
+            await publishPostToInstagramDirect(postId);
+            console.log(`[Scheduler] Successfully published post ${postId}`);
+            processedCount++;
+        }
+        catch (err) {
+            console.error(`[Scheduler] Failed to publish post ${postId}:`, err);
+            errors.push(`Post ${postId}: ${err.message || err}`);
+            // Revert post back to Approved and log error in user_feedback
+            await doc.ref.update({
+                status: 'Approved',
+                user_feedback: `[Scheduler Publish Error at ${now}]: ${err.message || err}`,
+                updated_at: new Date().toISOString()
+            });
+        }
+    }
+    return { processedCount, errors };
+}
+/**
  * Cron trigger running every 1 hour to find scheduled posts that are due and publish them.
  */
 exports.triggerScheduledPosts = functions.pubsub
     .schedule('every 1 hours')
     .onRun(async (context) => {
-    const db = admin.firestore();
-    const now = new Date().toISOString();
-    console.log(`[Scheduler] Checking for due scheduled posts at ${now}...`);
     try {
-        const snapshot = await db.collection('social_posts')
-            .where('status', '==', 'Scheduled')
-            .get();
-        const duePosts = snapshot.docs.filter(doc => {
-            const data = doc.data();
-            return data.scheduled_at && data.scheduled_at <= now;
-        });
-        if (duePosts.length === 0) {
-            console.log('[Scheduler] No scheduled posts due at this time.');
-            return null;
-        }
-        console.log(`[Scheduler] Found ${duePosts.length} posts due for publication.`);
-        for (const doc of duePosts) {
-            const postId = doc.id;
-            try {
-                console.log(`[Scheduler] Processing post ${postId}...`);
-                const result = await publishPostToInstagramDirect(postId);
-                console.log(`[Scheduler] Successfully published post ${postId}:`, result);
-            }
-            catch (err) {
-                console.error(`[Scheduler] Failed to publish post ${postId}:`, err);
-                // Revert post back to Approved and log error in user_feedback
-                await doc.ref.update({
-                    status: 'Approved',
-                    user_feedback: `[Scheduler Publish Error at ${now}]: ${err.message || err}`,
-                    updated_at: new Date().toISOString()
-                });
-            }
-        }
+        await checkAndPublishDuePosts();
     }
     catch (err) {
         console.error('[Scheduler] Error running triggerScheduledPosts:', err);
+    }
+    return null;
+});
+/**
+ * Cron trigger running on the 1st of every month to refresh the Facebook/Instagram access token.
+ */
+exports.refreshInstagramToken = functions.pubsub
+    .schedule('0 0 1 * *')
+    .onRun(async (context) => {
+    console.log('[Token Refresh] Running scheduled monthly token refresh...');
+    try {
+        const creds = await getInstagramCredentials();
+        if (!creds.app_id || !creds.app_secret) {
+            console.warn('[Token Refresh] App ID or App Secret not configured. Cannot refresh token.');
+            return null;
+        }
+        await upgradeAndStoreFacebookToken(creds.access_token, creds.app_id, creds.app_secret, creds.instagram_business_account_id);
+        console.log('[Token Refresh] Token successfully refreshed.');
+    }
+    catch (err) {
+        console.error('[Token Refresh] Error running token refresh:', err);
     }
     return null;
 });

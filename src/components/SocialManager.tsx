@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
-import { Search, X, Loader2, Check, MessageSquare, Edit3, Eye, Calendar, Share2, Sparkles, Download, Maximize2, Trash2, ArrowUpDown, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RotateCcw, Upload, Plus } from 'lucide-react';
+import { Search, X, Loader2, Check, MessageSquare, Edit3, Eye, Calendar, Share2, Sparkles, Download, Maximize2, Trash2, ArrowUpDown, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RotateCcw, Upload, Plus, RefreshCw } from 'lucide-react';
 import { FaInstagram } from 'react-icons/fa';
 import ecosystemData from '../data/ecosystem.json';
 
@@ -409,6 +409,8 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
   const [editingTitle, setEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
   const [showQueue, setShowQueue] = useState(false);
+  const [checkingQueue, setCheckingQueue] = useState(false);
+  const [lastTokenRefresh, setLastTokenRefresh] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [processingScreenshot, setProcessingScreenshot] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -611,6 +613,26 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
+
+  useEffect(() => {
+    if (showQueue && user) {
+      const fetchTokenMeta = async () => {
+        try {
+          const idToken = await user.getIdToken();
+          const res = await fetch('/api/social/instagram/token', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+          });
+          const data = await res.json();
+          if (res.ok && data.last_refreshed) {
+            setLastTokenRefresh(data.last_refreshed);
+          }
+        } catch (e) {
+          console.warn('[API] Failed to fetch token metadata:', e);
+        }
+      };
+      fetchTokenMeta();
+    }
+  }, [showQueue, user]);
 
   // Garbage-collect orphaned images from localStorage when posts change
   useEffect(() => {
@@ -1974,6 +1996,58 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     }
   };
 
+  const handleManualCronCheck = async () => {
+    setCheckingQueue(true);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/social/scheduler/check', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to trigger scheduled posts check');
+      }
+
+      if (data.success) {
+        if (data.processed > 0) {
+          setNotification({
+            title: 'Scheduler Run Success',
+            message: `Successfully processed and published ${data.processed} overdue post(s) to Instagram!`,
+            type: 'success'
+          });
+          await fetchPosts();
+        } else {
+          setNotification({
+            title: 'Scheduler Run Complete',
+            message: 'No overdue posts in the queue.',
+            type: 'success'
+          });
+        }
+        
+        if (data.errors && data.errors.length > 0) {
+          setNotification({
+            title: 'Scheduler Warnings',
+            message: `Processed posts with errors:\n${data.errors.join('\n')}`,
+            type: 'warning'
+          });
+        }
+      }
+    } catch (err: any) {
+      console.error('[Scheduler] Manual check failed:', err);
+      setNotification({
+        title: 'Check Failed',
+        message: err.message || 'An error occurred while checking the queue.',
+        type: 'error'
+      });
+    } finally {
+      setCheckingQueue(false);
+    }
+  };
+
   const [regeneratingCaptionId, setRegeneratingCaptionId] = useState<string | null>(null);
 
   const handleRegenerateCaption = async (post: SocialPost) => {
@@ -2438,10 +2512,17 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                 )}
                 <div className="flex items-center gap-2">
                   {post.user_feedback && (
-                    <span className="text-amber-400 flex items-center gap-1">
-                      <MessageSquare size={10} />
-                      Feedback
-                    </span>
+                    post.user_feedback.includes('Scheduler Publish Error') ? (
+                      <span className="text-red-400 flex items-center gap-1 font-bold animate-pulse" title={post.user_feedback}>
+                        <MessageSquare size={10} />
+                        Publish Error
+                      </span>
+                    ) : (
+                      <span className="text-amber-400 flex items-center gap-1">
+                        <MessageSquare size={10} />
+                        Feedback
+                      </span>
+                    )
                   )}
                   {post.status === 'Published' && (
                     <a
@@ -2518,8 +2599,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                       <button
                         onClick={async () => {
                           if (editedScheduledAt) {
-                            const localNow = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-                            if (editedScheduledAt < localNow) {
+                            if (new Date(editedScheduledAt).getTime() < Date.now()) {
                               setNotification({
                                 title: 'Invalid Date',
                                 message: 'Cannot schedule a post in the past. Please select a future date and time.',
@@ -2529,7 +2609,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                             }
                           }
                           const updates: Partial<SocialPost> = {
-                            scheduled_at: editedScheduledAt || null,
+                            scheduled_at: editedScheduledAt ? new Date(editedScheduledAt).toISOString() : null,
                             suggested_date: editedScheduledAt ? editedScheduledAt.split('T')[0] : ''
                           };
                           await updatePost(selectedPost.id, updates);
@@ -2558,7 +2638,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                     ) : (
                       <button
                         onClick={() => {
-                          const defaultDt = selectedPost.scheduled_at || (selectedPost.suggested_date ? `${selectedPost.suggested_date}T09:00` : '');
+                          const defaultDt = selectedPost.scheduled_at ? toLocalDateTimeString(selectedPost.scheduled_at) : (selectedPost.suggested_date ? `${selectedPost.suggested_date}T09:00` : '');
                           setEditedScheduledAt(defaultDt);
                           setEditingDate(true);
                         }}
@@ -3192,8 +3272,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
                     <button
                       onClick={() => {
                         if (selectedPost.scheduled_at) {
-                          const localNow = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-                          if (selectedPost.scheduled_at < localNow) {
+                          if (new Date(selectedPost.scheduled_at).getTime() < Date.now()) {
                             setNotification({
                               title: 'Invalid Date',
                               message: 'The scheduled time has already passed. Please update it to a future time before scheduling.',
@@ -3647,6 +3726,26 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
               <div>
                 <span className="mono-label !text-indigo-400 mb-0.5 block">// QUEUE</span>
                 <h3 className="text-lg font-bold text-white uppercase tracking-wider">Scheduled Posts</h3>
+                <div className="flex items-center gap-3">
+                  <CronTimer />
+                  <button
+                    onClick={handleManualCronCheck}
+                    disabled={checkingQueue}
+                    className="mt-1 px-2 py-0.5 rounded-md text-[9px] font-mono font-bold tracking-wider uppercase bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200 border border-white/5 transition-all cursor-pointer inline-flex items-center gap-1"
+                  >
+                    {checkingQueue ? (
+                      <Loader2 size={8} className="animate-spin" />
+                    ) : (
+                      <RefreshCw size={8} />
+                    )}
+                    Check Now
+                  </button>
+                </div>
+                {lastTokenRefresh && (
+                  <span className="text-[8px] font-mono text-slate-500/80 block mt-1">
+                    Token refreshed: {formatDate(lastTokenRefresh)}
+                  </span>
+                )}
               </div>
               <button
                 onClick={() => setShowQueue(false)}
@@ -3791,4 +3890,50 @@ function getRelativeTime(timestamp: string | null | undefined): string {
   if (mins > 0) return `in ${mins}m`;
   return `in ${secs}s`;
 }
+
+function toLocalDateTimeString(dateInput: string | null | undefined): string {
+  if (!dateInput) return '';
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return '';
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
+function CronTimer() {
+  const [timeLeft, setTimeLeft] = useState('');
+  const [nextTime, setNextTime] = useState('');
+
+  useEffect(() => {
+    const updateTimer = () => {
+      const now = new Date();
+      // Next run is at the top of the next hour
+      const nextRun = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0);
+
+      // Format nextRun as HH:00
+      const hh = String(nextRun.getHours()).padStart(2, '0');
+      setNextTime(`${hh}:00`);
+
+      const diffMs = nextRun.getTime() - now.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffSecs = Math.floor((diffMs % 60000) / 1000);
+
+      setTimeLeft(`${diffMins}m ${diffSecs}s`);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <span className="text-[10px] font-mono text-slate-500 mt-1 block">
+      Next check at {nextTime} (in {timeLeft})
+    </span>
+  );
+}
+
 
