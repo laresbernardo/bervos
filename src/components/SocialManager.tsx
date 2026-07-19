@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
-import { Search, X, Loader2, Check, MessageSquare, Edit3, Eye, Calendar, Share2, Sparkles, Download, Maximize2, Trash2, ArrowUpDown, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RotateCcw, Upload, Plus, RefreshCw } from 'lucide-react';
+import { Search, X, Loader2, Check, MessageSquare, Edit3, Eye, Calendar, Share2, Sparkles, Download, Maximize2, Trash2, ArrowUpDown, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RotateCcw, Upload, Plus, RefreshCw, Key } from 'lucide-react';
 import { FaInstagram } from 'react-icons/fa';
 import ecosystemData from '../data/ecosystem.json';
 
@@ -411,6 +411,9 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
   const [showQueue, setShowQueue] = useState(false);
   const [checkingQueue, setCheckingQueue] = useState(false);
   const [lastTokenRefresh, setLastTokenRefresh] = useState<string | null>(null);
+  const [showTokenSettings, setShowTokenSettings] = useState(false);
+  const [newTokenInput, setNewTokenInput] = useState('');
+  const [upgradingToken, setUpgradingToken] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [processingScreenshot, setProcessingScreenshot] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -1906,7 +1909,7 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
           // Scheduled successfully
           setNotification({
             title: 'Schedule Success',
-            message: `Post scheduled for ${data.scheduledDate}`,
+            message: `Post scheduled for ${formatDate(data.scheduled_at)}`,
             type: 'success'
           });
           setPosts(prev => prev.map(p =>
@@ -2234,6 +2237,46 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedPost, editingCaption, editingDate, editingTitle, showFeedbackInput, lightboxIndex, handlePrevPost, handleNextPost]);
+
+  const handleUpgradeToken = async () => {
+    if (!newTokenInput.trim()) return;
+    setUpgradingToken(true);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/social/instagram/token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          short_lived_token: newTokenInput.trim()
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to upgrade token');
+      }
+
+      setNotification({
+        title: 'Token Configured',
+        message: 'Successfully upgraded to long-lived Page Access Token and saved to Firestore!',
+        type: 'success'
+      });
+      setNewTokenInput('');
+      setShowTokenSettings(false);
+      setLastTokenRefresh(new Date().toISOString());
+    } catch (e: any) {
+      console.error('[Token Upgrade] Error:', e);
+      setNotification({
+        title: 'Upgrade Failed',
+        message: e.message,
+        type: 'error'
+      });
+    } finally {
+      setUpgradingToken(false);
+    }
+  };
 
   const statusCounts = {
     Draft: posts.filter(p => p.status === 'Draft').length,
@@ -3757,6 +3800,53 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
 
             {/* List */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {/* Instagram Token Manager */}
+              <div className="bg-[#121926] border border-white/5 rounded-xl p-4 space-y-3">
+                <div 
+                  className="flex items-center justify-between cursor-pointer select-none"
+                  onClick={() => setShowTokenSettings(!showTokenSettings)}
+                >
+                  <span className="mono-label !text-indigo-400 flex items-center gap-1.5">
+                    <Key size={11} />
+                    // Token Settings
+                  </span>
+                  <span className="text-[10px] text-slate-500 hover:text-slate-300">
+                    {showTokenSettings ? 'Hide' : 'Configure'}
+                  </span>
+                </div>
+
+                {showTokenSettings && (
+                  <div className="pt-2 border-t border-white/5 space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-400 block">
+                        Facebook Access Token
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="Paste short-lived access token..."
+                        value={newTokenInput}
+                        onChange={(e) => setNewTokenInput(e.target.value)}
+                        className="w-full text-xs font-mono bg-white/[0.02] border border-white/10 rounded-lg px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50"
+                      />
+                    </div>
+                    <button
+                      onClick={handleUpgradeToken}
+                      disabled={upgradingToken || !newTokenInput.trim()}
+                      className="w-full py-1.5 rounded-lg text-xs font-mono font-bold bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-900/40 disabled:text-slate-500 text-white transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      {upgradingToken ? (
+                        <>
+                          <Loader2 size={11} className="animate-spin" />
+                          Upgrading...
+                        </>
+                      ) : (
+                        'Upgrade & Save Token'
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {posts.filter(p => p.status === 'Scheduled').length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500">
                   <Calendar size={32} className="text-slate-700 mb-3" />

@@ -1736,6 +1736,22 @@ async function getInstagramCredentials(): Promise<{ access_token: string; instag
     throw new Error('Instagram credentials not configured. Please set them up in Firestore or functions/.env');
   }
 
+  // Self-healing: If we have app_id and app_secret, upgrade the token automatically on-the-fly and save to Firestore
+  if (app_id && app_secret && access_token && !access_token.startsWith('IGAA')) {
+    try {
+      console.log('[Instagram Credentials] Attempting automatic token upgrade for fallback env token...');
+      const upgradedToken = await upgradeAndStoreFacebookToken(access_token, app_id, app_secret, instagram_business_account_id);
+      return {
+        access_token: upgradedToken,
+        instagram_business_account_id,
+        app_id,
+        app_secret
+      };
+    } catch (e: any) {
+      console.error('[Instagram Credentials] Failed auto-upgrading fallback env token:', e);
+    }
+  }
+
   return { access_token, instagram_business_account_id, app_id, app_secret };
 }
 
