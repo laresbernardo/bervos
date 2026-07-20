@@ -19,7 +19,9 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'https://us-central1-bervos-official.cloudfunctions.net/hubApi',
+        target: process.env.VITE_USE_EMULATOR === 'true'
+          ? 'http://127.0.0.1:5001/bervos-official/us-central1/hubApi'
+          : 'https://us-central1-bervos-official.cloudfunctions.net/hubApi',
         changeOrigin: true,
         secure: false,
       }

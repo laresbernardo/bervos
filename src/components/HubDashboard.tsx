@@ -4,7 +4,7 @@ import type { User } from 'firebase/auth';
 import { auth } from '../firebase';
 import { InitiativeCard } from './InitiativeCard';
 import type { InitiativeMetric } from './InitiativeCard';
-import { RefreshCw, LogOut, Users, Download, ShieldAlert, Star, FolderGit, X, Search, Loader2, List, Sparkles, Wrench, FileText, GitBranch, Settings, GitCommit, Share2 } from 'lucide-react';
+import { RefreshCw, LogOut, Users, Download, ShieldAlert, Star, FolderGit, X, Search, Loader2, List, Sparkles, Wrench, FileText, GitBranch, Settings, GitCommit, Share2, Activity, UserPlus } from 'lucide-react';
 import ecosystem from '../data/ecosystem.json';
 import { SocialManager } from './SocialManager';
 
@@ -148,6 +148,31 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
   const [backlogModalTab, setBacklogModalTab] = useState<'tasks' | 'commits'>('tasks');
   const [loadingMoreCommits, setLoadingMoreCommits] = useState(false);
   const backlogFetchedRef = useRef(false);
+  
+  interface LogItem {
+    id: string;
+    type: 'USER_JOIN' | 'DOWNLOAD' | 'SOCIAL_PUBLISH' | 'SOCIAL_ERROR';
+    project: string;
+    userEmail?: string;
+    userDisplayName?: string;
+    userPhotoURL?: string;
+    tool?: string;
+    version?: string;
+    os?: string;
+    title?: string;
+    caption?: string;
+    errorMessage?: string;
+    timestamp: string;
+  }
+
+  const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+  const [logsList, setLogsList] = useState<LogItem[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [logsError, setLogsError] = useState<string | null>(null);
+  const [logsSearch, setLogsSearch] = useState('');
+  const [selectedLogsTypeFilter, setSelectedLogsTypeFilter] = useState<'ALL' | 'USER_JOIN' | 'DOWNLOAD' | 'SOCIAL_PUBLISH' | 'SOCIAL_ERROR'>('ALL');
+  const [selectedLogsProjectFilter, setSelectedLogsProjectFilter] = useState('ALL');
+  const [unreadLogsCount, setUnreadLogsCount] = useState(0);
 
   const GIT_REPO_MAP: Record<string, string> = {
     'billio': 'laresbernardo/Billio',
@@ -250,6 +275,44 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
     setIsUsersModalOpen(true);
     fetchUsers();
   }, [fetchUsers]);
+
+  const fetchLogs = useCallback(async () => {
+    setLoadingLogs(true);
+    setLogsError(null);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/logs', {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to load activity logs (Status: ${res.status})`);
+      }
+      const data = await res.json();
+      setLogsList(data);
+
+      // Calculate unread logs count
+      const lastSeen = localStorage.getItem('bervos_last_seen_log_time');
+      if (lastSeen) {
+        const unread = data.filter((log: any) => log.timestamp > lastSeen).length;
+        setUnreadLogsCount(unread);
+      } else {
+        setUnreadLogsCount(data.length > 0 ? Math.min(data.length, 10) : 0);
+      }
+    } catch (err) {
+      setLogsError(err instanceof Error ? err.message : 'An error occurred while loading activity logs.');
+    } finally {
+      setLoadingLogs(false);
+    }
+  }, [user]);
+
+  const handleOpenLogsModal = useCallback(() => {
+    setIsLogsModalOpen(true);
+    fetchLogs();
+    // Save current time as last seen
+    const nowStr = new Date().toISOString();
+    localStorage.setItem('bervos_last_seen_log_time', nowStr);
+    setUnreadLogsCount(0);
+  }, [fetchLogs]);
 
   const handleShowBacklog = useCallback((projectId: string) => {
     const project = metrics.find(m => m.id === projectId);
@@ -397,9 +460,10 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
     const timer = setTimeout(() => {
       fetchMetrics();
       fetchUsers();
+      fetchLogs();
     }, 0);
     return () => clearTimeout(timer);
-  }, [fetchMetrics, fetchUsers]);
+  }, [fetchMetrics, fetchUsers, fetchLogs]);
 
   const handleSignOut = () => {
     if (auth) signOut(auth);
@@ -792,15 +856,23 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
             {/* High-Level Summary Analytics Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 
-              <div className="tech-card p-4.5 flex flex-col justify-between group min-h-[110px]">
+              <div
+                onClick={() => !loading && handleOpenLogsModal()}
+                className={`tech-card p-4.5 flex flex-col justify-between group min-h-[110px] ${loading ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer hover:border-indigo-500/40 hover:shadow-[0_0_20px_rgba(99,102,241,0.15)]'} transition-all`}
+              >
                 <div className="flex items-center justify-between w-full">
                   <div className="space-y-0.5">
                     <span className="mono-label !text-indigo-400">
                       Total Projects {isFiltered && <span className="text-[9px] text-amber-500/80 normal-case ml-1 font-mono font-normal tracking-normal">(Filtered)</span>}
+                      {unreadLogsCount > 0 && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold font-mono leading-none text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-full animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.2)] ml-2 align-middle">
+                          ● {unreadLogsCount} NEW
+                        </span>
+                      )}
                     </span>
                     <h3 className="text-4xl md:text-5xl font-black text-white font-display tracking-tight leading-none">{totalProjectsCount}</h3>
                   </div>
-                  <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl shrink-0">
+                  <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl group-hover:bg-indigo-500/20 transition-colors shrink-0">
                     <FolderGit size={18} />
                   </div>
                 </div>
@@ -1261,6 +1333,283 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
               <div className="flex items-center gap-4">
                 <span>TOTAL REGISTERED (SUM): <strong className="text-white font-bold">{totalUsers}</strong></span>
                 <span>UNIQUE USERS: <strong className="text-white font-bold">{usersList.length}</strong></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Global Activity Logs Modal */}
+      {isLogsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#080b12]/80 backdrop-blur-md transition-all duration-300">
+          <div className="relative w-full max-w-4xl max-h-[85vh] bg-[#0c121d] border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-[0_0_50px_rgba(99,102,241,0.15)]">
+            {/* Top blueprint line decorations */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500" />
+
+            {/* Modal Header */}
+            <div className="p-6 border-b border-white/5 flex items-start justify-between">
+              <div>
+                <span className="mono-label !text-indigo-400">// ECOSYSTEM_ACTIVITY_TELEMETRY_LOGS</span>
+                <h3 className="text-xl font-black text-white tracking-tight uppercase mt-1 flex items-center gap-2">
+                  <Activity size={18} className="text-indigo-400 shrink-0" />
+                  Ecosystem Activity Logs
+                </h3>
+                <p className="text-slate-400 text-xs font-mono mt-1">
+                  Chronological records of user registrations and download telemetry across the BERVOS ecosystem.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsLogsModalOpen(false)}
+                className="p-2 bg-white/5 border border-white/10 hover:border-white/20 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Filtering / Search Bar */}
+            <div className="p-6 bg-white/[0.01] border-b border-white/5 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+              {/* Search */}
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  placeholder="Search logs by project, user, tool, platform..."
+                  value={logsSearch}
+                  onChange={(e) => setLogsSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 focus:border-indigo-500/40 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none transition-all font-mono"
+                />
+                <span className="absolute left-3 top-3 text-slate-500">
+                  <Search size={14} />
+                </span>
+              </div>
+
+              {/* Filters wrapper */}
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Log Type Filter Dropdown */}
+                <div className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl border border-white/5">
+                  <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Type:</span>
+                  <select
+                    value={selectedLogsTypeFilter}
+                    onChange={(e) => setSelectedLogsTypeFilter(e.target.value as any)}
+                    className="bg-transparent text-slate-200 font-mono text-xs focus:outline-none cursor-pointer border-0 text-slate-300"
+                  >
+                    <option value="ALL" className="bg-[#0f131a]">ALL TYPES</option>
+                    <option value="USER_JOIN" className="bg-[#0f131a]">USER JOINS</option>
+                    <option value="DOWNLOAD" className="bg-[#0f131a]">DOWNLOADS</option>
+                    <option value="SOCIAL_PUBLISH" className="bg-[#0f131a]">SOCIAL PUBLISH</option>
+                    <option value="SOCIAL_ERROR" className="bg-[#0f131a]">SOCIAL ERRORS</option>
+                  </select>
+                </div>
+
+                {/* Project Filter Dropdown */}
+                <div className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl border border-white/5">
+                  <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Project:</span>
+                  <select
+                    value={selectedLogsProjectFilter}
+                    onChange={(e) => setSelectedLogsProjectFilter(e.target.value)}
+                    className="bg-transparent text-slate-200 font-mono text-xs focus:outline-none cursor-pointer border-0 text-slate-300"
+                  >
+                    <option value="ALL" className="bg-[#0f131a]">ALL PROJECTS</option>
+                    {metrics.map(proj => (
+                      <option key={proj.id} value={proj.name} className="bg-[#0f131a]">
+                        {proj.name.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-3">
+              {loadingLogs ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <Loader2 size={32} className="text-indigo-500 animate-spin" />
+                  <span className="text-xs font-mono text-slate-400 uppercase tracking-widest">Retrieving ecosystem telemetry logs...</span>
+                </div>
+              ) : logsError ? (
+                <div className="tech-card border-red-500/30 p-8 bg-red-500/[0.01] flex items-start gap-4">
+                  <ShieldAlert size={24} className="text-red-400 shrink-0" />
+                  <div className="space-y-1">
+                    <span className="mono-label !text-red-400">// LOGS_LOAD_FAILURE</span>
+                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">Failed to load logs</h4>
+                    <p className="text-slate-400 text-xs font-mono">{logsError}</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {(() => {
+                    const filteredLogs = logsList.filter(log => {
+                      const matchesSearch =
+                        log.project.toLowerCase().includes(logsSearch.toLowerCase()) ||
+                        (log.userEmail && log.userEmail.toLowerCase().includes(logsSearch.toLowerCase())) ||
+                        (log.userDisplayName && log.userDisplayName.toLowerCase().includes(logsSearch.toLowerCase())) ||
+                        (log.tool && log.tool.toLowerCase().includes(logsSearch.toLowerCase())) ||
+                        (log.os && log.os.toLowerCase().includes(logsSearch.toLowerCase()));
+
+                      const matchesType =
+                        selectedLogsTypeFilter === 'ALL' ||
+                        log.type === selectedLogsTypeFilter;
+
+                      const matchesProject =
+                        selectedLogsProjectFilter === 'ALL' ||
+                        log.project.toLowerCase() === selectedLogsProjectFilter.toLowerCase();
+
+                      return matchesSearch && matchesType && matchesProject;
+                    });
+
+                    if (filteredLogs.length === 0) {
+                      return (
+                        <div className="text-center py-20 border border-dashed border-white/5 rounded-xl">
+                          <span className="text-xs font-mono text-slate-500 uppercase tracking-wider">No matching logs found.</span>
+                        </div>
+                      );
+                    }
+
+                    const formatDate = (dateStr: string) => {
+                      try {
+                        const d = new Date(dateStr);
+                        if (isNaN(d.getTime())) return dateStr;
+                        
+                        const yyyy = d.getFullYear();
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        const hh = String(d.getHours()).padStart(2, '0');
+                        const min = String(d.getMinutes()).padStart(2, '0');
+                        const ss = String(d.getSeconds()).padStart(2, '0');
+                        
+                        return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+                      } catch (e) {
+                        return dateStr;
+                      }
+                    };
+
+                    const formatRelativeTime = (dateStr: string) => {
+                      try {
+                        const d = new Date(dateStr);
+                        if (isNaN(d.getTime())) return '';
+                        const diffMs = Date.now() - d.getTime();
+                        const diffMin = Math.floor(diffMs / 60000);
+                        const diffHrs = Math.floor(diffMin / 60);
+                        const diffDays = Math.floor(diffHrs / 24);
+
+                        if (diffMin < 1) return 'just now';
+                        if (diffMin < 60) return `${diffMin}m ago`;
+                        if (diffHrs < 24) return `${diffHrs}h ago`;
+                        if (diffDays === 1) return 'yesterday';
+                        return `${diffDays}d ago`;
+                      } catch (e) {
+                        return '';
+                      }
+                    };
+
+                    const getLogAccentClass = (type: 'USER_JOIN' | 'DOWNLOAD' | 'SOCIAL_PUBLISH' | 'SOCIAL_ERROR') => {
+                      if (type === 'USER_JOIN') return 'border-l-violet-500';
+                      if (type === 'DOWNLOAD') return 'border-l-cyan-500';
+                      if (type === 'SOCIAL_PUBLISH') return 'border-l-pink-500';
+                      return 'border-l-rose-500';
+                    };
+
+                    const getLogBadgeClass = (type: 'USER_JOIN' | 'DOWNLOAD' | 'SOCIAL_PUBLISH' | 'SOCIAL_ERROR') => {
+                      if (type === 'USER_JOIN') return 'bg-violet-500/10 border-violet-500/20 text-violet-400';
+                      if (type === 'DOWNLOAD') return 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400';
+                      if (type === 'SOCIAL_PUBLISH') return 'bg-pink-500/10 border-pink-500/20 text-pink-400';
+                      return 'bg-rose-500/10 border-rose-500/20 text-rose-400';
+                    };
+
+                    return (
+                      <div className="space-y-2">
+                        {filteredLogs.map((log) => (
+                          <div
+                            key={log.id}
+                            className={`bg-[#080d15]/60 hover:bg-[#0c121d] border border-white/5 border-l-4 ${getLogAccentClass(log.type)} p-3.5 rounded-r-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="mt-0.5 shrink-0">
+                                {log.type === 'USER_JOIN' && (
+                                  <div className="p-1.5 bg-violet-500/10 border border-violet-500/20 text-violet-400 rounded-lg">
+                                    <UserPlus size={14} />
+                                  </div>
+                                )}
+                                {log.type === 'DOWNLOAD' && (
+                                  <div className="p-1.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-lg">
+                                    <Download size={14} />
+                                  </div>
+                                )}
+                                {log.type === 'SOCIAL_PUBLISH' && (
+                                  <div className="p-1.5 bg-pink-500/10 border border-pink-500/20 text-pink-400 rounded-lg">
+                                    <Share2 size={14} />
+                                  </div>
+                                )}
+                                {log.type === 'SOCIAL_ERROR' && (
+                                  <div className="p-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-lg animate-pulse">
+                                    <ShieldAlert size={14} />
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="space-y-0.5 min-w-0 text-left">
+                                <div className="text-xs text-slate-200 leading-normal">
+                                  {log.type === 'USER_JOIN' && (
+                                    <>
+                                      New user <strong className="text-white font-semibold font-mono">{log.userDisplayName}</strong> (
+                                      <span className="text-slate-400 text-[10px] font-mono">{log.userEmail}</span>) registered for{' '}
+                                      <span className="text-white font-semibold">{log.project}</span>.
+                                    </>
+                                  )}
+                                  {log.type === 'DOWNLOAD' && (
+                                    <>
+                                      Tool <strong className="text-white font-semibold font-mono">{log.tool}</strong>{' '}
+                                      <span className="text-[10px] font-mono bg-cyan-500/10 border border-cyan-500/20 px-1 py-0.2 rounded text-cyan-300">v{log.version}</span>{' '}
+                                      downloaded
+                                      {log.os && log.os !== 'Unknown OS' && (
+                                        <> on <strong className="text-slate-300 font-mono">{log.os}</strong></>
+                                      )}.
+                                    </>
+                                  )}
+                                  {log.type === 'SOCIAL_PUBLISH' && (
+                                    <>
+                                      Social post for <span className="text-white font-semibold">{log.project}</span> published successfully to Instagram:{' '}
+                                      <span className="text-slate-300 italic">"{log.title}"</span>.
+                                    </>
+                                  )}
+                                  {log.type === 'SOCIAL_ERROR' && (
+                                    <>
+                                      Instagram publishing failed for <span className="text-white font-semibold">{log.project}</span>:
+                                      <span className="text-rose-400 font-mono text-[11px] block mt-1 bg-rose-500/5 border border-rose-500/10 p-2.5 rounded max-w-xl break-words">{log.errorMessage}</span>
+                                    </>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-[8px] font-mono border px-1.5 py-0.2 rounded uppercase ${getLogBadgeClass(log.type)}`}>
+                                    {log.project}
+                                  </span>
+                                  <span className="text-[9px] font-mono text-slate-500">
+                                    {formatDate(log.timestamp)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="shrink-0 text-[10px] font-mono font-bold text-slate-400 self-end sm:self-center bg-white/5 border border-white/10 px-2 py-0.5 rounded-md">
+                              {formatRelativeTime(log.timestamp)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-white/5 bg-white/[0.01] flex items-center justify-between text-[10px] font-mono text-slate-500">
+              <div>
+                <span>ACTIVITY STATUS: ONLINE</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span>TOTAL LOGS: <strong className="text-white font-bold">{logsList.length}</strong></span>
               </div>
             </div>
 

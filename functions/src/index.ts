@@ -1244,108 +1244,120 @@ async function getAppUsersViaCli(projectId: string): Promise<UserRecord[]> {
   return [];
 }
 
-app.get(['/users', '/api/users'], authenticateAdmin, async (req: express.Request, res: express.Response) => {
-  try {
-    const initiatives = await getInitiativesFromSchema();
-    const allUsersMap = new Map<string, {
-      email: string;
-      displayName: string;
-      photoURL: string;
-      projects: string[];
-      lastActive: string;
-      firstActive: string;
-      projectDetails: Record<string, { firstActive: string; lastActive: string }>;
-    }>();
+async function fetchAllUsersAggregated(): Promise<Array<{
+  email: string;
+  displayName: string;
+  photoURL: string;
+  projects: string[];
+  lastActive: string;
+  firstActive: string;
+  projectDetails: Record<string, { firstActive: string; lastActive: string }>;
+}>> {
+  const initiatives = await getInitiativesFromSchema();
+  const allUsersMap = new Map<string, {
+    email: string;
+    displayName: string;
+    photoURL: string;
+    projects: string[];
+    lastActive: string;
+    firstActive: string;
+    projectDetails: Record<string, { firstActive: string; lastActive: string }>;
+  }>();
 
-    for (const item of initiatives) {
-      const type = item['@type'];
-      const name = item.name;
-      if (type === 'SoftwareApplication' && item.applicationCategory !== 'UtilitiesApplication') {
-        const projectId = getProjectId(item);
-        const projectApp = getProjectApp(projectId);
+  for (const item of initiatives) {
+    const type = item['@type'];
+    const name = item.name;
+    if (type === 'SoftwareApplication' && item.applicationCategory !== 'UtilitiesApplication') {
+      const projectId = getProjectId(item);
+      const projectApp = getProjectApp(projectId);
 
-        let users: UserRecord[] = [];
-        if (projectApp) {
-          users = await getAppUsers(projectApp);
-        } else {
-          users = await getAppUsersViaCli(projectId);
-        }
+      let users: UserRecord[] = [];
+      if (projectApp) {
+        users = await getAppUsers(projectApp);
+      } else {
+        users = await getAppUsersViaCli(projectId);
+      }
 
-        // Local workspace backup file fallback (e.g. chessverse-users.json, scribo-users.json, etc.)
-        if (users.length === 0) {
-          const workspaceDir = path.join(__dirname, '..', '..');
-          const normalizedName = name.toLowerCase();
-          const backupFileName = `${normalizedName}-users.json`;
-          const backupPath = path.join(workspaceDir, backupFileName);
-          if (fs.existsSync(backupPath)) {
-            try {
-              const fileContent = fs.readFileSync(backupPath, 'utf8');
-              const parsed = JSON.parse(fileContent);
-              const backupUsers = parsed.users || [];
-              users = backupUsers.map((u: any) => ({
-                uid: u.localId || u.uid,
-                email: u.email,
-                displayName: u.displayName,
-                photoURL: u.photoUrl || u.photoURL,
-                lastSignInTime: u.lastSignedInAt ? (isFinite(Number(u.lastSignedInAt)) ? new Date(parseInt(u.lastSignedInAt, 10)).toISOString() : u.lastSignedInAt) : undefined,
-                createdAt: u.createdAt ? (isFinite(Number(u.createdAt)) ? new Date(parseInt(u.createdAt, 10)).toISOString() : u.createdAt) : undefined,
-              }));
-            } catch (err) {
-              console.error(`[Backup Fallback] Failed to read backup file for ${name}:`, err);
-            }
-          }
-        }
-
-        for (const user of users) {
-          if (!user.email) continue;
-          const key = user.email.toLowerCase();
-          const existing = allUsersMap.get(key);
-          const lastActive = user.lastSignInTime || user.createdAt || '';
-          const firstActive = user.createdAt || user.lastSignInTime || '';
-          if (existing) {
-            if (!existing.projects.includes(name)) {
-              existing.projects.push(name);
-            }
-            if (lastActive && (!existing.lastActive || lastActive > existing.lastActive)) {
-              existing.lastActive = lastActive;
-            }
-            if (firstActive && (!existing.firstActive || firstActive < existing.firstActive)) {
-              existing.firstActive = firstActive;
-            }
-            if (!existing.displayName && user.displayName) {
-              existing.displayName = user.displayName;
-            }
-            if (!existing.photoURL && user.photoURL) {
-              existing.photoURL = user.photoURL;
-            }
-            if (!existing.projectDetails) {
-              existing.projectDetails = {};
-            }
-            existing.projectDetails[name] = {
-              firstActive: firstActive,
-              lastActive: lastActive
-            };
-          } else {
-            allUsersMap.set(key, {
-              email: user.email,
-              displayName: user.displayName || user.email.split('@')[0],
-              photoURL: user.photoURL || '',
-              projects: [name],
-              lastActive: lastActive,
-              firstActive: firstActive,
-              projectDetails: {
-                [name]: {
-                  firstActive: firstActive,
-                  lastActive: lastActive
-                }
-              }
-            });
+      // Local workspace backup file fallback (e.g. chessverse-users.json, scribo-users.json, etc.)
+      if (users.length === 0) {
+        const workspaceDir = path.join(__dirname, '..', '..');
+        const normalizedName = name.toLowerCase();
+        const backupFileName = `${normalizedName}-users.json`;
+        const backupPath = path.join(workspaceDir, backupFileName);
+        if (fs.existsSync(backupPath)) {
+          try {
+            const fileContent = fs.readFileSync(backupPath, 'utf8');
+            const parsed = JSON.parse(fileContent);
+            const backupUsers = parsed.users || [];
+            users = backupUsers.map((u: any) => ({
+              uid: u.localId || u.uid,
+              email: u.email,
+              displayName: u.displayName,
+              photoURL: u.photoUrl || u.photoURL,
+              lastSignInTime: u.lastSignedInAt ? (isFinite(Number(u.lastSignedInAt)) ? new Date(parseInt(u.lastSignedInAt, 10)).toISOString() : u.lastSignedInAt) : undefined,
+              createdAt: u.createdAt ? (isFinite(Number(u.createdAt)) ? new Date(parseInt(u.createdAt, 10)).toISOString() : u.createdAt) : undefined,
+            }));
+          } catch (err) {
+            console.error(`[Backup Fallback] Failed to read backup file for ${name}:`, err);
           }
         }
       }
-    }
 
-    const aggregatedUsers = Array.from(allUsersMap.values()).sort((a, b) => b.lastActive.localeCompare(a.lastActive));
+      for (const user of users) {
+        if (!user.email) continue;
+        const key = user.email.toLowerCase();
+        const existing = allUsersMap.get(key);
+        const lastActive = user.lastSignInTime || user.createdAt || '';
+        const firstActive = user.createdAt || user.lastSignInTime || '';
+        if (existing) {
+          if (!existing.projects.includes(name)) {
+            existing.projects.push(name);
+          }
+          if (lastActive && (!existing.lastActive || lastActive > existing.lastActive)) {
+            existing.lastActive = lastActive;
+          }
+          if (firstActive && (!existing.firstActive || firstActive < existing.firstActive)) {
+            existing.firstActive = firstActive;
+          }
+          if (!existing.displayName && user.displayName) {
+            existing.displayName = user.displayName;
+          }
+          if (!existing.photoURL && user.photoURL) {
+            existing.photoURL = user.photoURL;
+          }
+          if (!existing.projectDetails) {
+            existing.projectDetails = {};
+          }
+          existing.projectDetails[name] = {
+            firstActive: firstActive,
+            lastActive: lastActive
+          };
+        } else {
+          allUsersMap.set(key, {
+            email: user.email,
+            displayName: user.displayName || user.email.split('@')[0],
+            photoURL: user.photoURL || '',
+            projects: [name],
+            lastActive: lastActive,
+            firstActive: firstActive,
+            projectDetails: {
+              [name]: {
+                firstActive: firstActive,
+                lastActive: lastActive
+              }
+            }
+          });
+        }
+      }
+    }
+  }
+
+  return Array.from(allUsersMap.values()).sort((a, b) => b.lastActive.localeCompare(a.lastActive));
+}
+
+app.get(['/users', '/api/users'], authenticateAdmin, async (req: express.Request, res: express.Response) => {
+  try {
+    const aggregatedUsers = await fetchAllUsersAggregated();
     res.json(aggregatedUsers);
   } catch (err) {
     console.error('[API] Unexpected error in /users endpoint:', err);
@@ -2467,6 +2479,314 @@ app.delete('/api/social/:id', authenticateAdmin, async (req: express.Request, re
   } catch (err) {
     console.error('[API] Error deleting social post:', err);
     res.status(500).json({ error: 'Failed to delete social post' });
+  }
+});
+
+async function fetchTelemetryLogsForProject(app: admin.app.App, projectId: string, projectName: string): Promise<any[]> {
+  const db = admin.firestore(app);
+  const logs: any[] = [];
+  const collectionsToTry = ['telemetry', 'downloads', 'metrics'];
+
+  for (const colName of collectionsToTry) {
+    try {
+      // Try ordering by timestamp descending
+      let snapshot = await db.collection(colName).orderBy('timestamp', 'desc').limit(50).get();
+      if (snapshot.empty) {
+        // Try ordering by createdAt descending
+        snapshot = await db.collection(colName).orderBy('createdAt', 'desc').limit(50).get();
+      }
+      if (snapshot.empty) {
+        // Try query without ordering
+        snapshot = await db.collection(colName).limit(50).get();
+      }
+
+      if (!snapshot.empty) {
+        for (const doc of snapshot.docs) {
+          const data = doc.data();
+          const tsVal = data.timestamp || data.createdAt || data.date || data.time;
+          let timestamp = '';
+          if (tsVal) {
+            if (typeof tsVal.toDate === 'function') {
+              timestamp = tsVal.toDate().toISOString();
+            } else {
+              const parsedDate = new Date(tsVal);
+              if (!isNaN(parsedDate.getTime())) {
+                timestamp = parsedDate.toISOString();
+              }
+            }
+          }
+          if (!timestamp) continue;
+
+          logs.push({
+            id: `download-${projectId}-${doc.id}`,
+            type: 'DOWNLOAD',
+            project: projectName,
+            tool: data.tool || data.fileName || data.file || data.name || projectName,
+            version: data.version || data.appVersion || '1.0.0',
+            os: data.os || data.platform || data.system || 'Unknown OS',
+            timestamp
+          });
+        }
+        break;
+      }
+    } catch (err) {
+      // Ignore and continue to next collection
+    }
+  }
+
+  return logs;
+}
+
+async function fetchTelemetryLogsViaCli(projectId: string, projectName: string): Promise<any[]> {
+  const token = await getValidAccessToken();
+  if (!token) return [];
+
+  const logs: any[] = [];
+  const collectionsToTry = ['telemetry', 'downloads', 'metrics'];
+
+  const runLogsQuery = async (collectionName: string): Promise<any[]> => {
+    return new Promise((resolve) => {
+      const postData = JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: collectionName }],
+          limit: 50,
+          orderBy: [
+            {
+              field: { fieldPath: 'timestamp' },
+              direction: 'DESCENDING'
+            }
+          ]
+        }
+      });
+
+      const req = https.request({
+        hostname: 'firestore.googleapis.com',
+        path: `/v1/projects/${projectId}/databases/(default)/documents:runQuery`,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Content-Length': Buffer.byteLength(postData)
+        },
+        timeout: 4000
+      }, (res: any) => {
+        let body = '';
+        res.on('data', (chunk: any) => body += chunk);
+        res.on('end', () => {
+          try {
+            const arr = JSON.parse(body);
+            if (!Array.isArray(arr)) {
+              resolve([]);
+              return;
+            }
+            const parsedLogs: any[] = [];
+            for (const item of arr) {
+              if (item && item.document) {
+                const doc = item.document;
+                const fields = doc.fields || {};
+                const nameParts = doc.name.split('/');
+                const docId = nameParts[nameParts.length - 1];
+
+                const getVal = (f: any) => {
+                  if (!f) return undefined;
+                  if (f.stringValue !== undefined) return f.stringValue;
+                  if (f.integerValue !== undefined) return parseInt(f.integerValue, 10);
+                  if (f.doubleValue !== undefined) return parseFloat(f.doubleValue);
+                  if (f.timestampValue !== undefined) return f.timestampValue;
+                  return undefined;
+                };
+
+                const tsVal = getVal(fields.timestamp) || getVal(fields.createdAt) || getVal(fields.date) || getVal(fields.time);
+                let timestamp = '';
+                if (tsVal) {
+                  const parsedDate = new Date(tsVal);
+                  if (!isNaN(parsedDate.getTime())) {
+                    timestamp = parsedDate.toISOString();
+                  }
+                }
+                if (!timestamp) continue;
+
+                parsedLogs.push({
+                  id: `download-${projectId}-${docId}`,
+                  type: 'DOWNLOAD',
+                  project: projectName,
+                  tool: getVal(fields.tool) || getVal(fields.fileName) || getVal(fields.file) || getVal(fields.name) || projectName,
+                  version: getVal(fields.version) || getVal(fields.appVersion) || '1.0.0',
+                  os: getVal(fields.os) || getVal(fields.platform) || getVal(fields.system) || 'Unknown OS',
+                  timestamp
+                });
+              }
+            }
+            resolve(parsedLogs);
+          } catch (e) {
+            resolve([]);
+          }
+        });
+      });
+
+      req.on('error', () => resolve([]));
+      req.write(postData);
+      req.end();
+    });
+  };
+
+  for (const colName of collectionsToTry) {
+    const colLogs = await runLogsQuery(colName);
+    if (colLogs.length > 0) {
+      logs.push(...colLogs);
+      break;
+    }
+  }
+
+  return logs;
+}
+
+app.get(['/logs', '/api/logs'], authenticateAdmin, async (req: express.Request, res: express.Response) => {
+  try {
+    const initiatives = await getInitiativesFromSchema();
+    const userJoinLogs: any[] = [];
+    const downloadLogs: any[] = [];
+
+    // 1. Gather User Join Logs
+    const aggregatedUsers = await fetchAllUsersAggregated();
+    for (const user of aggregatedUsers) {
+      for (const [projectName, details] of Object.entries(user.projectDetails || {})) {
+        const firstActive = (details as any).firstActive;
+        if (firstActive) {
+          userJoinLogs.push({
+            id: `user-join-${user.email}-${projectName}-${firstActive}`,
+            type: 'USER_JOIN',
+            project: projectName,
+            userEmail: user.email,
+            userDisplayName: user.displayName || user.email.split('@')[0],
+            userPhotoURL: user.photoURL || '',
+            timestamp: firstActive
+          });
+        }
+      }
+    }
+
+    // 2. Gather Download Logs for Utility apps
+    for (const item of initiatives) {
+      const type = item['@type'];
+      const name = item.name;
+      const isUtility = item.applicationCategory === 'UtilitiesApplication';
+      if (type === 'SoftwareApplication' && isUtility) {
+        const projectId = getProjectId(item);
+        const projectApp = getProjectApp(projectId);
+
+        let logs: any[] = [];
+        if (projectApp) {
+          logs = await fetchTelemetryLogsForProject(projectApp, projectId, name);
+        } else {
+          logs = await fetchTelemetryLogsViaCli(projectId, name);
+        }
+        downloadLogs.push(...logs);
+      }
+    }
+
+    // 3. Gather Social Scheduler Logs
+    const socialLogs: any[] = [];
+    try {
+      const db = admin.firestore();
+      const socialSnap = await db.collection('social_posts').get();
+      for (const doc of socialSnap.docs) {
+        const data = doc.data();
+        const project = data.project || 'Social';
+
+        // Success Publish Event
+        if (data.status === 'Published' && data.published_at) {
+          socialLogs.push({
+            id: `social-publish-${doc.id}`,
+            type: 'SOCIAL_PUBLISH',
+            project: project,
+            title: data.hook || 'Instagram post published',
+            caption: data.caption_english || '',
+            timestamp: data.published_at
+          });
+        }
+
+        // Failure/Error Event
+        if (data.user_feedback && data.user_feedback.includes('Scheduler Publish Error')) {
+          const match = data.user_feedback.match(/\[Scheduler Publish Error at ([^\]]+)\]:\s*([\s\S]*)/);
+          let timestamp = data.updated_at || new Date().toISOString();
+          let errorMessage = data.user_feedback;
+          if (match && match[1]) {
+            timestamp = match[1];
+            errorMessage = match[2];
+          }
+
+          socialLogs.push({
+            id: `social-error-${doc.id}-${timestamp}`,
+            type: 'SOCIAL_ERROR',
+            project: project,
+            errorMessage: errorMessage,
+            timestamp
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[Logs API] Failed to fetch social posts for logs:', err);
+    }
+
+    // 4. Fallback mock download logs for local testing/emulator
+    if (process.env.FUNCTIONS_EMULATOR === 'true' && downloadLogs.length === 0) {
+      const tools = ['Aura', 'Pinmage', 'YT2MP3'];
+      const platforms = ['macOS', 'Windows', 'iOS', 'Linux'];
+      const versions = ['1.3.0', '1.1.0', '2.1.1', '1.0.4'];
+      const now = Date.now();
+      for (let i = 0; i < 25; i++) {
+        const project = tools[i % tools.length];
+        const timestamp = new Date(now - i * 4 * 3600 * 1000).toISOString();
+        downloadLogs.push({
+          id: `mock-download-${project}-${i}`,
+          type: 'DOWNLOAD',
+          project: project,
+          tool: project,
+          version: versions[i % versions.length],
+          os: platforms[i % platforms.length],
+          timestamp
+        });
+      }
+    }
+
+    // 5. Fallback mock social logs for emulator testing
+    if (process.env.FUNCTIONS_EMULATOR === 'true' && socialLogs.length === 0) {
+      const projects = ['Chessverse', 'Tonaly', 'LaresDJ', 'Billio'];
+      const now = Date.now();
+      for (let i = 0; i < 8; i++) {
+        const project = projects[i % projects.length];
+        const timestamp = new Date(now - i * 8 * 3600 * 1000).toISOString();
+        if (i % 3 === 2) {
+          socialLogs.push({
+            id: `mock-social-error-${project}-${i}`,
+            type: 'SOCIAL_ERROR',
+            project: project,
+            errorMessage: 'Instagram Graph API error: The Page Access Token has expired or is invalid. Please refresh the token.',
+            timestamp
+          });
+        } else {
+          socialLogs.push({
+            id: `mock-social-publish-${project}-${i}`,
+            type: 'SOCIAL_PUBLISH',
+            project: project,
+            title: `New visual showcase post for ${project}`,
+            caption: `Check out our latest update for ${project}! We have added offline support and custom dashboards.`,
+            timestamp
+          });
+        }
+      }
+    }
+
+    // 6. Combine and sort all logs
+    const allLogs = [...userJoinLogs, ...downloadLogs, ...socialLogs].sort((a, b) =>
+      b.timestamp.localeCompare(a.timestamp)
+    );
+
+    res.json(allLogs);
+  } catch (err) {
+    console.error('[API] Unexpected error in /logs endpoint:', err);
+    res.status(500).json({ error: 'Internal Server Error', message: err instanceof Error ? err.message : String(err) });
   }
 });
 
