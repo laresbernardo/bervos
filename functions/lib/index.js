@@ -1751,6 +1751,37 @@ async function upgradeAndStoreFacebookToken(shortLivedToken, appId, appSecret, i
     return pageAccessToken;
 }
 /**
+ * Helper to wait until an Instagram media container is finished processing by Meta.
+ */
+async function waitForMediaContainerReady(containerId, accessToken, maxAttempts = 15, delayMs = 3000) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            const statusRes = await fetch(`https://graph.facebook.com/v19.0/${containerId}?fields=status_code,status&access_token=${accessToken}`);
+            const statusData = await statusRes.json();
+            if (statusRes.ok && statusData) {
+                const statusCode = statusData.status_code;
+                if (statusCode === 'FINISHED') {
+                    return;
+                }
+                if (statusCode === 'ERROR') {
+                    throw new Error(`Media container ${containerId} processing failed with status ERROR: ${JSON.stringify(statusData)}`);
+                }
+                if (statusCode === 'EXPIRED') {
+                    throw new Error(`Media container ${containerId} has expired.`);
+                }
+            }
+        }
+        catch (err) {
+            if (err.message && (err.message.includes('ERROR') || err.message.includes('EXPIRED'))) {
+                throw err;
+            }
+            console.warn(`[Instagram] Container ${containerId} status check attempt ${attempt} failed:`, err);
+        }
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    throw new Error(`Media container ${containerId} was not ready after ${maxAttempts * (delayMs / 1000)} seconds.`);
+}
+/**
  * Helper to publish a post directly to Instagram using the uploaded image in Firebase Storage.
  */
 async function publishPostToInstagramDirect(postId, hasGeneratedImage = true) {
@@ -1792,6 +1823,10 @@ async function publishPostToInstagramDirect(postId, hasGeneratedImage = true) {
             }
             itemContainerIds.push(itemData.id);
         }
+        // Wait for all item containers to be finished processing by Meta
+        for (const itemContainerId of itemContainerIds) {
+            await waitForMediaContainerReady(itemContainerId, facebookAccessToken);
+        }
         // Create carousel container
         const carouselRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media`, {
             method: 'POST',
@@ -1827,6 +1862,8 @@ async function publishPostToInstagramDirect(postId, hasGeneratedImage = true) {
         }
         creationId = containerData.id;
     }
+    // Wait until the container is FINISHED processing by Meta before publishing
+    await waitForMediaContainerReady(creationId, facebookAccessToken);
     // Publish Media Container
     const publishRes = await fetch(`https://graph.facebook.com/v19.0/${instagramAccountId}/media_publish`, {
         method: 'POST',
