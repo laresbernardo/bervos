@@ -11,6 +11,7 @@ import { auth } from './firebase';
 import { HubLogin } from './components/HubLogin';
 import { HubDashboard } from './components/HubDashboard';
 import { HubAccessDenied } from './components/HubAccessDenied';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 declare global {
   interface Window {
@@ -1082,10 +1083,12 @@ function App() {
       return <HubAccessDenied user={user} onBackToHome={() => { window.location.href = '/'; }} />;
     }
     return (
-      <HubDashboard
-        user={user}
-        initialSection={window.location.pathname === '/social' ? 'social' : 'projects'}
-      />
+      <ErrorBoundary>
+        <HubDashboard
+          user={user}
+          initialSection={window.location.pathname === '/social' ? 'social' : 'projects'}
+        />
+      </ErrorBoundary>
     );
   }
 

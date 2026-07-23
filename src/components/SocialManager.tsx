@@ -2137,41 +2137,55 @@ export const SocialManager: React.FC<SocialManagerProps> = ({ user }) => {
     setEditingTitle(false);
   };
 
-  const filteredPosts = posts
+  const filteredPosts = (posts || [])
     .filter(p => {
-      const matchesStatus = selectedStatuses.includes(p.status);
+      if (!p) return false;
+      const status = p.status || 'Draft';
+      const matchesStatus = selectedStatuses.includes(status);
+      const hook = p.hook || '';
+      const project = p.project || '';
+      const caption = p.caption_english || '';
       const matchesSearch = !search ||
-        p.hook.toLowerCase().includes(search.toLowerCase()) ||
-        p.project.toLowerCase().includes(search.toLowerCase()) ||
-        p.caption_english.toLowerCase().includes(search.toLowerCase());
+        hook.toLowerCase().includes(search.toLowerCase()) ||
+        project.toLowerCase().includes(search.toLowerCase()) ||
+        caption.toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesSearch;
     })
     .sort((a, b) => {
+      const dateA = a.suggested_date || '';
+      const dateB = b.suggested_date || '';
+      const projA = a.project || '';
+      const projB = b.project || '';
+      const updatedA = a.updated_at || '';
+      const updatedB = b.updated_at || '';
+
       switch (sortBy) {
         case 'date_asc':
-          if (!a.suggested_date) return 1;
-          if (!b.suggested_date) return -1;
-          return a.suggested_date.localeCompare(b.suggested_date);
+          if (!dateA) return 1;
+          if (!dateB) return -1;
+          return dateA.localeCompare(dateB);
         case 'date_desc':
-          if (!a.suggested_date) return 1;
-          if (!b.suggested_date) return -1;
-          return b.suggested_date.localeCompare(a.suggested_date);
+          if (!dateA) return 1;
+          if (!dateB) return -1;
+          return dateB.localeCompare(dateA);
         case 'project': {
-          const projCmp = a.project.localeCompare(b.project);
+          const projCmp = projA.localeCompare(projB);
           if (projCmp !== 0) return projCmp;
-          if (!a.suggested_date) return 1;
-          if (!b.suggested_date) return -1;
-          return a.suggested_date.localeCompare(b.suggested_date);
+          if (!dateA) return 1;
+          if (!dateB) return -1;
+          return dateA.localeCompare(dateB);
         }
         case 'status': {
           const order = ['Draft', 'Needs AI Revision', 'Approved', 'Scheduled', 'Published'];
-          const statusCmp = order.indexOf(a.status) - order.indexOf(b.status);
+          const statusA = a.status || 'Draft';
+          const statusB = b.status || 'Draft';
+          const statusCmp = order.indexOf(statusA) - order.indexOf(statusB);
           if (statusCmp !== 0) return statusCmp;
-          if (!a.suggested_date) return 1;
-          if (!b.suggested_date) return -1;
-          return a.suggested_date.localeCompare(b.suggested_date);
+          if (!dateA) return 1;
+          if (!dateB) return -1;
+          return dateA.localeCompare(dateB);
         }
-        case 'updated': return b.updated_at.localeCompare(a.updated_at);
+        case 'updated': return updatedB.localeCompare(updatedA);
         default: return 0;
       }
     });
