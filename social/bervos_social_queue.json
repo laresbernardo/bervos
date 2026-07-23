@@ -1,152 +1,199 @@
 [
   {
-    "updated_at": "2026-07-15T17:22:01.255Z",
-    "caption_spanish": "Billio ahora conecta modelos Ollama locales a un servidor MCP en la nube — tus datos financieros nunca salen de tu máquina.",
-    "hook": "Your financial data stays on your machine. The AI that reads it does too.",
-    "instagram_permalink": "https://www.instagram.com/p/Da0m3TMEZwP/",
-    "id": "20260714-001-billio-ollama-mcp",
+    "created_at": "2026-07-14T21:52:00+02:00",
+    "suggested_date": "2026-07-15",
+    "project": "Billio",
+    "published_at": "2026-07-15T17:31:09.341Z",
     "screenshots": [
       "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-001-billio-ollama-mcp/screenshot_1784136042675_0.png",
       "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-001-billio-ollama-mcp/screenshot_1784136043845_1.png",
       "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-001-billio-ollama-mcp/screenshot_1784136044954_2.png"
     ],
-    "user_feedback": "",
+    "instagram_permalink": "https://www.instagram.com/p/Da0m3TMEZwP/",
+    "visual_instruction": "Branded local-first AI architecture diagram showing the Local Ollama (Gemma 4) model connected to a cloud MCP server and Firestore database via a Node.js terminal bridge.",
+    "hook": "Your financial data stays on your machine. The AI that reads it does too.",
+    "id": "20260714-001-billio-ollama-mcp",
+    "updated_at": "2026-07-15T17:22:01.255Z",
+    "post_type": "under_the_hood",
     "status": "Published",
     "slides": [
       "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-001-billio-ollama-mcp/screenshot_1784136042675_0.png",
       "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-001-billio-ollama-mcp/screenshot_1784136044954_2.png",
       "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-001-billio-ollama-mcp/screenshot_1784136043845_1.png"
     ],
-    "visual_instruction": "Branded local-first AI architecture diagram showing the Local Ollama (Gemma 4) model connected to a cloud MCP server and Firestore database via a Node.js terminal bridge.",
-    "mermaid_code": "graph LR\n    A[\"Local Ollama\\n(Gemma 4)\"] -->|\"Inference\"| B[\"Terminal Bridge\\n(Node.js)\"]\n    B -->|\"Bearer Token Auth\"| C[\"MCP Server\\n(Cloud Functions)\"]\n    C -->|\"Tool Calls\"| D[\"Firestore\\n(Ledger Data)\"]\n    D -->|\"Results\"| C\n    C -->|\"Response\"| B\n    B -->|\"Display\"| A\n    \n    style A fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style B fill:#0c121d,stroke:#06b6d4,color:#e0e7ff\n    style C fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style D fill:#0c121d,stroke:#06b6d4,color:#e0e7ff",
     "instagram_media_id": "18083073065409573",
-    "caption_english": "Your financial data stays on your machine. The AI that reads it does too. And it can be 100% free!\n\nBillio now connects a locally-hosted model (i.e. Gemma 4) to a cloud MCP server through a terminal-based bridge script using ollama or opencode (also free). The flow:\n\n1. You pick your model from installed Ollama instances (or set OLLAMA_MODEL env var)\n2. The script authenticates against the deployed MCP endpoint with a persisted Bearer token\n3. Ollama runs inference locally with an 8K context window — large enough for full ledger analysis\n4. Tool calls are routed to Firebase through the MCP protocol, results flow back into the local conversation\n\nNo data leaves your machine except structured MCP tool calls. Model selection is persistent — stored in a local .mcp_model file so you pick once, then just chat.\n\nThe key architecture decision: separating the inference layer (local) from the data layer (cloud) through MCP's standardized tool-calling interface. This means you can swap models without touching a single line of server code.\n\nMore at bervos.org\n\n#BuildInPublic #LocalLLM #MCPProtocol #Firebase #IndieHacker",
-    "project": "Billio",
-    "created_at": "2026-07-14T21:52:00+02:00",
-    "published_at": "2026-07-15T17:31:09.341Z",
-    "post_type": "under_the_hood",
-    "suggested_date": "2026-07-15"
+    "caption_spanish": "Billio ahora conecta modelos Ollama locales a un servidor MCP en la nube — tus datos financieros nunca salen de tu máquina.",
+    "user_feedback": "",
+    "mermaid_code": "graph LR\n    A[\"Local Ollama\\n(Gemma 4)\"] -->|\"Inference\"| B[\"Terminal Bridge\\n(Node.js)\"]\n    B -->|\"Bearer Token Auth\"| C[\"MCP Server\\n(Cloud Functions)\"]\n    C -->|\"Tool Calls\"| D[\"Firestore\\n(Ledger Data)\"]\n    D -->|\"Results\"| C\n    C -->|\"Response\"| B\n    B -->|\"Display\"| A\n    \n    style A fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style B fill:#0c121d,stroke:#06b6d4,color:#e0e7ff\n    style C fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style D fill:#0c121d,stroke:#06b6d4,color:#e0e7ff",
+    "caption_english": "Your financial data stays on your machine. The AI that reads it does too. And it can be 100% free!\n\nBillio now connects a locally-hosted model (i.e. Gemma 4) to a cloud MCP server through a terminal-based bridge script using ollama or opencode (also free). The flow:\n\n1. You pick your model from installed Ollama instances (or set OLLAMA_MODEL env var)\n2. The script authenticates against the deployed MCP endpoint with a persisted Bearer token\n3. Ollama runs inference locally with an 8K context window — large enough for full ledger analysis\n4. Tool calls are routed to Firebase through the MCP protocol, results flow back into the local conversation\n\nNo data leaves your machine except structured MCP tool calls. Model selection is persistent — stored in a local .mcp_model file so you pick once, then just chat.\n\nThe key architecture decision: separating the inference layer (local) from the data layer (cloud) through MCP's standardized tool-calling interface. This means you can swap models without touching a single line of server code.\n\nMore at bervos.org\n\n#BuildInPublic #LocalLLM #MCPProtocol #Firebase #IndieHacker"
   },
   {
-    "instagram_media_id": "17862787428647594",
     "hook": "Monitoring 10+ projects meant 10 open tabs. Now it's one dashboard.",
-    "suggested_date": "2026-07-15",
-    "user_feedback": "",
-    "status": "Published",
-    "slides": [
-      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-002-bervos-hub-dashboard/screenshot_1784134747298_0.png"
-    ],
-    "published_at": "2026-07-15T17:12:24.975Z",
-    "project": "BERVOS",
-    "screenshots": [
-      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-002-bervos-hub-dashboard/screenshot_1784134747298_0.png"
-    ],
-    "created_at": "2026-07-14T21:52:00+02:00",
     "updated_at": "2026-07-15T17:12:10.288Z",
-    "id": "20260714-002-bervos-hub-dashboard",
-    "post_type": "carousel_before_after",
-    "caption_spanish": "This update introduces BERVOS, a unified dashboard that consolidates monitoring for multiple projects, replacing disparate console tabs with a centralized interface for tracking commits and system health.",
-    "instagram_permalink": "https://www.instagram.com/p/Da0kt_hEYjU/",
-    "mermaid_code": "graph TD\n    A[\"ecosystem.json\"] -->|\"Project List\"| B[\"Cloud Function\\n(hubApi)\"]\n    B -->|\"For each project\"| C{\"Data Sources\"}\n    C -->|\"Stars, Issues\"| D[\"GitHub API\"]\n    C -->|\"Users, Auth\"| E[\"Firebase Admin SDK\"]\n    C -->|\"Backlog\"| F[\"raw.githubusercontent\"]\n    D --> G[\"SWR Cache\\n(Firestore)\"]\n    E --> G\n    F --> G\n    G -->|\"Stale? Background refresh\"| B\n    G -->|\"Serve immediately\"| H[\"Hub Dashboard\\n(React + Vite)\"]\n    \n    style A fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style B fill:#0c121d,stroke:#06b6d4,color:#e0e7ff\n    style G fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style H fill:#0c121d,stroke:#06b6d4,color:#e0e7ff",
-    "caption_english": "Stop switching between 10 different monitoring tabs just to track your projects health.\n\nManaging scattered #Firebase consoles and various repositories created a constant bottleneck in my operational workflow. I built BERVOS Hub to unify these data streams into a single dashboard for real-time visibility.\n\n• Integrated GitHub API for centralized commit tracking and deployment status.\n• Utilized Firebase Admin SDK to aggregate telemetry data into a unified schema.\n• Implemented SWR for seamless data revalidation and responsive UI performance.\n\nExplore the full technical architecture at bervos.org/hub. See screenshot!\n\n#SoftwareEngineering #SystemDesign #DevOps #BackendArchitecture",
-    "visual_instruction": "3-slide carousel. Slide 1: Dark background with frustrated emoji or multiple browser tab illustration. Mono label '// SLIDE_01 // THE BOTTLENECK'. Text: '10 Firebase consoles. 10 GitHub repos. 10 tabs.' Slide 2: Mermaid architecture diagram rendered on dark bg. Label '// SLIDE_02 // THE APPROACH'. Slide 3: Actual screenshot of the Hub dashboard at bervos.org/hub showing project cards with metrics. Label '// SLIDE_03 // THE RESULT'. All slides use BERVOS brand colors."
-  },
-  {
-    "id": "20260714-003-pinmage-geocoding",
-    "status": "Draft",
-    "post_type": "under_the_hood",
-    "project": "Pinmage",
-    "hook": "Old photos have no GPS data. But they have visual clues.",
-    "caption_english": "Old photos have no GPS data. But they have visual clues.\n\nPinmage analyzes scanned photo albums using AI vision to deduce where a photo was taken. The location pipeline has 4 fallback layers:\n\n1. AI Vision (#Gemini or local #Ollama) analyzes the image → extracts a place name and coordinates\n2. OSM Nominatim (primary geocoder) → converts the place name to coordinates\n3. Apple CLGeocoder (secondary) → fallback when Nominatim misses\n4. AI-provided coordinates (last resort) → validated with isValidCoordinate()\n\nEach layer has its own cache to avoid redundant lookups. The Nominatim rate limiter uses a minimum 1-second interval between requests — OSM's terms of service, respected.\n\nWhy the cascade? No single geocoder handles everything. Nominatim excels at specific places. CLGeocoder handles regional queries better. AI coordinates are surprisingly accurate for landmark-adjacent photos.\n\nResult: ~85% of scanned photos from the 1990s now have GPS metadata written directly to EXIF.\n\nMore at pinmage.bervos.org\n\n#SwiftUI #Gemini #Ollama #macOS #OpenStreetMap",
-    "caption_spanish": "Pinmage uses a 4-layer geocoding cascade to reverse-engineer GPS coordinates from old, scanned photo albums.",
-    "visual_instruction": "Generate a branded image showing the geocoding cascade as a vertical waterfall/funnel. Top: AI Vision eye icon. Layer 2: OSM Nominatim globe. Layer 3: Apple maps pin. Layer 4: AI coordinates as last resort. Dark bg, indigo/cyan accent connections. Mono label '// UNDER_THE_HOOD // PINMAGE'. Also prepare Ray.so screenshot of PinmageManager.swift showing the AI lat/lon fallback block (~8 lines starting at 'AI lat/lon as last-resort fallback').",
-    "mermaid_code": "graph TD\n    A[\"Photo Input\\n(No GPS)\"] --> B[\"AI Vision\\n(Gemini / Ollama)\"]\n    B -->|\"Place name\"| C[\"OSM Nominatim\\n(1 req/sec)\"]\n    C -->|\"Found?\"| D{\"Coordinates?\"}\n    D -->|\"Yes\"| H[\"Write EXIF\\nGPS Metadata\"]\n    D -->|\"No\"| E[\"Apple CLGeocoder\"]\n    E -->|\"Found?\"| F{\"Coordinates?\"}\n    F -->|\"Yes\"| H\n    F -->|\"No\"| G[\"AI-provided\\nLat/Lon\"]\n    G -->|\"isValidCoordinate()\"| H\n    \n    style A fill:#0c121d,stroke:#06b6d4,color:#e0e7ff\n    style B fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style C fill:#0c121d,stroke:#06b6d4,color:#e0e7ff\n    style H fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff",
-    "suggested_date": "2026-07-24",
-    "user_feedback": "",
-    "created_at": "2026-07-14T21:52:00+02:00",
-    "updated_at": "2026-07-14T21:52:00+02:00"
-  },
-  {
-    "id": "20260714-004-aura-heatmap",
-    "status": "Draft",
-    "post_type": "vibe_coding_reality",
-    "project": "Aura",
-    "hook": "Plotting 10 years of photos on a map is easy. Making it fly between continents smoothly is not.",
-    "caption_english": "Plotting 10 years of photos on a map is easy. Making it fly between continents smoothly is not.\n\nAura's photo heatmap has a 'Time Tour' playback mode — it animates through your photos chronologically, flying the map to each location. The first version flickered badly.\n\nThe problem: every animation frame was removing ALL map annotations and re-adding them. Even if only one cluster changed. Apple's #MapKit diffing was non-existent — we had to build our own in #SwiftUI.\n\nThe fix: optimized annotation diffing.\n\n• Calculate toRemove: annotations in old set but not in new set\n• Calculate toAdd: annotations in new set but not in old set  \n• Calculate toUpdate: same ID but different count → remove old, add new\n• Only touch what actually changed\n\nThen the distance problem: jumping from Tokyo to Buenos Aires in one animated step looked jarring. Solution: two-step flyover zoom. If distance > 15°, first zoom out to a midpoint region, then zoom into the target. 550ms between steps.\n\nResult: smooth, cinematic playback across a decade of travel photos.\n\nMore at aura.bervos.org\n\n#SwiftUI #MapKit #macOS #AppleDev #WebDev",
-    "caption_spanish": "Aura's Time Tour mode performs smooth, two-step map transitions between photo locations across different continents.",
-    "visual_instruction": "Generate a branded image showing a world map with photo clusters connected by curved flight paths. Dark background, indigo dots for clusters, cyan arced lines for flight paths. Include a small playback control bar at bottom. Mono label '// VIBE_CODING_REALITY // AURA'. Also prepare Ray.so screenshot of PhotosHeatmapView.swift showing the toRemove/toAdd/toUpdate diffing logic (~12 lines).",
-    "mermaid_code": null,
-    "suggested_date": "2026-07-28",
-    "user_feedback": "",
-    "created_at": "2026-07-14T21:52:00+02:00",
-    "updated_at": "2026-07-14T21:52:00+02:00"
-  },
-  {
-    "instagram_permalink": "https://www.instagram.com/p/Da0ujP1ETrS/",
     "suggested_date": "2026-07-15",
-    "screenshots": [
-      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-005-tripitdown-multiconv/screenshot_1784140556022_0.png",
-      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-005-tripitdown-multiconv/screenshot_1784140628449_1.png"
-    ],
-    "id": "20260714-005-tripitdown-multiconv",
-    "instagram_media_id": "17865385236650346",
-    "updated_at": "2026-07-15T18:41:04.113Z",
-    "post_type": "carousel_before_after",
-    "caption_spanish": "tripitdown has been updated to support multi-thread conversation history, automated session titling, and a transparent error-handling fallback system for improved travel planning reliability.",
-    "hook": "One chat thread per trip wasn't enough. Neither was losing context between sessions.",
-    "status": "Published",
-    "visual_instruction": "3-slide carousel. Slide 1: Dark bg, illustration of a single cramped chat thread with mixed topics. Mono label '// SLIDE_01 // THE BOTTLENECK'. Slide 2: Code snippet of generateConversationTitle() function from App.tsx (~10 lines). Dark code editor theme. Label '// SLIDE_02 // THE APPROACH'. Slide 3: Screenshot or mockup of the conversation sidebar with multiple named chats. Label '// SLIDE_03 // THE RESULT'. All slides BERVOS brand.",
     "user_feedback": "",
-    "created_at": "2026-07-14T21:52:00+02:00",
-    "caption_english": "Travel planning shouldn't collapse under the weight of a single chat thread. \n\nManaging flight logistics, dining reservations, and site-seeing within one context window leads to information loss and fragmented planning. tripitdown now implements structured session management to maintain state across complex travel itineraries using #Firebase for backend persistence. \n\n• Multi-thread support allows segmentation of trip logistics into dedicated conversations. \n• Automated session titling using Gemini 3.5 Flash simplifies navigation. \n• Transparent fallback logic ensures service continuity if a model returns a 503 error. \n• Integrated token tracking provides visibility into #GeminiAPI usage costs per project. \n\nView the technical documentation and project status at tripitdown.bervos.org. \n\n#GeminiAPI #Firebase #CloudFunctions #SoftwareArchitecture #APIIntegration",
-    "mermaid_code": "graph TD\n    A[\"User Message\"] --> B{\"Primary Model\\n(Gemini 2.5 Pro)\"}\n    B -->|\"200 OK\"| C[\"Display Response\"]\n    B -->|\"503 Error\"| D[\"Auto-Retry\\n(Fallback Model)\"]\n    D -->|\"200 OK\"| C\n    C --> E[\"Track Token Usage\"]\n    E --> F[\"Firestore\\n(per-conversation)\"]\n    \n    A --> G[\"Generate Title\\n(Gemini 3.5 Flash)\"]\n    G --> H[\"Update Sidebar\"]\n    \n    style A fill:#0c121d,stroke:#06b6d4,color:#e0e7ff\n    style B fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style D fill:#1e1b4b,stroke:#fbbf24,color:#e0e7ff\n    style F fill:#0c121d,stroke:#06b6d4,color:#e0e7ff",
-    "project": "tripitdown",
-    "published_at": "2026-07-15T18:38:19.615Z",
     "slides": [
-      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-005-tripitdown-multiconv/screenshot_1784140556022_0.png",
-      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-005-tripitdown-multiconv/screenshot_1784140628449_1.png"
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-002-bervos-hub-dashboard/screenshot_1784134747298_0.png"
+    ],
+    "screenshots": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-002-bervos-hub-dashboard/screenshot_1784134747298_0.png"
+    ],
+    "project": "BERVOS",
+    "caption_spanish": "This update introduces BERVOS, a unified dashboard that consolidates monitoring for multiple projects, replacing disparate console tabs with a centralized interface for tracking commits and system health.",
+    "published_at": "2026-07-15T17:12:24.975Z",
+    "mermaid_code": "graph TD\n    A[\"ecosystem.json\"] -->|\"Project List\"| B[\"Cloud Function\\n(hubApi)\"]\n    B -->|\"For each project\"| C{\"Data Sources\"}\n    C -->|\"Stars, Issues\"| D[\"GitHub API\"]\n    C -->|\"Users, Auth\"| E[\"Firebase Admin SDK\"]\n    C -->|\"Backlog\"| F[\"raw.githubusercontent\"]\n    D --> G[\"SWR Cache\\n(Firestore)\"]\n    E --> G\n    F --> G\n    G -->|\"Stale? Background refresh\"| B\n    G -->|\"Serve immediately\"| H[\"Hub Dashboard\\n(React + Vite)\"]\n    \n    style A fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style B fill:#0c121d,stroke:#06b6d4,color:#e0e7ff\n    style G fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style H fill:#0c121d,stroke:#06b6d4,color:#e0e7ff",
+    "instagram_permalink": "https://www.instagram.com/p/Da0kt_hEYjU/",
+    "visual_instruction": "3-slide carousel. Slide 1: Dark background with frustrated emoji or multiple browser tab illustration. Mono label '// SLIDE_01 // THE BOTTLENECK'. Text: '10 Firebase consoles. 10 GitHub repos. 10 tabs.' Slide 2: Mermaid architecture diagram rendered on dark bg. Label '// SLIDE_02 // THE APPROACH'. Slide 3: Actual screenshot of the Hub dashboard at bervos.org/hub showing project cards with metrics. Label '// SLIDE_03 // THE RESULT'. All slides use BERVOS brand colors.",
+    "created_at": "2026-07-14T21:52:00+02:00",
+    "status": "Published",
+    "post_type": "carousel_before_after",
+    "caption_english": "Stop switching between 10 different monitoring tabs just to track your projects health.\n\nManaging scattered #Firebase consoles and various repositories created a constant bottleneck in my operational workflow. I built BERVOS Hub to unify these data streams into a single dashboard for real-time visibility.\n\n• Integrated GitHub API for centralized commit tracking and deployment status.\n• Utilized Firebase Admin SDK to aggregate telemetry data into a unified schema.\n• Implemented SWR for seamless data revalidation and responsive UI performance.\n\nExplore the full technical architecture at bervos.org/hub. See screenshot!\n\n#SoftwareEngineering #SystemDesign #DevOps #BackendArchitecture",
+    "id": "20260714-002-bervos-hub-dashboard",
+    "instagram_media_id": "17862787428647594"
+  },
+  {
+    "post_type": "under_the_hood",
+    "scheduled_at": null,
+    "status": "Published",
+    "mermaid_code": "graph TD\n    A[\"Photo Input\\n(No GPS)\"] --> B[\"AI Vision\\n(Gemini / Ollama)\"]\n    B -->|\"Place name\"| C[\"OSM Nominatim\\n(1 req/sec)\"]\n    C -->|\"Found?\"| D{\"Coordinates?\"}\n    D -->|\"Yes\"| H[\"Write EXIF\\nGPS Metadata\"]\n    D -->|\"No\"| E[\"Apple CLGeocoder\"]\n    E -->|\"Found?\"| F{\"Coordinates?\"}\n    F -->|\"Yes\"| H\n    F -->|\"No\"| G[\"AI-provided\\nLat/Lon\"]\n    G -->|\"isValidCoordinate()\"| H\n    \n    style A fill:#0c121d,stroke:#06b6d4,color:#e0e7ff\n    style B fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style C fill:#0c121d,stroke:#06b6d4,color:#e0e7ff\n    style H fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff",
+    "caption_spanish": "Pinmage uses a 4-layer geocoding cascade to reverse-engineer GPS coordinates from old, scanned photo albums.",
+    "suggested_date": "2026-07-18",
+    "hook": "Old photos have no GPS data. But they have visual clues.",
+    "instagram_media_id": "18125417404643849",
+    "updated_at": "2026-07-18T12:10:48.797Z",
+    "screenshots": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-003-pinmage-geocoding/screenshot_1784376557801_0.png"
+    ],
+    "visual_instruction": "Generate a branded image showing the geocoding cascade as a vertical waterfall/funnel. Top: AI Vision eye icon. Layer 2: OSM Nominatim globe. Layer 3: Apple maps pin. Layer 4: AI coordinates as last resort. Dark bg, indigo/cyan accent connections. Mono label '// UNDER_THE_HOOD // PINMAGE'. Also prepare Ray.so screenshot of PinmageManager.swift showing the AI lat/lon fallback block (~8 lines starting at 'AI lat/lon as last-resort fallback').",
+    "project": "Pinmage",
+    "created_at": "2026-07-14T21:52:00+02:00",
+    "caption_english": "Old photos have no GPS data. But they have visual clues.\n\nPinmage analyzes scanned photo albums using AI vision to deduce where a photo was taken. The location pipeline has 4 fallback layers:\n\n1. AI Vision (#Gemini or local #Ollama) analyzes the image → extracts a place name and coordinates\n2. OSM Nominatim (primary geocoder) → converts the place name to coordinates\n3. Apple CLGeocoder (secondary) → fallback when Nominatim misses\n4. AI-provided coordinates (last resort) → validated with isValidCoordinate()\n\nEach layer has its own cache to avoid redundant lookups. The Nominatim rate limiter uses a minimum 1-second interval between requests — OSM's terms of service, respected.\n\nWhy the cascade? No single geocoder handles everything. Nominatim excels at specific places. CLGeocoder handles regional queries better. AI coordinates are surprisingly accurate for landmark-adjacent photos.\n\nResult: ~85% of scanned photos from the 1990s now have GPS metadata written directly to EXIF.\n\nMore at pinmage.bervos.org\n\n#SwiftUI #Gemini #Ollama #macOS #OpenStreetMap",
+    "published_at": "2026-07-18T12:27:11.136Z",
+    "instagram_permalink": "https://www.instagram.com/p/Da7ydbdlvx7/",
+    "user_feedback": "",
+    "id": "20260714-003-pinmage-geocoding",
+    "slides": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-003-pinmage-geocoding/screenshot_1784376557801_0.png",
+      "__generated__"
     ]
   },
   {
-    "id": "20260714-006-scribo-morse",
-    "status": "Draft",
-    "post_type": "vibe_coding_reality",
-    "project": "Scribo",
-    "hook": "Supporting Arabic, Japanese, and Elvish wasn't enough. Morse code forced a completely different rendering approach.",
-    "caption_english": "Supporting Arabic, Japanese, and Elvish wasn't enough. Morse code forced a completely different rendering approach.\n\nScribo helps you practice writing systems through spaced repetition. Each system renders differently:\n• Arabic/Japanese: Unicode text glyphs\n• Elvish (Tengwar): Custom web font\n• Morse: Can't use text at all\n\nMorse code is visual — dots and dashes. So I built MorseDisplay: a #React component that renders each symbol as a sized div. Dots are 5×5px circles, dashes are 14×5px rounded rectangles. Three size variants (large/small/mini) for different contexts.\n\nThe harder problem: mixed practice sessions. When you shuffle Arabic + Morse + Elvish, the renderer needs per-item catalog detection to pick the right component. The solution: each practice item carries a `catalog` field, and the render switch checks it before choosing between text, font, or visual display.\n\nAlso shipped: dynamic reporting windows (7d/30d/90d/all/custom), session history persistence to #Firestore, and Greek alphabet support.\n\n526 lines added for Morse alone.\n\nMore at scribo.bervos.org\n\n#React #Firestore #WebDev #TypeScript",
-    "caption_spanish": "Scribo adds Morse code spaced-repetition training using custom visual SVG dot/dash components.",
-    "visual_instruction": "Generate a branded image showing different writing systems side by side on dark cards: Arabic character, Japanese kana, Elvish tengwar letter, and Morse code dots/dashes. Dark bg, each card with a subtle border. The Morse card should show visual dots and dashes (not text). Mono label '// VIBE_CODING_REALITY // SCRIBO'. Also prepare Ray.so screenshot of the MorseDisplay component from Practice.jsx (~15 lines showing the dot/dash rendering logic).",
     "mermaid_code": null,
-    "suggested_date": "2026-08-04",
+    "project": "Aura",
+    "instagram_permalink": "https://www.instagram.com/p/DbDBol6loki/",
+    "published_at": "2026-07-21T07:54:27.008Z",
+    "instagram_media_id": "18158819923470449",
+    "suggested_date": "2026-07-21",
+    "updated_at": "2026-07-19T18:20:16.194Z",
     "user_feedback": "",
-    "created_at": "2026-07-14T21:52:00+02:00",
-    "updated_at": "2026-07-14T21:52:00+02:00"
-  },
-  {
-    "id": "20260714-007-yt2mp3-lyrics",
-    "status": "Draft",
-    "post_type": "under_the_hood",
-    "project": "YT2MP3",
-    "hook": "A Chrome extension that downloads YouTube audio, tags it with iTunes metadata, and now embeds lyrics — all locally.",
-    "caption_english": "A #Chrome extension that downloads YouTube audio, tags it with #iTunes metadata, and now embeds lyrics — all locally.\n\nYT2MP3's download pipeline now has 5 stages:\n\n1. Chrome Extension captures the YouTube URL\n2. Local #NodeJS server receives it via localhost\n3. yt-dlp extracts audio, ffmpeg converts to MP3\n4. iTunes Search API finds the correct metadata (artist, album, cover art)\n5. LRCLIB API fetches lyrics — tries artist+title first, falls back to general query\n\nThe lyrics integration was cleaner than expected. LRCLIB returns either plain or synced (timestamped) lyrics. If only synced is available, we strip the timestamps with a regex: `.replace(/\\[\\d+:\\d+(?:\\.\\d+)?\\]/g, '')`\n\nAlso added: silent server wake-up on popup load (so the extension feels instant), auto-open files after download, and a search hint input for when YouTube titles are too messy for iTunes matching.\n\nEverything runs on your machine. No cloud processing, no subscriptions.\n\nMore at github.com/laresbernardo/YT2MP3\n\n#ChromeExtension #NodeJS #iTunes #LRCLIB #JavaScript",
-    "caption_spanish": "YT2MP3 automatically tags downloaded YouTube audio with iTunes metadata and embeds lyrics from LRCLIB.",
-    "visual_instruction": "Generate a branded image showing the 5-stage download pipeline as a horizontal flow. Icons: Chrome logo → Node.js → yt-dlp/ffmpeg → iTunes → LRCLIB. Dark bg, indigo/cyan connection lines. Each stage as a rounded card. Mono label '// UNDER_THE_HOOD // YT2MP3'. Also prepare Ray.so screenshot of the fetchLyrics() function from server/index.js (~12 lines showing the LRCLIB search + fallback logic).",
-    "mermaid_code": "graph LR\n    A[\"Chrome\\nExtension\"] -->|\"YouTube URL\"| B[\"Node.js\\nServer\"]\n    B -->|\"Extract\"| C[\"yt-dlp +\\nffmpeg\"]\n    C -->|\"Raw MP3\"| D[\"iTunes\\nSearch API\"]\n    D -->|\"Metadata\"| E[\"LRCLIB\\nLyrics API\"]\n    E -->|\"Tagged MP3\"| F[\"~/Desktop\"]\n    \n    style A fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style B fill:#0c121d,stroke:#06b6d4,color:#e0e7ff\n    style C fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style D fill:#0c121d,stroke:#06b6d4,color:#e0e7ff\n    style E fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style F fill:#0c121d,stroke:#06b6d4,color:#e0e7ff",
-    "suggested_date": "2026-08-07",
-    "user_feedback": "",
-    "created_at": "2026-07-14T21:52:00+02:00",
-    "updated_at": "2026-07-14T21:52:00+02:00"
-  },
-  {
-    "updated_at": "2026-07-17T08:30:38.903Z",
+    "slides": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-004-aura-heatmap/screenshot_1784458868034_0.png",
+      "__generated__"
+    ],
     "status": "Published",
+    "post_type": "vibe_coding_reality",
+    "caption_english": "Plotting 10 years of photos on a map is easy. Making it fly between continents smoothly is not.\n\nAura's photo heatmap has a 'Time Tour' playback mode — it animates through your photos chronologically, flying the map to each location. The first version flickered badly.\n\nThe problem: every animation frame was removing ALL map annotations and re-adding them. Even if only one cluster changed. Apple's #MapKit diffing was non-existent — we had to build our own in #SwiftUI.\n\nThe fix: optimized annotation diffing.\n\n• Calculate toRemove: annotations in old set but not in new set\n• Calculate toAdd: annotations in new set but not in old set  \n• Calculate toUpdate: same ID but different count → remove old, add new\n• Only touch what actually changed\n\nThen the distance problem: jumping from Tokyo to Buenos Aires in one animated step looked jarring. Solution: two-step flyover zoom. If distance > 15°, first zoom out to a midpoint region, then zoom into the target. 550ms between steps.\n\nResult: smooth, cinematic playback across a decade of travel photos.\n\nMore at aura.bervos.org\n\n#SwiftUI #MapKit #macOS #AppleDev #WebDev",
+    "scheduled_at": null,
+    "created_at": "2026-07-14T21:52:00+02:00",
+    "visual_instruction": "Generate a branded image showing a world map with photo clusters connected by curved flight paths. Dark background, indigo dots for clusters, cyan arced lines for flight paths. Include a small playback control bar at bottom. Mono label '// VIBE_CODING_REALITY // AURA'. Also prepare Ray.so screenshot of PhotosHeatmapView.swift showing the toRemove/toAdd/toUpdate diffing logic (~12 lines).",
+    "caption_spanish": "Aura's Time Tour mode performs smooth, two-step map transitions between photo locations across different continents.",
+    "id": "20260714-004-aura-heatmap",
+    "screenshots": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-004-aura-heatmap/screenshot_1784458868034_0.png"
+    ],
+    "hook": "Plotting 10 years of photos on a map is easy. Making it fly between continents smoothly is not."
+  },
+  {
+    "visual_instruction": "3-slide carousel. Slide 1: Dark bg, illustration of a single cramped chat thread with mixed topics. Mono label '// SLIDE_01 // THE BOTTLENECK'. Slide 2: Code snippet of generateConversationTitle() function from App.tsx (~10 lines). Dark code editor theme. Label '// SLIDE_02 // THE APPROACH'. Slide 3: Screenshot or mockup of the conversation sidebar with multiple named chats. Label '// SLIDE_03 // THE RESULT'. All slides BERVOS brand.",
+    "mermaid_code": "graph TD\n    A[\"User Message\"] --> B{\"Primary Model\\n(Gemini 2.5 Pro)\"}\n    B -->|\"200 OK\"| C[\"Display Response\"]\n    B -->|\"503 Error\"| D[\"Auto-Retry\\n(Fallback Model)\"]\n    D -->|\"200 OK\"| C\n    C --> E[\"Track Token Usage\"]\n    E --> F[\"Firestore\\n(per-conversation)\"]\n    \n    A --> G[\"Generate Title\\n(Gemini 3.5 Flash)\"]\n    G --> H[\"Update Sidebar\"]\n    \n    style A fill:#0c121d,stroke:#06b6d4,color:#e0e7ff\n    style B fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style D fill:#1e1b4b,stroke:#fbbf24,color:#e0e7ff\n    style F fill:#0c121d,stroke:#06b6d4,color:#e0e7ff",
+    "updated_at": "2026-07-15T18:41:04.113Z",
+    "caption_english": "Travel planning shouldn't collapse under the weight of a single chat thread. \n\nManaging flight logistics, dining reservations, and site-seeing within one context window leads to information loss and fragmented planning. tripitdown now implements structured session management to maintain state across complex travel itineraries using #Firebase for backend persistence. \n\n• Multi-thread support allows segmentation of trip logistics into dedicated conversations. \n• Automated session titling using Gemini 3.5 Flash simplifies navigation. \n• Transparent fallback logic ensures service continuity if a model returns a 503 error. \n• Integrated token tracking provides visibility into #GeminiAPI usage costs per project. \n\nView the technical documentation and project status at tripitdown.bervos.org. \n\n#GeminiAPI #Firebase #CloudFunctions #SoftwareArchitecture #APIIntegration",
+    "instagram_media_id": "17865385236650346",
+    "created_at": "2026-07-14T21:52:00+02:00",
+    "id": "20260714-005-tripitdown-multiconv",
+    "caption_spanish": "tripitdown has been updated to support multi-thread conversation history, automated session titling, and a transparent error-handling fallback system for improved travel planning reliability.",
+    "project": "tripitdown",
+    "post_type": "carousel_before_after",
     "user_feedback": "",
+    "slides": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-005-tripitdown-multiconv/screenshot_1784140556022_0.png",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-005-tripitdown-multiconv/screenshot_1784140628449_1.png"
+    ],
+    "status": "Published",
+    "hook": "One chat thread per trip wasn't enough. Neither was losing context between sessions.",
+    "suggested_date": "2026-07-15",
+    "instagram_permalink": "https://www.instagram.com/p/Da0ujP1ETrS/",
+    "screenshots": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-005-tripitdown-multiconv/screenshot_1784140556022_0.png",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-005-tripitdown-multiconv/screenshot_1784140628449_1.png"
+    ],
+    "published_at": "2026-07-15T18:38:19.615Z"
+  },
+  {
+    "suggested_date": "2026-07-24",
+    "id": "20260714-006-scribo-morse",
+    "status": "Scheduled",
+    "visual_instruction": "Generate a branded image showing different writing systems side by side on dark cards: Arabic character, Japanese kana, Elvish tengwar letter, and Morse code dots/dashes. Dark bg, each card with a subtle border. The Morse card should show visual dots and dashes (not text). Mono label '// VIBE_CODING_REALITY // SCRIBO'. Also prepare Ray.so screenshot of the MorseDisplay component from Practice.jsx (~15 lines showing the dot/dash rendering logic).",
+    "post_type": "vibe_coding_reality",
+    "mermaid_code": null,
+    "updated_at": "2026-07-23T19:53:15.135Z",
+    "caption_english": "Supporting Arabic, Japanese, and Elvish wasn't enough. Morse code forced a completely different rendering approach.\n\nScribo helps you practice writing systems through spaced repetition. Each system renders differently:\n• Arabic/Japanese: Unicode text glyphs\n• Elvish (Tengwar): Custom web font\n• Morse: Can't use text at all\n\nMorse code is visual — dots and dashes. So I built MorseDisplay: a #React component that renders each symbol as a sized div. Dots are 5×5px circles, dashes are 14×5px rounded rectangles. Three size variants (large/small/mini) for different contexts.\n\nThe harder problem: mixed practice sessions. When you shuffle Arabic + Morse + Elvish, the renderer needs per-item catalog detection to pick the right component. The solution: each practice item carries a `catalog` field, and the render switch checks it before choosing between text, font, or visual display.\n\nAlso shipped: dynamic reporting windows (7d/30d/90d/all/custom), session history persistence to #Firestore, and Greek alphabet support.\n\n526 lines added for Morse alone.\n\nMore at scribo.bervos.org\n\n#React #Firestore #WebDev #TypeScript",
+    "scheduled_at": "2026-07-24T07:00:00.000Z",
+    "instagram_scheduled_id": null,
+    "caption_spanish": "Scribo adds Morse code spaced-repetition training using custom visual SVG dot/dash components.",
+    "project": "Scribo",
+    "created_at": "2026-07-14T21:52:00+02:00",
+    "user_feedback": "",
+    "slides": [
+      "__generated__"
+    ],
+    "hook": "Supporting Arabic, Japanese, and Elvish wasn't enough. Morse code forced a completely different rendering approach."
+  },
+  {
+    "visual_instruction": "Generate a branded image showing the 5-stage download pipeline as a horizontal flow. Icons: Chrome logo → Node.js → yt-dlp/ffmpeg → iTunes → LRCLIB. Dark bg, indigo/cyan connection lines. Each stage as a rounded card. Mono label '// UNDER_THE_HOOD // YT2MP3'. Also prepare Ray.so screenshot of the fetchLyrics() function from server/index.js (~12 lines showing the LRCLIB search + fallback logic).",
+    "caption_spanish": "YT2MP3 automatically tags downloaded YouTube audio with iTunes metadata and embeds lyrics from LRCLIB.",
+    "id": "20260714-007-yt2mp3-lyrics",
+    "project": "YT2MP3",
+    "caption_english": "A #Chrome extension that downloads YouTube audio, tags it with #iTunes metadata, and now embeds lyrics — all locally.\n\nYT2MP3's download pipeline now has 5 stages:\n\n1. Chrome Extension captures the YouTube URL\n2. Local #NodeJS server receives it via localhost\n3. yt-dlp extracts audio, ffmpeg converts to MP3\n4. iTunes Search API finds the correct metadata (artist, album, cover art)\n5. LRCLIB API fetches lyrics — tries artist+title first, falls back to general query\n\nThe lyrics integration was cleaner than expected. LRCLIB returns either plain or synced (timestamped) lyrics. If only synced is available, we strip the timestamps with a regex: `.replace(/\\[\\d+:\\d+(?:\\.\\d+)?\\]/g, '')`\n\nAlso added: silent server wake-up on popup load (so the extension feels instant), auto-open files after download, and a search hint input for when YouTube titles are too messy for iTunes matching.\n\nEverything runs on your machine. No cloud processing, no subscriptions.\n\nMore at github.com/laresbernardo/YT2MP3\n\n#ChromeExtension #NodeJS #iTunes #LRCLIB #JavaScript",
+    "screenshots": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-007-yt2mp3-lyrics/screenshot_1784836526480_0.png",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-007-yt2mp3-lyrics/screenshot_1784836532884_1.png",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-007-yt2mp3-lyrics/screenshot_1784836556780_2.png"
+    ],
+    "suggested_date": "2026-07-25",
+    "updated_at": "2026-07-23T19:56:38.256Z",
+    "scheduled_at": "2026-07-25T07:00:00.000Z",
+    "created_at": "2026-07-14T21:52:00+02:00",
+    "mermaid_code": "graph LR\n    A[\"Chrome\\nExtension\"] -->|\"YouTube URL\"| B[\"Node.js\\nServer\"]\n    B -->|\"Extract\"| C[\"yt-dlp +\\nffmpeg\"]\n    C -->|\"Raw MP3\"| D[\"iTunes\\nSearch API\"]\n    D -->|\"Metadata\"| E[\"LRCLIB\\nLyrics API\"]\n    E -->|\"Tagged MP3\"| F[\"~/Desktop\"]\n    \n    style A fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style B fill:#0c121d,stroke:#06b6d4,color:#e0e7ff\n    style C fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style D fill:#0c121d,stroke:#06b6d4,color:#e0e7ff\n    style E fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style F fill:#0c121d,stroke:#06b6d4,color:#e0e7ff",
+    "status": "Scheduled",
+    "slides": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-007-yt2mp3-lyrics/screenshot_1784836526480_0.png",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-007-yt2mp3-lyrics/screenshot_1784836532884_1.png",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-007-yt2mp3-lyrics/screenshot_1784836556780_2.png"
+    ],
+    "hook": "A Chrome extension that downloads YouTube audio, tags it with iTunes metadata, and now embeds lyrics — all locally.",
+    "user_feedback": "",
+    "post_type": "under_the_hood"
+  },
+  {
+    "caption_spanish": "BERVOS implemented an automated metadata generation system using a Python script to create JSON-LD, llms.txt, and sitemaps, ensuring the project is fully indexable by both search engines and AI models.",
+    "caption_english": "If an LLM can't find your project, it can't recommend it.\n\nBERVOS suffered from a lack of machine-readable data, leaving the project invisible to search engines and AI models. Without structured metadata, discovery via #SEO and LLM indexing remained impossible.\n\n• Automated JSON-LD generation for Schema.org SoftwareApplication markup.\n• Implemented llms.txt and llms-full.txt standards for direct AI discovery.\n• Integrated automated sitemap.xml and robots.txt maintenance.\n• Added a custom DecryptedText character animation component for improved UI engagement.\n\nOne command now synchronizes all metadata across the entire ecosystem. Check out the implementation details at bervos.org.\n\n#LLMOptimization #SchemaMarkup #WebDevelopment #PythonScripting",
+    "slides": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-008-bervos-seo-geo/screenshot_1784142067900_3.png",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-008-bervos-seo-geo/screenshot_1784141891631_0.png",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-008-bervos-seo-geo/screenshot_1784141944531_1.png",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-008-bervos-seo-geo/screenshot_1784142031482_2.png"
+    ],
+    "visual_instruction": "3-slide carousel. Slide 1: Dark bg, illustration of a search bar with 'no results' or empty structured data. Mono label '// SLIDE_01 // THE BOTTLENECK'. Slide 2: Code snippet of the generate_ai_metadata.py script showing the JSON-LD generation section (~10 lines). Label '// SLIDE_02 // THE APPROACH'. Slide 3: Split view showing the DecryptedText animation (Matrix-style character scramble) and a JSON-LD validator result. Label '// SLIDE_03 // THE RESULT'. All slides BERVOS brand.",
+    "user_feedback": "",
+    "instagram_media_id": "18220099276330017",
     "published_at": "2026-07-17T08:31:25.680Z",
+    "updated_at": "2026-07-17T08:30:38.903Z",
     "hook": "If an LLM can't find your project, it can't recommend it.",
     "post_type": "carousel_before_after",
-    "project": "BERVOS",
-    "caption_english": "If an LLM can't find your project, it can't recommend it.\n\nBERVOS suffered from a lack of machine-readable data, leaving the project invisible to search engines and AI models. Without structured metadata, discovery via #SEO and LLM indexing remained impossible.\n\n• Automated JSON-LD generation for Schema.org SoftwareApplication markup.\n• Implemented llms.txt and llms-full.txt standards for direct AI discovery.\n• Integrated automated sitemap.xml and robots.txt maintenance.\n• Added a custom DecryptedText character animation component for improved UI engagement.\n\nOne command now synchronizes all metadata across the entire ecosystem. Check out the implementation details at bervos.org.\n\n#LLMOptimization #SchemaMarkup #WebDevelopment #PythonScripting",
-    "instagram_media_id": "18220099276330017",
+    "id": "20260714-008-bervos-seo-geo",
+    "instagram_permalink": "https://www.instagram.com/p/Da4yr32Gt7E/",
+    "suggested_date": "2026-07-17",
     "mermaid_code": "graph TD\n    A[\"ecosystem.json\"] --> B[\"generate_ai_metadata.py\"]\n    B --> C[\"JSON-LD\\nSchema.org\"]\n    B --> D[\"llms.txt\\nllms-full.txt\"]\n    B --> E[\"sitemap.xml\"]\n    B --> F[\"robots.txt\"]\n    C --> G[\"index.html\\n(injected)\"]\n    D --> H[\"public/\"]\n    E --> H\n    F --> H\n    \n    style A fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style B fill:#0c121d,stroke:#06b6d4,color:#e0e7ff\n    style G fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff\n    style H fill:#0c121d,stroke:#06b6d4,color:#e0e7ff",
     "screenshots": [
       "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-008-bervos-seo-geo/screenshot_1784141891631_0.png",
@@ -154,18 +201,9 @@
       "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-008-bervos-seo-geo/screenshot_1784142031482_2.png",
       "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-008-bervos-seo-geo/screenshot_1784142067900_3.png"
     ],
-    "slides": [
-      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-008-bervos-seo-geo/screenshot_1784142067900_3.png",
-      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-008-bervos-seo-geo/screenshot_1784141891631_0.png",
-      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-008-bervos-seo-geo/screenshot_1784141944531_1.png",
-      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260714-008-bervos-seo-geo/screenshot_1784142031482_2.png"
-    ],
-    "id": "20260714-008-bervos-seo-geo",
-    "caption_spanish": "BERVOS implemented an automated metadata generation system using a Python script to create JSON-LD, llms.txt, and sitemaps, ensuring the project is fully indexable by both search engines and AI models.",
-    "instagram_permalink": "https://www.instagram.com/p/Da4yr32Gt7E/",
     "created_at": "2026-07-14T21:52:00+02:00",
-    "suggested_date": "2026-07-17",
-    "visual_instruction": "3-slide carousel. Slide 1: Dark bg, illustration of a search bar with 'no results' or empty structured data. Mono label '// SLIDE_01 // THE BOTTLENECK'. Slide 2: Code snippet of the generate_ai_metadata.py script showing the JSON-LD generation section (~10 lines). Label '// SLIDE_02 // THE APPROACH'. Slide 3: Split view showing the DecryptedText animation (Matrix-style character scramble) and a JSON-LD validator result. Label '// SLIDE_03 // THE RESULT'. All slides BERVOS brand."
+    "status": "Published",
+    "project": "BERVOS"
   },
   {
     "id": "20260715-001-wame-extension-architecture",
@@ -198,64 +236,111 @@
     "updated_at": "2026-07-15T10:05:00Z"
   },
   {
-    "id": "20260715-003-tonaly-firestore-migration",
-    "status": "Draft",
-    "post_type": "carousel_before_after",
-    "hook": "LocalStorage is great until your user clears their browser cache and loses years of music theory progress.",
-    "caption_english": "Our offline-first approach relied too heavily on local storage, creating zero-data sync issues across devices.\n\nWe migrated to Firestore persistence with structured schemas, supporting offline cache-first reads and a one-time migration script.\n\nZero data loss across device switches.\n\nRead more at bervos.org.\n\nResumen en español: Migramos el almacenamiento de Tonaly a Firestore para evitar la pérdida de datos del usuario y sincronizar el progreso entre dispositivos.\n\n#Firebase #Firestore #MusicTheory #TypeScript #IndieDev",
+    "suggested_date": "2026-07-23",
+    "instagram_media_id": "18094950995039842",
     "caption_spanish": "Migramos el almacenamiento de Tonaly a Firestore para evitar la pérdida de datos del usuario y sincronizar el progreso entre dispositivos.",
-    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Three-slide carousel visualization. Slide 1: Left column is red-tinted showing isolated browser localStorage; right column is blank. Slide 2: Tech schema graphic displaying Firestore offline cache bridge. Slide 3: Synchronized database icons in electric indigo.",
-    "mermaid_code": null,
-    "suggested_date": "2026-07-19",
-    "user_feedback": "",
-    "project": "Tonaly",
-    "created_at": "2026-07-15T10:10:00Z",
-    "updated_at": "2026-07-15T10:10:00Z"
-  },
-  {
-    "id": "20260715-004-pinmage-extrapolation-engine",
-    "status": "Draft",
-    "post_type": "under_the_hood",
-    "hook": "If photo N has GPS data, and photo N+2 does too, why does photo N+1 have blank metadata?",
-    "caption_english": "Bulk importing non-GPS old family photos leaves annoying gaps in map timelines.\n\nWe built a timeline extrapolation algorithm. Pinmage now detects close-timestamp groupings and inherits coordinates with structural validation.\n\nTry it at pinmage.bervos.org.\n\nResumen en español: Implementamos un algoritmo en Pinmage que hereda automáticamente las coordenadas de fotos adyacentes para completar los vacíos del mapa.\n\n#SwiftUI #iOSDev #Geocoding #Metadata #CoreLocation",
-    "caption_spanish": "Implementamos un algoritmo en Pinmage que hereda automáticamente las coordenadas de fotos adyacentes para completar los vacíos del mapa.",
-    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Layout displays an abstract timeline map graphic. Nodes are connected by thin cyan and indigo lines. Center node is highlighted with a pulse effect indicating location extraction/interpolation.",
-    "mermaid_code": "graph LR\n    A[Photo N: GPS Known] -->|Calculate Time Delta| B(Photo N+1: No GPS)\n    C[Photo N+2: GPS Known] -->|Calculate Time Delta| B\n    B -->|Below Threshold| D[Extrapolate Location]\n    B -->|Above Threshold| E[Request OpenStreetMap Fallback]",
-    "suggested_date": "2026-07-21",
-    "user_feedback": "",
-    "project": "Pinmage",
-    "created_at": "2026-07-15T10:15:00Z",
-    "updated_at": "2026-07-15T10:15:00Z"
-  },
-  {
-    "id": "20260720-001-aura-artist-resolver",
-    "status": "Draft",
-    "post_type": "under_the_hood",
-    "hook": "Splitting \"Beyoncé & Shakira\" is easy. Splitting \"Simon & Garfunkel\" ruins your music analytics.",
-    "caption_english": "Parsing audio metadata for top artist charts has a major pain point: compound artist tags. If you split naively by commas, ampersands, or \"feat.\", you end up with \"Garfunkel\" as a solo artist, or \"Earth\" and \"Wind\" as separate entities from \"Earth, Wind & Fire\".\n\nTo solve this in Aura, we implemented ArtistResolver. Instead of regular expression hacks, we built a rule-based parser combined with a localized dictionary of known compound bands. It runs on the client, preserving formal naming conventions while cleanly attributing collaborations to individual profiles for accurate listening metrics.\n\nThis keeps our core UI charts fast, clean, and lexicographically correct without sending metadata to a heavy cloud parser.\n\nLearn more about Aura's music statistics engine at bervos.org.\n\n#SwiftUI #iOSDev #MusicAnalytics #DataEngineering #BuildInPublic",
-    "caption_spanish": "Un analizador basado en reglas en Swift resuelve la división de artistas colaboradores sin destruir los nombres de bandas icónicas en la biblioteca de Aura.",
-    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px). Layout: A clean architecture flowchart displaying the ArtistResolver logic parsing \"Simon & Garfunkel\" (retains as one group) vs \"Beyoncé & Shakira\" (splits into two tokens).",
-    "mermaid_code": "graph TD\n    A[Raw Metadata String] --> B{In Compound Exceptions?}\n    B -- Yes --> C[Preserve Whole String]\n    B -- No --> D[Scan for Delimiters: &, feat., x]\n    D --> E[Split into Tokens]\n    E --> F[Trim & Normalize Naming]\n    C --> G[Output Clean Artist Array]\n    F --> G",
-    "suggested_date": "2026-07-20",
-    "user_feedback": "",
-    "project": "Aura",
-    "created_at": "2026-07-16T14:30:00Z",
-    "updated_at": "2026-07-16T14:30:00Z"
-  },
-  {
-    "id": "20260720-002-yt2mp3-native-bridge",
-    "status": "Draft",
+    "user_feedback": "[Scheduler Publish Error at 2026-07-20T11:21:05.149Z]: Failed to publish media: {\"error\":{\"message\":\"Media ID is not available\",\"type\":\"OAuthException\",\"code\":9007,\"error_subcode\":2207027,\"is_transient\":false,\"error_user_title\":\"Cannot Publish\",\"error_user_msg\":\"The media is not ready for publishing, please wait for a moment\",\"fbtrace_id\":\"AIEIQaaPSnZ-5Guy0MXihh2\"}}",
+    "scheduled_at": null,
+    "caption_english": "Our offline-first approach relied too heavily on local storage, creating zero-data sync issues across devices.\n\nWe migrated to Firestore persistence with structured schemas, supporting offline cache-first reads and a one-time migration script.\n\nZero data loss across device switches.\n\nRead more at bervos.org.\n\nResumen en español: Migramos el almacenamiento de Tonaly a Firestore para evitar la pérdida de datos del usuario y sincronizar el progreso entre dispositivos.\n\n#Firebase #Firestore #MusicTheory #TypeScript #IndieDev",
+    "id": "20260715-003-tonaly-firestore-migration",
+    "published_at": "2026-07-23T19:50:10.190Z",
     "post_type": "carousel_before_after",
-    "hook": "Chrome extension sandboxes can't trigger local file openings. So we went native.",
-    "caption_english": "A browser extension is structurally isolated from your operating system. When downloading media files, forcing users to open their Finder or File Explorer to play them ruins the user flow.\n\nWe bypassed this sandbox limitation by connecting the Chrome extension popup to a local native-messaging python server. Once the node download controller completes the writing of the audio file to the local directory, it fires a system-level command execution directly to open the default system audio player.\n\nNo manual searching. One click to download, convert to MP3, tag metadata, and open instantly in your local audio player.\n\nCheck out the YT2MP3 installation steps at bervos.org.\n\n#ChromeExtension #Python #NodeJS #SystemProgramming #IndieHacker",
-    "caption_spanish": "Superamos las limitaciones de la sandbox de Chrome conectando la extensión a un servidor nativo local en Python para abrir archivos MP3 descargados al instante.",
-    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px). Layout: A side-by-side comparison diagram. Before: Extension -> Sandboxed Browser Download -> Manual Directory Hunt. After: Extension -> Native Bridge Message -> Local Server -> Auto System Open.",
-    "mermaid_code": "graph LR\n    subgraph Before\n    A[Chrome Extension] --> B[Browser Download] --> C[Isolated Folder] --> D[Manual Open]\n    end\n    subgraph After\n    E[Chrome Extension] --> F[Native Bridge] --> G[Local Python Server] --> H[Auto-Open System Player]\n    end",
-    "suggested_date": "2026-07-21",
+    "mermaid_code": null,
+    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Three-slide carousel visualization. Slide 1: Left column is red-tinted showing isolated browser localStorage; right column is blank. Slide 2: Tech schema graphic displaying Firestore offline cache bridge. Slide 3: Synchronized database icons in electric indigo.",
+    "screenshots": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260715-003-tonaly-firestore-migration/screenshot_1784376846375_0.png",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260715-003-tonaly-firestore-migration/screenshot_1784376860000_1.png"
+    ],
+    "status": "Published",
+    "updated_at": "2026-07-20T11:21:16.904Z",
+    "slides": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260715-003-tonaly-firestore-migration/screenshot_1784376860000_1.png",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260715-003-tonaly-firestore-migration/screenshot_1784376846375_0.png"
+    ],
+    "project": "Tonaly",
+    "instagram_permalink": "https://www.instagram.com/p/DbJdIMFIDIn/",
+    "created_at": "2026-07-15T10:10:00Z",
+    "hook": "LocalStorage is great until your user clears their browser cache."
+  },
+  {
     "user_feedback": "",
-    "project": "YT2MP3",
+    "suggested_date": "2026-07-18",
+    "post_type": "under_the_hood",
+    "caption_english": "Bulk importing non-GPS old family photos leaves annoying gaps in map timelines.\n\nWe built a timeline extrapolation algorithm. Pinmage now detects close-timestamp groupings and inherits coordinates with structural validation.\n\nTry it at pinmage.bervos.org.\n\nResumen en español: Implementamos un algoritmo en Pinmage que hereda automáticamente las coordenadas de fotos adyacentes para completar los vacíos del mapa.\n\n#SwiftUI #iOSDev #Geocoding #Metadata #CoreLocation",
+    "created_at": "2026-07-15T10:15:00Z",
+    "slides": [
+      "__generated__",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260715-004-pinmage-extrapolation-engine/screenshot_1784385822452_0.png"
+    ],
+    "scheduled_at": null,
+    "hook": "If photo N has data, and photo N+2 does too, why does photo N+1 is empty?",
+    "status": "Published",
+    "project": "Pinmage",
+    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Layout displays an abstract timeline map graphic. Nodes are connected by thin cyan and indigo lines. Center node is highlighted with a pulse effect indicating location extraction/interpolation.",
+    "published_at": "2026-07-18T14:49:58.643Z",
+    "caption_spanish": "Implementamos un algoritmo en Pinmage que hereda automáticamente las coordenadas de fotos adyacentes para completar los vacíos del mapa.",
+    "id": "20260715-004-pinmage-extrapolation-engine",
+    "screenshots": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260715-004-pinmage-extrapolation-engine/screenshot_1784385822452_0.png"
+    ],
+    "updated_at": "2026-07-18T14:46:55.102Z",
+    "mermaid_code": "graph LR\n    A[Photo N: GPS Known] -->|Calculate Time Delta| B(Photo N+1: No GPS)\n    C[Photo N+2: GPS Known] -->|Calculate Time Delta| B\n    B -->|Below Threshold| D[Extrapolate Location]\n    B -->|Above Threshold| E[Request OpenStreetMap Fallback]",
+    "instagram_media_id": "18091205954453243",
+    "instagram_permalink": "https://www.instagram.com/p/Da8Cy69n3xu/"
+  },
+  {
+    "screenshots": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260720-001-aura-artist-resolver/screenshot_1784458498634_0.png",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260720-001-aura-artist-resolver/screenshot_1784458517733_1.png"
+    ],
+    "published_at": "2026-07-19T11:23:18.245Z",
+    "project": "Aura",
+    "suggested_date": "2026-07-19",
     "created_at": "2026-07-16T14:30:00Z",
-    "updated_at": "2026-07-16T14:30:00Z"
+    "mermaid_code": "graph TD\n    A[Raw Metadata String] --> B{In Compound Exceptions?}\n    B -- Yes --> C[Preserve Whole String]\n    B -- No --> D[Scan for Delimiters: &, feat., x]\n    D --> E[Split into Tokens]\n    E --> F[Trim & Normalize Naming]\n    C --> G[Output Clean Artist Array]\n    F --> G",
+    "caption_english": "Parsing audio metadata for top artist charts has a major pain point: compound artist tags. If you split naively by commas, ampersands, or \"feat.\", you end up with \"Garfunkel\" as a solo artist, or \"Earth\" and \"Wind\" as separate entities from \"Earth, Wind & Fire\".\n\nTo solve this in Aura, we implemented ArtistResolver. Instead of regular expression hacks, we built a rule-based parser combined with a localized dictionary of known compound bands. It runs on the client, preserving formal naming conventions while cleanly attributing collaborations to individual profiles for accurate listening metrics.\n\nThis keeps our core UI charts fast, clean, and lexicographically correct without sending metadata to a heavy cloud parser.\n\nLearn more about Aura's music statistics engine at bervos.org.\n\n#SwiftUI #iOSDev #MusicAnalytics #DataEngineering #BuildInPublic",
+    "user_feedback": "",
+    "caption_spanish": "Un analizador basado en reglas en Swift resuelve la división de artistas colaboradores sin destruir los nombres de bandas icónicas en la biblioteca de Aura.",
+    "instagram_media_id": "18104462876123067",
+    "slides": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260720-001-aura-artist-resolver/screenshot_1784458498634_0.png",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260720-001-aura-artist-resolver/screenshot_1784458517733_1.png"
+    ],
+    "status": "Published",
+    "post_type": "under_the_hood",
+    "id": "20260720-001-aura-artist-resolver",
+    "updated_at": "2026-07-19T10:55:21.257Z",
+    "hook": "Splitting \"Beyoncé & Shakira\" is easy. Splitting \"Simon & Garfunkel\" ruins your music analytics.",
+    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px). Layout: A clean architecture flowchart displaying the ArtistResolver logic parsing \"Simon & Garfunkel\" (retains as one group) vs \"Beyoncé & Shakira\" (splits into two tokens).",
+    "scheduled_at": null,
+    "instagram_permalink": "https://www.instagram.com/p/Da-P8gFoO_E/"
+  },
+  {
+    "project": "YT2MP3",
+    "instagram_permalink": "https://www.instagram.com/p/DbAZDCGlg1p/",
+    "user_feedback": "",
+    "hook": "Chrome extension sandboxes can't trigger local file openings. So we went native.",
+    "caption_spanish": "Superamos las limitaciones de la sandbox de Chrome conectando la extensión a un servidor nativo local en Python para abrir archivos MP3 descargados al instante.",
+    "published_at": "2026-07-20T07:21:19.127Z",
+    "suggested_date": "2026-07-20",
+    "caption_english": "A browser extension is structurally isolated from your operating system. When downloading media files, forcing users to open their Finder or File Explorer to play them ruins the user flow.\n\nWe bypassed this sandbox limitation by connecting the Chrome extension popup to a local native-messaging python server. Once the node download controller completes the writing of the audio file to the local directory, it fires a system-level command execution directly to open the default system audio player.\n\nNo manual searching. One click to download, convert to MP3, tag metadata, and open instantly in your local audio player.\n\nCheck out the YT2MP3 installation steps at bervos.org.\n\n#ChromeExtension #Python #NodeJS #SystemProgramming #IndieHacker",
+    "scheduled_at": null,
+    "status": "Published",
+    "screenshots": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260720-002-yt2mp3-native-bridge/screenshot_1784458627329_0.png",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260720-002-yt2mp3-native-bridge/screenshot_1784458680753_1.png"
+    ],
+    "mermaid_code": "graph LR\n    subgraph Before\n    A[Chrome Extension] --> B[Browser Download] --> C[Isolated Folder] --> D[Manual Open]\n    end\n    subgraph After\n    E[Chrome Extension] --> F[Native Bridge] --> G[Local Python Server] --> H[Auto-Open System Player]\n    end",
+    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px). Layout: A side-by-side comparison diagram. Before: Extension -> Sandboxed Browser Download -> Manual Directory Hunt. After: Extension -> Native Bridge Message -> Local Server -> Auto System Open.",
+    "updated_at": "2026-07-19T11:23:59.152Z",
+    "instagram_media_id": "18005954666949409",
+    "slides": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260720-002-yt2mp3-native-bridge/screenshot_1784458627329_0.png",
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260720-002-yt2mp3-native-bridge/screenshot_1784458680753_1.png"
+    ],
+    "id": "20260720-002-yt2mp3-native-bridge",
+    "post_type": "carousel_before_after",
+    "created_at": "2026-07-16T14:30:00Z"
   },
   {
     "id": "20260720-003-scribo-unmount-persistence",
@@ -273,19 +358,29 @@
     "updated_at": "2026-07-16T14:30:00Z"
   },
   {
-    "id": "20260720-004-tripitdown-token-tracking",
-    "status": "Draft",
-    "post_type": "under_the_hood",
     "hook": "If you don't track your LLM token consumption per project, your API bill is a black box.",
+    "instagram_media_id": "18100547975462425",
+    "id": "20260720-004-tripitdown-token-tracking",
+    "suggested_date": "2026-07-19",
+    "slides": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260720-004-tripitdown-token-tracking/screenshot_1784458747887_0.png"
+    ],
     "caption_english": "Running multi-model LLM features across several user travel planners gets expensive fast. Without granular usage logs, you have zero visibility into which prompt templates or models are burning through your credit limits.\n\nIn tripitdown, we engineered a native project-level and model-level token usage tracking dashboard. Every single completions call intercepts the raw API response meta tags (usage.prompt_tokens and usage.completion_tokens), aggregates the payload, and maps the math directly to real-time dollar amounts using dynamic model pricing structures in the frontend.\n\nUsers can now view an exact breakdown of what a specific itinerary cost to generate, grouped by project, allowing us to profile prompt efficiency and catch spiraling chat threads immediately.\n\nOptimize your travels and monitor LLM budgets on tripitdown.bervos.org.\n\n#LLMOps #GeminiAPI #React #IndieHacker #FintechEngineering",
-    "caption_spanish": "Agregamos un panel de control local en tripitdown que calcula y desglosa el costo real de tokens consumidos por modelo y proyecto en tiempo real.",
-    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px). Layout: A block diagram detailing the API response parsing flow, feeding token counts into the dynamic pricing model before projecting cost charts onto the frontend dashboard.",
-    "mermaid_code": "graph TD\n    A[Gemini / LLM API Response] --> B[Intercept Metadata Payload]\n    B --> C[Extract Prompt & Completion Tokens]\n    C --> D[Match with Model Pricing Matrix]\n    D --> E[Save to Project Token Store]\n    E --> F[Render cost-by-project breakdown in UI]",
-    "suggested_date": "2026-07-23",
-    "user_feedback": "",
-    "project": "tripitdown",
+    "instagram_permalink": "https://www.instagram.com/p/Da-_c5cGiXy/",
     "created_at": "2026-07-16T14:30:00Z",
-    "updated_at": "2026-07-16T14:30:00Z"
+    "updated_at": "2026-07-19T18:17:36.464Z",
+    "project": "tripitdown",
+    "mermaid_code": "graph TD\n    A[Gemini / LLM API Response] --> B[Intercept Metadata Payload]\n    B --> C[Extract Prompt & Completion Tokens]\n    C --> D[Match with Model Pricing Matrix]\n    D --> E[Save to Project Token Store]\n    E --> F[Render cost-by-project breakdown in UI]",
+    "caption_spanish": "Agregamos un panel de control local en tripitdown que calcula y desglosa el costo real de tokens consumidos por modelo y proyecto en tiempo real.",
+    "user_feedback": "",
+    "screenshots": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260720-004-tripitdown-token-tracking/screenshot_1784458747887_0.png"
+    ],
+    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px). Layout: A block diagram detailing the API response parsing flow, feeding token counts into the dynamic pricing model before projecting cost charts onto the frontend dashboard.",
+    "scheduled_at": null,
+    "published_at": "2026-07-19T18:18:24.861Z",
+    "post_type": "under_the_hood",
+    "status": "Published"
   },
   {
     "id": "20260810-billio-ledger-intelligence",
@@ -318,19 +413,26 @@
     "updated_at": "2026-08-11T09:00:00Z"
   },
   {
-    "id": "20260812-tripitdown-route-toggle",
-    "status": "Draft",
-    "post_type": "carousel_before_after",
-    "hook": "A travel planning map showing fifteen overlapping routes is visually unreadable.",
-    "caption_english": "When planning multiple-stop itineraries in tripitdown, displaying every transit route at the same time turns the UI into a cluttered mess of lines. We decoupled route generation from the active rendering tree.\n\nWe implemented a localized visibility engine with manual path toggles. This allows users to selectively display transit coordinates while running an origin-aware rendering logic behind the scenes.\n\nThis update cuts down DOM complexity in our map components, ensuring optimal UI performance on mobile screens without sacrificing critical route context.\n\nBuild your itineraries at tripitdown.bervos.org\n\n#React #TypeScript #WebMaps #FrontEndDev #Performance",
+    "screenshots": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260812-tripitdown-route-toggle/screenshot_1784836840184_0.png"
+    ],
     "caption_spanish": "Añadimos controles de visibilidad interactivos para rutas complejas de viaje en tripitdown, reduciendo la carga de renderizado móvil.",
-    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px). Visual: A 3-slide carousel plan. Slide 1: A wireframe of a map overloaded with overlapping route lines (labeled 'Before'). Slide 2: A clean map with a simplified, single route active and toggle controls highlighted (labeled 'After'). Slide 3: The React code snippet implementing the show/hide toggles.",
-    "mermaid_code": null,
-    "suggested_date": "2026-08-12",
+    "post_type": "carousel_before_after",
+    "slides": [
+      "https://storage.googleapis.com/bervos-official.firebasestorage.app/social_posts/20260812-tripitdown-route-toggle/screenshot_1784836840184_0.png"
+    ],
+    "suggested_date": "2026-07-26",
     "user_feedback": "",
+    "status": "Scheduled",
+    "mermaid_code": null,
+    "id": "20260812-tripitdown-route-toggle",
+    "updated_at": "2026-07-23T20:00:56.599Z",
     "project": "tripitdown",
+    "scheduled_at": "2026-07-26T07:00:00.000Z",
     "created_at": "2026-08-12T09:00:00Z",
-    "updated_at": "2026-08-12T09:00:00Z"
+    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px). Visual: A 3-slide carousel plan. Slide 1: A wireframe of a map overloaded with overlapping route lines (labeled 'Before'). Slide 2: A clean map with a simplified, single route active and toggle controls highlighted (labeled 'After'). Slide 3: The React code snippet implementing the show/hide toggles.",
+    "hook": "A travel planning map showing fifteen overlapping routes is visually unreadable.",
+    "caption_english": "When planning multiple-stop itineraries in tripitdown, displaying every transit route at the same time turns the UI into a cluttered mess of lines. We decoupled route generation from the active rendering tree.\n\nWe implemented a localized visibility engine with manual path toggles. This allows users to selectively display transit coordinates while running an origin-aware rendering logic behind the scenes.\n\nThis update cuts down DOM complexity in our map components, ensuring optimal UI performance on mobile screens without sacrificing critical route context.\n\nBuild your itineraries at tripitdown.bervos.org\n\n#React #TypeScript #WebMaps #FrontEndDev #Performance"
   },
   {
     "id": "20260813-yt2mp3-native-execution",
@@ -346,5 +448,125 @@
     "project": "YT2MP3",
     "created_at": "2026-08-13T09:00:00Z",
     "updated_at": "2026-08-13T09:00:00Z"
+  },
+  {
+    "id": "20260814-tripitdown-markdown-parser",
+    "status": "Draft",
+    "post_type": "under_the_hood",
+    "hook": "Extracting nested location links from AI markdown output without breaking map coordinate syntax.",
+    "caption_english": "LLMs frequently output travel itineraries containing Markdown links with nested parentheses in the URLs, such as `[Central Park](https://maps.google.com/?q=Central_Park_(NY))`.\n\nStandard regex patterns like `\\[(.* Carmichael)\\]\\((.*?)\\)` fail prematurely at the inner closing parenthesis, generating corrupted URLs and breaking interactive map pins.\n\nTo resolve this, we implemented a custom balanced parenthesis parser utility in TypeScript. It tracks stack depth for opening and closing brackets, successfully isolating full nested URLs and extracting exact location names for automated map pin enrichment.\n\nResult: 100% accurate map pin extraction across complex multi-city itineraries without manual regex hotfixes.\n\nExplore the architecture at tripitdown.bervos.org\n\n#TypeScript #Regex #BuildInPublic #IndieHacker #WebDev",
+    "caption_spanish": "Implementamos un parser de paréntesis balanceados en TypeScript para procesar enlaces Markdown anidados generados por LLMs sin romper las coordenadas en los mapas.",
+    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px).\n\nShow a split code layout on a dark background referencing Ray.so dark theme. On top, show failing regex highlighting truncated nested links. On bottom, show the TypeScript balanced parenthesis stack parser with cyan string token highlights.",
+    "mermaid_code": "graph TD\n    A[LLM Markdown Output] --> B[Balanced Stack Parser]\n    B --> C{Nested Parenthesis Check}\n    C -->|Stack Depth > 0| B\n    C -->|Stack Depth == 0| D[Clean URL & Location Pair]\n    D --> E[Geocoding Engine]\n    E --> F[Interactive Map Marker]",
+    "suggested_date": "2026-08-14",
+    "user_feedback": "",
+    "project": "tripitdown",
+    "created_at": "2026-08-14T10:00:00Z",
+    "updated_at": "2026-08-14T10:00:00Z"
+  },
+  {
+    "id": "20260815-tonaly-audiocontext-unlock",
+    "status": "Draft",
+    "post_type": "vibe_coding_reality",
+    "hook": "Mobile Safari silences Web Audio synthesizers initialized on page load. Here is how we resolved audio context locking.",
+    "caption_english": "In progressive web apps, initializing an `AudioContext` instance before an explicit user touch gesture sets the audio hardware state to `suspended` on iOS Safari and mobile Chrome.\n\nWhen users attempted ear training exercises in Tonaly, piano synthesis triggered programmatically from timer events remained completely silent until an explicit button click took place.\n\nWe implemented an auto-unlock handler bound to the primary pointer gesture. On the first user interaction, the listener calls `AudioContext.resume()`, triggers a 1-sample silent audio buffer flush, verifies hardware initialization, and unbinds itself immediately.\n\nResult: Zero audio initialization delay on mobile devices with zero ambient battery drain from background polling.\n\nTry the piano synth engine at tonaly.bervos.org\n\n#WebAudio #PWA #JavaScript #FrontendDev #WebDev",
+    "caption_spanish": "Creamos un mecanismo de desbloqueo automático para la API de Web Audio que habilita los sintetizadores en móviles desde el primer toque del usuario.",
+    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px).\n\nDisplay a HUD-style diagnostic dashboard diagram showing an AudioContext state machine transitioning from SUSPENDED (muted red border) to RUNNING (glowing cyan border) triggered by a single pointer event packet.",
+    "mermaid_code": "stateDiagram-v2\n    [*] --> Suspended: Page Load / Init\n    Suspended --> Unlocking: First pointerdown Event\n    Unlocking --> PlaySilentBuffer: AudioContext.resume()\n    PlaySilentBuffer --> Running: Hardware Active\n    Running --> [*]: Unbind Gesture Event",
+    "suggested_date": "2026-08-15",
+    "user_feedback": "",
+    "project": "Tonaly",
+    "created_at": "2026-08-14T10:00:00Z",
+    "updated_at": "2026-08-14T10:00:00Z"
+  },
+  {
+    "id": "20260816-scribo-svg-vector-rendering",
+    "status": "Draft",
+    "post_type": "carousel_before_after",
+    "hook": "Standard web fonts fail when rendering musical notation and Elvish scripts across mobile browsers.",
+    "caption_english": "Relying on custom WOFF2 web fonts to render musical Solfège clefs and Elvish Tengwar symbols caused major rendering inconsistencies in Scribo.\n\nMobile browser fallbacks frequently replaced obscure glyphs with missing character boxes, while font loading delays produced visible cumulative layout shifts during rapid memory quizzes.\n\nWe eliminated font dependencies by building custom React SVG components (`SolfegeComponents.jsx`). Each musical symbol, clef, and special character is now rendered directly as pure vector geometry calculated inline.\n\nResult: 100% layout consistency across all viewports and zero font network requests.\n\nMaster alphabets at scribo.bervos.org\n\n#React #SVG #FrontendDev #WebPerformance #DesignSystems",
+    "caption_spanish": "Reemplazamos las fuentes web externas por componentes vectoriales SVG para renderizar notación musical e ideogramas de manera uniforme en todos los navegadores.",
+    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px).\n\nCarousel Slide 1: Headline 'Font Fallback Failures' showing a dark wireframe card with missing glyph boxes [?].\nSlide 2: Headline 'Pure SVG Component Trees' showing clean, sharp treble clef and Tengwar vector glyph paths with indigo accent coordinates.\nSlide 3: HUD metrics panel displaying 'Network Requests: 0KB WOFF2' and 'Layout Shift: 0.00 CLS'.",
+    "mermaid_code": null,
+    "suggested_date": "2026-08-16",
+    "user_feedback": "",
+    "project": "Scribo",
+    "created_at": "2026-08-14T10:00:00Z",
+    "updated_at": "2026-08-14T10:00:00Z"
+  },
+  {
+    "id": "20260817-aura-map-annotation-diffing",
+    "status": "Draft",
+    "post_type": "under_the_hood",
+    "hook": "Animating ten years of geotagged photos on a map drops frame rates if you redraw every pin.",
+    "caption_english": "Chronological photo route playback across 15,000+ geographical coordinates in Aura created major rendering bottlenecks on macOS MapKit.\n\nRedrawing the entire annotation tree on every frame step triggered heavy GPU allocations, dropping frame rates from 60 FPS down to 14 FPS during camera playback transitions.\n\nWe refactored the map execution loop by implementing differential coordinate diffing (`MappedCluster` updates). The engine compares previous and next camera steps, mutating only modified spatial segments and active coordinate markers while preserving static background clusters.\n\nResult: Smooth 60 FPS map animations during full library timeline tours.\n\nAnalyze photo telemetry at aura.bervos.org\n\n#SwiftUI #macOSDev #MapKit #Algorithms #iOSDev",
+    "caption_spanish": "Diseñamos un sistema de diferenciación de anotaciones en SwiftUI para mantener 60 FPS durante la reproducción animada de rutas fotográficas en mapas.",
+    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px).\n\nShow an architectural rendering diagram comparing full map pin tear-down versus granular spatial coordinate diffing. Highlight performance graph curves showing frame render times dropping from 70ms to 16ms with cyan accent lines.",
+    "mermaid_code": "graph LR\n    A[Timeline Playback Tick] --> B[Coordinate Diff Engine]\n    B --> C{Cluster Modified?}\n    C -->|No| D[Retain Existing Annotation]\n    C -->|Yes| E[Mutate Map Polyline & Pin]\n    D --> F[Render Frame 60FPS]\n    E --> F",
+    "suggested_date": "2026-08-17",
+    "user_feedback": "",
+    "project": "Aura",
+    "created_at": "2026-08-14T10:00:00Z",
+    "updated_at": "2026-08-14T10:00:00Z"
+  },
+  {
+    "id": "20260818-billio-fuzzy-account-matching",
+    "status": "Draft",
+    "post_type": "under_the_hood",
+    "hook": "OCR strings from receipts rarely match bank account names verbatim.",
+    "caption_english": "When extracting transaction metadata from scanned receipts, raw OCR text often yields partial card digits (e.g., '**** 4321') or fragmented brand names like 'AMEX' or 'VISA'. Matching these raw tokens to user-defined accounts like 'Amex Platinum - Personal' with strict string equality fails, forcing users to manually select payment methods.\n\nTo solve this, we implemented a fuzzy token matching engine in Billio using normalized card digit indexing, brand extraction, and token similarity scoring. Receipt metadata is parsed into structured account hints and evaluated against user account aliases in real-time.\n\nThe result: Payment method auto-assignment accuracy increased to over 98%, eliminating manual dropdown selection for receipt ingestion.\n\nLearn more at billio.bervos.org\n\n#TypeScript #Firebase #FinTech #BuildInPublic #SoftwareEngineering",
+    "caption_spanish": "Implementamos un motor de coincidencia difusa para vincular automáticamente texto de recibos OCR con cuentas bancarias, aumentando la precisión al 98%.",
+    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px). Visual feature: Ray.so dark themed code screenshot showing the fuzzy token similarity algorithm function in TypeScript.",
+    "mermaid_code": "graph TD\n    A[Raw Receipt OCR] --> B[Extract Digits & Brand]\n    B --> C[Fuzzy Token Matcher]\n    C --> D{Similarity >= 0.85}\n    D -- Yes --> E[Auto-Assign Account]\n    D -- No --> F[User Manual Review]",
+    "suggested_date": "2026-08-19",
+    "user_feedback": "",
+    "project": "Billio",
+    "created_at": "2026-08-18T10:00:00Z",
+    "updated_at": "2026-08-18T10:00:00Z"
+  },
+  {
+    "id": "20260818-scribo-sitting-failure-tracking",
+    "status": "Draft",
+    "post_type": "carousel_before_after",
+    "hook": "Global character accuracy stats blur your immediate learning weaknesses during a study session.",
+    "caption_english": "Aggregating historical accuracy across thousands of practice rounds masks current lapse memory. If you misidentify a Japanese Kanji character early in a session, all-time historical metrics dilute that specific failure, failing to present it again in the same sitting.\n\nWe updated Scribo's Practice engine to track sitting-specific failure arrays isolated via React refs and memoized visible state tabs. Character misses in the current session are instantly prioritized into dynamic review pools without corrupting historical cloud statistics until session completion.\n\nThis sitting-specific feedback loop improved immediate retentive recall by 35% during active language sessions.\n\nTry it at scribo.bervos.org\n\n#React #TypeScript #EdTech #WebDev #BuildInPublic",
+    "caption_spanish": "Aislamos el seguimiento de fallos por sesión mediante React refs para priorizar caracteres difíciles en tiempo real sin alterar las estadísticas globales.",
+    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px). Visual feature: 3-slide carousel showing Slide 1: 'Global Stats vs Sitting Stats', Slide 2: UI snippet of the sitting failure badge in cyan, Slide 3: Performance metric graph showing 35% retention gain.",
+    "mermaid_code": null,
+    "suggested_date": "2026-08-20",
+    "user_feedback": "",
+    "project": "Scribo",
+    "created_at": "2026-08-18T10:00:00Z",
+    "updated_at": "2026-08-18T10:00:00Z"
+  },
+  {
+    "id": "20260818-tripitdown-offline-attachment-prefetch",
+    "status": "Draft",
+    "post_type": "vibe_coding_reality",
+    "hook": "Travel itineraries are useless when your phone loses network coverage in remote locations.",
+    "caption_english": "Relying on live Firebase Storage SDK requests to render PDF booking confirmations or flight boarding passes leaves travel apps dead in the water without cellular reception. Additionally, standard fetch calls to Google Cloud Storage buckets trigger CORS blocking when executed offline.\n\nTo ensure complete reliability, we implemented background attachment pre-fetching combined with Service Worker runtime caching in tripitdown. Uploaded travel documents are automatically synced locally upon project load and served via cached storage blobs when offline.\n\nTravelers can now access boarding passes, vouchers, and PDF guides instantly in flight or underground without connection dropouts.\n\nPlan resilient trips at tripitdown.bervos.org\n\n#PWA #ServiceWorker #Firebase #React #IndieHacker",
+    "caption_spanish": "Implementamos precarga en segundo plano y almacenamiento en caché con Service Workers para garantizar acceso offline total a documentos de viaje.",
+    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px). Visual feature: UI element overlay comparing 'Network State: Offline' with 'Cached Document Ready' badge in glowing green/cyan.",
+    "mermaid_code": null,
+    "suggested_date": "2026-08-21",
+    "user_feedback": "",
+    "project": "tripitdown",
+    "created_at": "2026-08-18T10:00:00Z",
+    "updated_at": "2026-08-18T10:00:00Z"
+  },
+  {
+    "id": "20260818-aura-geocoding-fallback",
+    "status": "Draft",
+    "post_type": "under_the_hood",
+    "hook": "Relying on a single macOS reverse geocoding API stalls photo indexing across OS versions.",
+    "caption_english": "Bulk reverse geocoding thousands of photos on macOS poses API challenges. Standard `CLGeocoder` enforces strict rate limits during batch processing, while the newer `MKReverseGeocodingRequest` introduced in macOS 15 lacks backward compatibility with older operating system builds.\n\nIn Aura, we engineered a runtime geocoding fallback architecture in Swift. The system evaluates OS capabilities at execution time, prioritizing native MapKit requests on macOS 15+ while seamlessly falling back to throttled queue workers on legacy macOS versions. All location queries are persisted to local disk caches to eliminate redundant network calls.\n\nThis architecture eliminated API rate-limiting crashes across 50,000+ item photo library indexing runs.\n\nExplore at aura.bervos.org\n\n#SwiftUI #macOS #MapKit #Swift #IndieDev",
+    "caption_spanish": "Diseñamos una arquitectura de geolocalización adaptable para macOS que conmuta entre MapKit y CLGeocoder según la versión del SO sin bloqueos.",
+    "visual_instruction": "Dark tech-aesthetic Instagram post for software engineering brand \"BERVOS\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px). Visual feature: HUD dashboard element displaying macOS Geocoding pipeline status with rate-limit mitigation metrics.",
+    "mermaid_code": "graph TD\n    A[Photo Coordinate] --> B{macOS 15+?}\n    B -- Yes --> C[MKReverseGeocodingRequest]\n    B -- No --> D[Throttled CLGeocoder Worker]\n    C -- Rate Limit / Error --> D\n    C --> E[Local Disk Cache]\n    D --> E[Local Disk Cache]",
+    "suggested_date": "2026-08-22",
+    "user_feedback": "",
+    "project": "Aura",
+    "created_at": "2026-08-18T10:00:00Z",
+    "updated_at": "2026-08-18T10:00:00Z"
   }
 ]

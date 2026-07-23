@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.refreshInstagramToken = exports.triggerScheduledPosts = exports.hubApi = void 0;
+exports.onScheduleSocialPipeline = exports.refreshInstagramToken = exports.triggerScheduledPosts = exports.hubApi = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
@@ -1478,86 +1478,209 @@ app.post('/api/social/import', authenticateAdmin, async (req, res) => {
         res.status(500).json({ error: 'Failed to import social posts' });
     }
 });
+const REPOS_FOR_PIPELINE = [
+    { name: 'Billio', repo: 'laresbernardo/Billio' },
+    { name: 'Aura', repo: 'laresbernardo/Aura' },
+    { name: 'Pinmage', repo: 'laresbernardo/Pinmage' },
+    { name: 'tripitdown', repo: 'laresbernardo/tripitdown' },
+    { name: 'Chessverse', repo: 'laresbernardo/Chessverse' },
+    { name: 'Scribo', repo: 'laresbernardo/Scribo' },
+    { name: 'Tonaly', repo: 'laresbernardo/Tonaly' },
+    { name: 'YT2MP3', repo: 'laresbernardo/YT2MP3' },
+    { name: 'LaresDJ', repo: 'laresbernardo/LaresDJ' },
+    { name: 'WAme', repo: 'laresbernardo/WAme' },
+    { name: 'Relatos', repo: 'laresbernardo/relatos' },
+    { name: 'BERVOS Hub', repo: 'laresbernardo/bervos' }
+];
+async function runSocialPipelineCore() {
+    const db = admin.firestore();
+    // Try local python execution first (for localhost:2000 environment)
+    const scriptPath = path.join(process.cwd(), 'execution', 'generate_social_content.py');
+    const scriptPathParent = path.join(__dirname, '..', 'execution', 'generate_social_content.py');
+    const scriptToUse = fs.existsSync(scriptPath) ? scriptPath : (fs.existsSync(scriptPathParent) ? scriptPathParent : null);
+    if (scriptToUse && process.env.FUNCTIONS_EMULATOR === 'true') {
+        console.log(`[Pipeline] Running local Python script at ${scriptToUse}...`);
+        try {
+            (0, child_process_1.execSync)(`python3 "${scriptToUse}"`, { stdio: 'inherit' });
+            // Fetch latest generated posts from Firestore
+            const snapshot = await db.collection('social_posts').orderBy('created_at', 'desc').limit(10).get();
+            const posts = snapshot.docs.map(doc => doc.data());
+            return { success: true, generated: posts.length, posts };
+        }
+        catch (err) {
+            console.warn('[Pipeline] Local Python execution failed, falling back to Node Cloud pipeline:', err);
+        }
+    }
+    // Cloud Production Pipeline via GitHub API + Gemini API
+    console.log('[Pipeline] Running Cloud Generation Pipeline across all 12 projects...');
+    const githubToken = process.env.GITHUB_TOKEN || '';
+    const geminiKey = process.env.GEMINI_API_KEY || '';
+    // 1. Fetch commits for each project from GitHub API
+    const projectCommits = {};
+    for (const item of REPOS_FOR_PIPELINE) {
+        try {
+            const headers = {
+                'User-Agent': 'BERVOS-Hub-Pipeline'
+            };
+            if (githubToken) {
+                headers['Authorization'] = `token ${githubToken}`;
+            }
+            const ghRes = await fetch(`https://api.github.com/repos/${item.repo}/commits?per_page=100`, { headers });
+            if (ghRes.ok) {
+                const commitsData = await ghRes.json();
+                if (Array.isArray(commitsData) && commitsData.length > 0) {
+                    const formatted = commitsData.slice(0, 100).map((c) => {
+                        const sha = c.sha?.substring(0, 7) || '';
+                        const msg = c.commit?.message?.split('\n')[0] || '';
+                        const date = c.commit?.committer?.date || '';
+                        return `${sha} - ${msg} (${date})`;
+                    }).join('\n');
+                    projectCommits[item.name] = formatted;
+                }
+            }
+        }
+        catch (err) {
+            console.warn(`[Pipeline] Failed to fetch GitHub commits for ${item.name}:`, err);
+        }
+    }
+    // 2. Fetch existing and discarded posts for deduplication
+    const existingSnapshot = await db.collection('social_posts').get();
+    const discardedSnapshot = await db.collection('discarded_posts').get();
+    const existingPosts = [];
+    existingSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        existingPosts.push({
+            project: data.project,
+            hook: data.hook,
+            id: doc.id
+        });
+    });
+    discardedSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        existingPosts.push({
+            project: data.project || '',
+            hook: data.hook || '',
+            id: doc.id,
+            discarded: true
+        });
+    });
+    // 3. Construct Gemini Prompt
+    const prompt = `You are Antigravity, a senior software engineer building the BERVOS ecosystem.
+Your job is to draft 3-6 new Instagram posts from the recent engineering updates across the projects.
+Follow these brand guidelines and structural rules strictly.
+
+--- BRAND GUIDELINES & STYLE ---
+1. Tone: Professional, direct, senior engineer discussing implementation, trade-offs, and metrics.
+2. Absolutely NO AI marketing jargon: Do not use "Revolutionize," "Game-changer," "Unlock," "Supercharge," "Cutting-edge," "Empower," "Streamline," etc. Be concrete.
+3. Language: Captions must be in English. At the very end of caption_english, add a clear, one-sentence Spanish summary as the caption_spanish field.
+4. Structure:
+   - Technical hook (1 line, attention-grabbing, no fluff)
+   - Explain the "why" (problem context)
+   - Frame the impact (efficiency / speed / scale / reliability)
+   - End with a soft pointer to bervos.org or project site (e.g. bervos.org, tripitdown.bervos.org, etc.)
+   - Include 3-5 relevant niche hashtags (e.g. #BuildInPublic, #IndieHacker, #React, #TypeScript, #SwiftUI, #LocalLLM, #Ollama, #MCPProtocol, #GeminiAPI)
+5. Visual Directions:
+   - Must specify brand prefix from guidelines for AI generated images:
+     "Dark tech-aesthetic Instagram post for software engineering brand \\"BERVOS\\". Background: deep navy-black (#080b12). Accent colors: electric indigo (#6366f1) and cyan (#06b6d4) used sparingly for highlights, borders, and glow effects. Style: minimal, clean, HUD-inspired, no clutter. Typography: bold white sans-serif headlines, mono-spaced labels in indigo-300. No stock photos, no people, no hands. Professional and premium feel. Square format (1080x1080px)."
+   - Include visual instructions for code screenshots (referencing Ray.so dark theme), architecture diagrams (using valid Mermaid.js flowcharts), or UI captures.
+6. Post Formats:
+   - Format A: "Before & After" Carousel (3 slides)
+   - Format B: "Under the Hood" (Deep dive into technical architecture)
+   - Format C: "Vibe Coding Reality" (Hurdle, design evolution, or testing phase)
+
+--- DATA INPUT ---
+Here is the JSON of existing posts in the queue to avoid repeating the exact same updates/hooks:
+${JSON.stringify(existingPosts, null, 2)}
+
+Here are the recent commit logs for the ecosystem projects:
+${JSON.stringify(projectCommits, null, 2)}
+
+--- TASK ---
+Generate between 3 to 6 new, unique, and compelling social posts based on the recent commits that are not already covered in the existing posts.
+Make sure you write posts for projects that are underrepresented (e.g., WAme, YT2MP3, tripitdown, Scribo, Aura, Billio, Pinmage, Relatos) using their latest updates.
+
+Return a JSON array of post objects adhering to this schema:
+[
+  {
+    "id": "unique-kebab-case-string-like-YYYYMMDD-project-topic",
+    "status": "Draft",
+    "post_type": "carousel_before_after" | "under_the_hood" | "vibe_coding_reality",
+    "hook": "attention-grabbing first line",
+    "caption_english": "Full English caption with paragraph spacing and 3-5 hashtags",
+    "caption_spanish": "One-sentence Spanish summary",
+    "visual_instruction": "Detailed visual layout instructions including the required BERVOS prompt prefix if generating an image",
+    "mermaid_code": "valid Mermaid.js flowchart string (or null)",
+    "suggested_date": "YYYY-MM-DD",
+    "user_feedback": "",
+    "project": "Project Name",
+    "created_at": "ISO 8601 string (current time)",
+    "updated_at": "ISO 8601 string (current time)"
+  }
+]
+Do not include markdown code block formatting in your response. Return ONLY valid JSON.`;
+    // 4. Try models in order: gemini-3.6-flash, gemini-3.5-flash, gemini-2.5-flash, gemini-1.5-flash
+    const modelsToTry = [
+        'gemini-3.6-flash',
+        'gemini-3.5-flash',
+        'gemini-2.5-flash',
+        'gemini-1.5-flash'
+    ];
+    let generatedPosts = [];
+    for (const modelName of modelsToTry) {
+        try {
+            console.log(`[Pipeline] Calling Gemini API model ${modelName}...`);
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: 'application/json' }
+            };
+            const res = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                const resData = await res.json();
+                const textResult = resData?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+                generatedPosts = JSON.parse(textResult);
+                console.log(`[Pipeline] Model ${modelName} returned ${generatedPosts.length} posts.`);
+                break;
+            }
+            else {
+                const errText = await res.text();
+                console.warn(`[Pipeline] Model ${modelName} failed (${res.status}): ${errText.substring(0, 150)}`);
+            }
+        }
+        catch (err) {
+            console.warn(`[Pipeline] Error with model ${modelName}:`, err);
+        }
+    }
+    if (!Array.isArray(generatedPosts) || generatedPosts.length === 0) {
+        return { success: false, generated: 0, posts: [] };
+    }
+    // 5. Commit generated posts to Firestore
+    const batch = db.batch();
+    let count = 0;
+    for (const post of generatedPosts) {
+        if (post.id && post.project) {
+            const docRef = db.collection('social_posts').doc(post.id);
+            batch.set(docRef, post, { merge: true });
+            count++;
+        }
+    }
+    if (count > 0) {
+        await batch.commit();
+        console.log(`[Pipeline] Successfully committed ${count} new posts to Firestore.`);
+    }
+    return { success: true, generated: count, posts: generatedPosts };
+}
 /**
- * POST /api/social/generate — Run AI pipeline to generate non-redundant posts for underrepresented projects
+ * POST /api/social/generate — Run AI pipeline to generate non-redundant posts across all 12 projects
  */
 app.post('/api/social/generate', authenticateAdmin, async (_req, res) => {
     try {
-        const db = admin.firestore();
-        // 1. Get existing posts
-        const snapshot = await db.collection('social_posts').get();
-        const existingProjects = new Set();
-        snapshot.docs.forEach(doc => {
-            const data = doc.data();
-            if (data.project) {
-                existingProjects.add(data.project.toLowerCase());
-            }
-        });
-        const newPosts = [];
-        const now = new Date().toISOString();
-        // 2. Candidate posts for underrepresented projects
-        const candidates = [
-            {
-                id: "20260714-009-chessverse-opening-practice",
-                status: "Draft",
-                post_type: "vibe_coding_reality",
-                project: "Chessverse",
-                hook: "Mastering openings requires repetition. Puzzles require context.",
-                caption_english: "Mastering openings requires repetition. Puzzles require context.\n\nChessverse is a modern #PWA designed to let you practice chess openings and puzzles offline. Our recent update brings custom opening tree tracking: you input your repertoire, and the engine shuffles variations to test your responses.\n\nWhy Chessverse?\n• Immersive Opening Repertoire Practice\n• Thousands of offline-enabled tactical puzzles\n• LocalStorage performance metrics tracking\n• Minimalist UI matching the sumi-black theme\n\nNo server lag. Pure chess opening memorization, built with #React and direct in your pocket.\n\nMore at chessverse.bervos.org\n\n#Chessverse #React #PWA #TypeScript #TailwindCSS",
-                caption_spanish: "Chessverse ahora te permite entrenar tu repertorio de aperturas y resolver tácticas sin conexión.",
-                visual_instruction: "Generate a dark Chess board design with glowing indigo coordinates, showcasing a tactical opening fork. Top label '// VIBE_CODING_REALITY // CHESSVERSE'.",
-                mermaid_code: null,
-                suggested_date: "",
-                user_feedback: "",
-                created_at: now,
-                updated_at: now
-            },
-            {
-                id: "20260714-010-tonaly-ear-training",
-                status: "Draft",
-                post_type: "under_the_hood",
-                project: "Tonaly",
-                hook: "Can you identify a perfect fifth by ear?",
-                caption_english: "Can you identify a perfect fifth by ear?\n\nTonaly is a web-based ear training studio built to bridge the gap between music theory and instinct. Our audio generation pipeline uses the #WebAudio API to synthesize clean waveforms (sine, square, triangle) directly in the browser. No pre-recorded MP3 samples.\n\nHow it works under the hood:\n1. Choose your training module: intervals, chords, or note recognition\n2. The system generates randomized musical keys and plays the progression dynamically\n3. Responsive keyboard UI matches your input\n4. Performance insights calculated locally, showing interval reaction times\n\nPure Web Audio API, zero latency, offline-ready #PWA.\n\nMore at tonaly.bervos.org\n\n#WebAudioAPI #Tonaly #MusicTheory #TypeScript #WebDev",
-                caption_spanish: "Tonaly entrena tu oído musical generando sintetizadores en tiempo real usando el Web Audio API del navegador.",
-                visual_instruction: "Branded design showing a circular music wheel of fifths with glowing indigo and cyan accents. Label '// UNDER_THE_HOOD // TONALY'.",
-                mermaid_code: "graph TD\n    A[Interval Selector] --> B[Web Audio Synth]\n    B -->|Sine / Square Wave| C[Audio Node Link]\n    C --> D[User Response Match]\n    D -->|Correct / Incorrect| E[Reaction Logger]\n    E --> F[Performance Charts]",
-                suggested_date: "",
-                user_feedback: "",
-                created_at: now,
-                updated_at: now
-            },
-            {
-                id: "20260714-011-laresdj-equipment-map",
-                status: "Draft",
-                post_type: "carousel_before_after",
-                project: "LaresDJ",
-                hook: "DJs need gear. Producers need resources. Finding both in one place shouldn't be hard.",
-                caption_english: "DJs need gear. Producers need resources. Finding both in one place shouldn't be hard.\n\nDJs and music producers spend hours searching for custom skins, mapping configs, gear reviews, and localized DJ equipment rental shops. Most info is scattered across outdated forums.\n\nSo we created LaresDJ:\n• Centralized controller mapping database for Traktor and Pioneer\n• Immersive equipment rental map using #OpenStreetMap\n• High-quality curated download packs for DJs\n• Integrated community forum backend\n\nNow there's one central #React portal for DJs and music producers to level up their gear setup, grab controller mapping files instantly, and rent equipment locally. Custom skins downloaded over 5,000 times.\n\nMore at laresdj.bervos.org\n\n#LaresDJ #OpenStreetMap #Traktor #PioneerDJ #React",
-                caption_spanish: "LaresDJ consolida recursos para productores y DJs, incluyendo mapeos de controladores y mapas de equipamiento en un portal centralizado.",
-                visual_instruction: "3-slide carousel. Slide 1: Scattered folder icons. Slide 2: Interactive map wireframe. Slide 3: DJ mixer controller screenshot. Label '// BEFORE_AND_AFTER // LARESDJ'.",
-                mermaid_code: null,
-                suggested_date: "",
-                user_feedback: "",
-                created_at: now,
-                updated_at: now
-            }
-        ];
-        // Filter candidates to only keep those whose project is not in existingProjects
-        const batch = db.batch();
-        let generated = 0;
-        for (const post of candidates) {
-            if (!existingProjects.has(post.project.toLowerCase())) {
-                const docRef = db.collection('social_posts').doc(post.id);
-                batch.set(docRef, post);
-                newPosts.push(post);
-                generated++;
-            }
-        }
-        if (generated > 0) {
-            await batch.commit();
-        }
-        res.json({ success: true, generated, posts: newPosts });
+        const result = await runSocialPipelineCore();
+        res.json(result);
     }
     catch (err) {
         console.error('[API] Error running generation pipeline:', err);
@@ -2348,13 +2471,31 @@ app.post('/api/social/instagram/token', authenticateAdmin, async (req, res) => {
     }
 });
 /**
- * DELETE /api/social/:id — Delete a social post
+ * DELETE /api/social/:id — Delete a social post (saves tombstone in discarded_posts so pipeline never restores it)
  */
 app.delete('/api/social/:id', authenticateAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const db = admin.firestore();
-        await db.collection('social_posts').doc(id).delete();
+        // Save tombstone in discarded_posts so pipeline ignores and never regenerates it
+        const docRef = db.collection('social_posts').doc(id);
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+            const data = docSnap.data();
+            await db.collection('discarded_posts').doc(id).set({
+                id,
+                project: data?.project || '',
+                hook: data?.hook || '',
+                discarded_at: new Date().toISOString()
+            });
+        }
+        else {
+            await db.collection('discarded_posts').doc(id).set({
+                id,
+                discarded_at: new Date().toISOString()
+            });
+        }
+        await docRef.delete();
         res.json({ success: true, id });
     }
     catch (err) {
@@ -2736,6 +2877,23 @@ exports.refreshInstagramToken = functions.pubsub
     }
     catch (err) {
         console.error('[Token Refresh] Error running token refresh:', err);
+    }
+    return null;
+});
+/**
+ * Cron trigger running twice per month (1st and 15th at 00:00 UTC) to generate social pipeline content automatically.
+ */
+exports.onScheduleSocialPipeline = functions.pubsub
+    .schedule('0 0 1,15 * *')
+    .timeZone('UTC')
+    .onRun(async (_context) => {
+    console.log('[Scheduler] Running bi-weekly social content generation pipeline...');
+    try {
+        const result = await runSocialPipelineCore();
+        console.log(`[Scheduler] Pipeline completed successfully. Generated ${result.generated} posts.`);
+    }
+    catch (err) {
+        console.error('[Scheduler] Error running bi-weekly social pipeline:', err);
     }
     return null;
 });

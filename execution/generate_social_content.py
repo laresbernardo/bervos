@@ -25,6 +25,7 @@ KNOWN_PROJECTS = {
     'YT2MP3': os.path.join(PROJECTS_DIR, 'YT2MP3'),
     'LaresDJ': os.path.join(PROJECTS_DIR, 'LaresDJ'),
     'WAme': os.path.join(PROJECTS_DIR, 'WAme'),
+    'Relatos': os.path.join(PROJECTS_DIR, 'Relatos'),
     'BERVOS Hub': PROJECT_ROOT
 }
 
@@ -42,11 +43,17 @@ def get_recent_commits():
     for name, path in KNOWN_PROJECTS.items():
         if os.path.exists(path) and os.path.exists(os.path.join(path, '.git')):
             try:
-                # Get commit log in the last 60 days
+                # Get commit log in the last 120 days up to 100 commits
                 out = subprocess.check_output(
-                    ['git', 'log', '--since="60 days ago"', '--pretty=format:%h - %s (%cr)', '--stat', '-n', '15'],
+                    ['git', 'log', '--since="120 days ago"', '--pretty=format:%h - %s (%cr)', '--stat', '-n', '100'],
                     cwd=path, text=True, stderr=subprocess.DEVNULL
                 ).strip()
+                # If no commits in the last 120 days, fetch top 100 commits regardless of age
+                if not out:
+                    out = subprocess.check_output(
+                        ['git', 'log', '--pretty=format:%h - %s (%cr)', '--stat', '-n', '100'],
+                        cwd=path, text=True, stderr=subprocess.DEVNULL
+                    ).strip()
                 if out:
                     project_commits[name] = out
             except Exception as e:
@@ -62,12 +69,38 @@ def load_existing_posts():
             print(f"[Warning] Failed to parse existing queue JSON: {e}")
     return []
 
+def fetch_discarded_posts():
+    discarded = []
+    try:
+        cli_config_path = os.path.expanduser('~/.config/configstore/firebase-tools.json')
+        if os.path.exists(cli_config_path):
+            with open(cli_config_path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+            token = cfg.get('tokens', {}).get('access_token')
+            if token:
+                url = "https://firestore.googleapis.com/v1/projects/bervos-official/databases/(default)/documents/discarded_posts?pageSize=1000"
+                req = urllib.request.Request(url, headers={'Authorization': f'Bearer {token}'}, method='GET')
+                with urllib.request.urlopen(req) as res:
+                    data = json.loads(res.read().decode('utf-8'))
+                    for doc in data.get('documents', []):
+                        fields = doc.get('fields', {})
+                        doc_id = doc.get('name', '').split('/')[-1]
+                        discarded.append({
+                            "id": doc_id,
+                            "project": fields.get('project', {}).get('stringValue', ''),
+                            "hook": fields.get('hook', {}).get('stringValue', ''),
+                            "status": "Discarded"
+                        })
+    except Exception as e:
+        print(f"[Warning] Could not fetch discarded_posts tombstones: {e}")
+    return discarded
+
 def main():
     print("Starting Social Content Pipeline...")
     api_key = load_gemini_api_key()
     
     # 1. Workspace Analysis (Step 2)
-    print("Scanning workspaces for git history (last 60 days)...")
+    print("Scanning workspaces for git history (last 120 days)...")
     commits = get_recent_commits()
     if not commits:
         print("No recent commits found in any repository. Exiting.")
@@ -77,6 +110,7 @@ def main():
 
     # 2. Load existing queue items (Step 1 & Step 6 tracking)
     existing_posts = load_existing_posts()
+    discarded_posts = fetch_discarded_posts()
     
     # Format existing posts summaries to pass to the AI prompt to avoid duplication
     existing_summaries = []
@@ -85,6 +119,13 @@ def main():
             "project": post.get("project"),
             "hook": post.get("hook"),
             "id": post.get("id")
+        })
+    for disc in discarded_posts:
+        existing_summaries.append({
+            "project": disc.get("project"),
+            "hook": disc.get("hook"),
+            "id": disc.get("id"),
+            "status": "Discarded"
         })
 
     # 3. Construct prompt for Gemini
@@ -143,52 +184,66 @@ Return a JSON array of post objects adhering to this schema:
 Do not include markdown code block formatting in your response. Return ONLY valid JSON.
 """
 
-    print("Requesting Gemini 3.5 Flash...")
-    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "responseMimeType": "application/json"
+    models_to_try = [
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-2.5-flash",
+        "gemini-1.5-flash"
+    ]
+    
+    new_posts = None
+    for model_name in models_to_try:
+        print(f"Requesting {model_name}...")
+        api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "responseMimeType": "application/json"
+            }
         }
-    }
+        
+        req = urllib.request.Request(
+            api_url,
+            data=json.dumps(payload).encode('utf-8'),
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+        
+        try:
+            with urllib.request.urlopen(req) as response:
+                res_data = json.loads(response.read().decode('utf-8'))
+                text_result = res_data['candidates'][0]['content']['parts'][0]['text']
+                new_posts = json.loads(text_result)
+                print(f"[{model_name}] Successfully generated {len(new_posts)} new posts.")
+                break
+        except urllib.error.HTTPError as e:
+            err_msg = e.read().decode('utf-8')
+            print(f"[Warning] Model {model_name} failed ({e.code}): {err_msg[:150]}... Trying next model.")
+        except Exception as e:
+            print(f"[Warning] Model {model_name} error: {e}. Trying next model.")
+            
+    if not new_posts:
+        print("[Error] All Gemini models failed to generate content.")
+        return
+
+    # Append new posts to existing queue
+    combined_queue = existing_posts + new_posts
     
-    req = urllib.request.Request(
-        api_url,
-        data=json.dumps(payload).encode('utf-8'),
-        headers={'Content-Type': 'application/json'},
-        method='POST'
-    )
+    # Save back to file
+    os.makedirs(os.path.dirname(QUEUE_PATH), exist_ok=True)
+    with open(QUEUE_PATH, 'w', encoding='utf-8') as f:
+        json.dump(combined_queue, f, indent=2, ensure_ascii=False)
+    print(f"Successfully saved updated queue to {QUEUE_PATH}.")
     
-    try:
-        with urllib.request.urlopen(req) as response:
-            res_data = json.loads(response.read().decode('utf-8'))
-            text_result = res_data['candidates'][0]['content']['parts'][0]['text']
-            new_posts = json.loads(text_result)
-            print(f"Gemini generated {len(new_posts)} new posts.")
-            
-            # Append new posts to existing queue
-            combined_queue = existing_posts + new_posts
-            
-            # Save back to file
-            os.makedirs(os.path.dirname(QUEUE_PATH), exist_ok=True)
-            with open(QUEUE_PATH, 'w', encoding='utf-8') as f:
-                json.dump(combined_queue, f, indent=2, ensure_ascii=False)
-            print(f"Successfully saved updated queue to {QUEUE_PATH}.")
-            
-            # Sync to Firestore using import_queue_rest.py
-            print("Syncing queue to Firestore...")
-            import_script = os.path.join(SCRIPT_DIR, 'import_queue_rest.py')
-            result = subprocess.run(['python3', import_script], capture_output=True, text=True)
-            print(result.stdout)
-            if result.returncode != 0:
-                print(f"[Error] Sync failed: {result.stderr}")
-            else:
-                print("Sync completed successfully.")
-                
-    except urllib.error.HTTPError as e:
-        print(f"[Error] API call failed: {e.code} - {e.read().decode('utf-8')}")
-    except Exception as e:
-        print(f"[Error] {e}")
+    # Sync to Firestore using import_queue_rest.py
+    print("Syncing queue to Firestore...")
+    import_script = os.path.join(SCRIPT_DIR, 'import_queue_rest.py')
+    result = subprocess.run(['python3', import_script], capture_output=True, text=True)
+    print(result.stdout)
+    if result.returncode != 0:
+        print(f"[Error] Sync failed: {result.stderr}")
+    else:
+        print("Sync completed successfully.")
 
 if __name__ == '__main__':
     main()

@@ -66,14 +66,32 @@ def main():
         
     with open(QUEUE_PATH, 'r', encoding='utf-8') as f:
         posts = json.load(f)
+
+    # Fetch discarded_posts tombstones from Firestore
+    discarded_ids = set()
+    try:
+        disc_url = "https://firestore.googleapis.com/v1/projects/bervos-official/databases/(default)/documents/discarded_posts?pageSize=1000"
+        disc_req = urllib.request.Request(disc_url, headers={'Authorization': f'Bearer {token}'}, method='GET')
+        with urllib.request.urlopen(disc_req) as res:
+            disc_data = json.loads(res.read().decode('utf-8'))
+            for doc in disc_data.get('documents', []):
+                doc_id = doc.get('name', '').split('/')[-1]
+                if doc_id:
+                    discarded_ids.add(doc_id)
+    except Exception as e:
+        print(f"  [Warning] Failed to fetch discarded_posts: {e}")
         
-    print(f"Syncing {len(posts)} posts to Firestore via REST API (checking protection)...")
+    print(f"Syncing {len(posts)} posts to Firestore via REST API (checking protection & discarded)...")
     
     updated_local_posts = []
     
     for post in posts:
         post_id = post.get('id')
         if not post_id:
+            continue
+
+        if post_id in discarded_ids:
+            print(f"  [Discarded] {post_id} was deleted by user. Purging from local queue.")
             continue
             
         url = f"https://firestore.googleapis.com/v1/projects/bervos-official/databases/(default)/documents/social_posts/{post_id}"
