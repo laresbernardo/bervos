@@ -42,7 +42,8 @@ const ORIGINAL_VISUAL_DIRECTIONS: Record<string, string> = {
   'yt2mp3': 'Horizontal 5-stage audio download pipeline: Chrome Extension, Node.js API, yt-dlp Engine, iTunes Tagging, and LRCLIB Lyrics.',
   'chessverse': 'Immersive chess opening practice chessboard rendering variations, tactical puzzles, and coordinate guides.',
   'tonaly': 'Interactive music theory circle of fifths ear training chart showing pitch relationships and interval selectors.',
-  'laresdj': 'Professional 4-channel DJ mixer console deck layout showing faders, level meters, Traktor mappings, and BPM monitors.'
+  'laresdj': 'Professional 4-channel DJ mixer console deck layout showing faders, level meters, Traktor mappings, and BPM monitors.',
+  'rosa': 'Enterprise-grade self-hosted Marketing Mix Modeling (MMM) dashboard showing Meta Robyn integration, AI query assistant, scenario simulations, and PowerPoint export engine.'
 };
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; label: string }> = {

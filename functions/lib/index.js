@@ -1546,6 +1546,7 @@ const REPOS_FOR_PIPELINE = [
     { name: 'LaresDJ', repo: 'laresbernardo/LaresDJ' },
     { name: 'WAme', repo: 'laresbernardo/WAme' },
     { name: 'Relatos', repo: 'laresbernardo/relatos' },
+    { name: 'Rosa', repo: 'laresbernardo/Rosa' },
     { name: 'BERVOS Hub', repo: 'laresbernardo/bervos' }
 ];
 async function runSocialPipelineCore() {
