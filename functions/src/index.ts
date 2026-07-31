@@ -654,6 +654,7 @@ function getLocalProjectVersion(projectName: string): string | null {
     'tonaly': 'Tonaly',
     'yt2mp3': 'YT2MP3',
     'rosa': 'Rosa',
+    'rutinas': 'rutinas',
     'bervos': 'BERVOS.org'
   };
 
@@ -797,6 +798,7 @@ async function getRepoCommits(projectName: string, repoUrl: string, limit = 15):
       'tonaly': 'https://github.com/laresbernardo/tonaly',
       'yt2mp3': 'https://github.com/laresbernardo/YT2MP3.git',
       'rosa': 'https://github.com/laresbernardo/Rosa.git',
+      'rutinas': 'https://github.com/laresbernardo/rutinas.git',
       'bervos': 'https://github.com/laresbernardo/bervos.git'
     };
     gitUrl = gitUrlMap[normalizedName] || '';
@@ -970,6 +972,7 @@ async function fetchInitiativeMetrics(item: any): Promise<any> {
         'tonaly': 'https://github.com/laresbernardo/tonaly',
         'yt2mp3': 'https://github.com/laresbernardo/YT2MP3.git',
         'rosa': 'https://github.com/laresbernardo/Rosa.git',
+        'rutinas': 'https://github.com/laresbernardo/rutinas.git',
         'bervos': 'https://github.com/laresbernardo/bervos.git'
       };
       const repoUrl = item.codeRepository || gitUrlMap[normalizedName] || url || '';

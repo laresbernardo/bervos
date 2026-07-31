@@ -177,6 +177,22 @@
       "version": "1.1.0"
     },
     {
+      "title": "Rutinas",
+      "description": "Personalized habits, routines, and daily task tracking application for productivity and focus.",
+      "link": "https://rutinas.bervos.org/",
+      "tags": [
+        "Habits",
+        "Routines",
+        "Productivity",
+        "PWA"
+      ],
+      "logo": "/rutinas-logo.png",
+      "category": "productivity",
+      "applicationCategory": "WebApplication",
+      "updated": "2026-07-31",
+      "version": "1.0.0"
+    },
+    {
       "title": "BERVOS",
       "description": "Centralized ecosystem aggregating all BERVOS projects and open source solutions.",
       "link": "https://bervos.org/",

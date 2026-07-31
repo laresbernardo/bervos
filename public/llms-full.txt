@@ -77,6 +77,12 @@ The name **BERVOS** represents three distinct architectural layers of the ecosys
 - **Tags**: MMM, Robyn, R, Shiny
 - **Description**: Enterprise-grade self-hosted MMM app with AI Assistant, scenario simulations, reporting, and more.
 
+### Rutinas
+- **Deployment URL**: [https://rutinas.bervos.org/](https://rutinas.bervos.org/)
+- **Category**: Productivity (WebApplication)
+- **Tags**: Habits, Routines, Productivity, PWA
+- **Description**: Personalized habits, routines, and daily task tracking application for productivity and focus.
+
 ### BERVOS
 - **Deployment URL**: [https://bervos.org/](https://bervos.org/)
 - **Category**: Productivity (WebApplication)

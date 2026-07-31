@@ -185,6 +185,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
     'tonaly': 'laresbernardo/tonaly',
     'yt2mp3': 'laresbernardo/YT2MP3',
     'rosa': 'laresbernardo/Rosa',
+    'rutinas': 'laresbernardo/rutinas',
     'bervos': 'laresbernardo/bervos'
   };
 
