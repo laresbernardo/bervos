@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, CheckCircle2, BookMarked, MessageSquare } from 'lucide-react';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 interface PreorderModalProps {
   isOpen: boolean;
@@ -37,6 +39,28 @@ export const PreorderModal: React.FC<PreorderModalProps> = ({ isOpen, onClose, l
       });
 
       if (res.ok) {
+        // Backup to Firestore for Hub visibility (upsert by email)
+        if (db) {
+          try {
+            const waitlistRef = collection(db, 'waitlist_users');
+            const existing = await getDocs(
+              query(waitlistRef, where('email', '==', email.toLowerCase()), where('project', '==', 'Rutinas'))
+            );
+            if (existing.empty) {
+              await addDoc(waitlistRef, {
+                name,
+                email: email.toLowerCase(),
+                project: 'Rutinas',
+                lang,
+                comment: comment || '',
+                registeredAt: new Date().toISOString(),
+                source: 'waitlist'
+              });
+            }
+          } catch (err) {
+            console.warn('[Firestore] Waitlist backup error:', err);
+          }
+        }
         setStatus('success');
       } else {
         setStatus('error');

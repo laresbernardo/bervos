@@ -995,7 +995,23 @@ async function fetchInitiativeMetrics(item: any): Promise<any> {
     }
 
     const normalizedName = name.toLowerCase();
-    if (normalizedName === 'rosa' || item.applicationCategory === 'BusinessApplication') {
+    if (normalizedName === 'rutinas' || item.applicationCategory === 'EducationalApplication') {
+      // Rutinas / Educational: count waitlist signups from Firestore
+      try {
+        const bervosDb = admin.firestore();
+        const waitlistSnap = await bervosDb.collection('waitlist_users')
+          .where('project', '==', name).get();
+        const demoLeadsSnap = await bervosDb.collection('demo_leads')
+          .where('project', '==', name).get();
+        const totalWaitlist = waitlistSnap.size + demoLeadsSnap.size;
+        metrics.totalUsers = totalWaitlist > 0 ? totalWaitlist : (item.totalUsers || 0);
+        metrics.active30d = totalWaitlist > 0 ? totalWaitlist : (item.active30d || 0);
+      } catch (err) {
+        console.warn(`[Metrics] Error counting waitlist users for ${name}:`, err);
+        metrics.totalUsers = item.totalUsers || 0;
+        metrics.active30d = item.active30d || 0;
+      }
+    } else if (normalizedName === 'rosa' || item.applicationCategory === 'BusinessApplication') {
       const repoUrl = item.codeRepository || 'https://github.com/laresbernardo/Rosa';
       const repoMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
       if (repoMatch) {
@@ -1457,6 +1473,73 @@ async function fetchAllUsersAggregated(): Promise<Array<{
         }
       }
     }
+  }
+
+  // ── Merge waitlist_users and demo_leads from BERVOS Firestore ──
+  // This captures non-auth projects like Rutinas (waitlist signups) and Rosa (demo leads)
+  try {
+    const bervosDb = admin.firestore();
+    const collections = [
+      { ref: bervosDb.collection('waitlist_users'), sourceLabel: 'waitlist' },
+      { ref: bervosDb.collection('demo_leads'), sourceLabel: 'demo_lead' }
+    ];
+
+    for (const { ref: colRef, sourceLabel } of collections) {
+      try {
+        const snapshot = await colRef.get();
+        for (const doc of snapshot.docs) {
+          const data = doc.data();
+          if (!data.email) continue;
+          const key = data.email.toLowerCase();
+          const projectName = data.project || 'Unknown';
+          const registeredAt = data.registeredAt || data.timestamp || '';
+          const existing = allUsersMap.get(key);
+
+          if (existing) {
+            if (!existing.projects.includes(projectName)) {
+              existing.projects.push(projectName);
+            }
+            if (registeredAt && (!existing.firstActive || registeredAt < existing.firstActive)) {
+              existing.firstActive = registeredAt;
+            }
+            if (registeredAt && (!existing.lastActive || registeredAt > existing.lastActive)) {
+              existing.lastActive = registeredAt;
+            }
+            if (!existing.displayName && data.name) {
+              existing.displayName = data.name;
+            }
+            if (!existing.projectDetails) {
+              existing.projectDetails = {};
+            }
+            if (!existing.projectDetails[projectName]) {
+              existing.projectDetails[projectName] = {
+                firstActive: registeredAt,
+                lastActive: registeredAt
+              };
+            }
+          } else {
+            allUsersMap.set(key, {
+              email: data.email,
+              displayName: data.name || data.email.split('@')[0],
+              photoURL: '',
+              projects: [projectName],
+              lastActive: registeredAt,
+              firstActive: registeredAt,
+              projectDetails: {
+                [projectName]: {
+                  firstActive: registeredAt,
+                  lastActive: registeredAt
+                }
+              }
+            });
+          }
+        }
+      } catch (err) {
+        console.warn(`[Users] Error reading ${sourceLabel} collection:`, err);
+      }
+    }
+  } catch (err) {
+    console.warn('[Users] Error merging waitlist/demo_leads users:', err);
   }
 
   return Array.from(allUsersMap.values()).sort((a, b) => b.lastActive.localeCompare(a.lastActive));
