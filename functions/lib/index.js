@@ -466,7 +466,6 @@ async function fetchRepoMetadata(owner, repo) {
                     if (vMatch) {
                         const result = { version: vMatch[1] };
                         if (dMatch) {
-                            // Parse date correctly and format it to ISO string
                             result.releaseDate = new Date(dMatch[1]).toISOString();
                         }
                         return result;
@@ -476,6 +475,43 @@ async function fetchRepoMetadata(owner, repo) {
         }
         catch (e) {
             // Continue
+        }
+    }
+    // Fallback to GitHub Contents API for private repositories
+    if (process.env.GITHUB_TOKEN) {
+        const branches = ['main', 'master'];
+        const files = ['DESCRIPTION', 'R/DESCRIPTION', 'package.json', 'manifest.json'];
+        for (const branch of branches) {
+            for (const file of files) {
+                try {
+                    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${file}?ref=${branch}`;
+                    const apiRes = await fetch(apiUrl, {
+                        headers: {
+                            ...headers,
+                            'Accept': 'application/vnd.github.v3.raw'
+                        }
+                    });
+                    if (apiRes.ok) {
+                        const text = await apiRes.text();
+                        if (file.endsWith('package.json') || file.endsWith('manifest.json')) {
+                            const data = JSON.parse(text);
+                            if (data.version)
+                                return { version: data.version };
+                        }
+                        else {
+                            const vMatch = text.match(/^Version:\s*(\S+)/m);
+                            const dMatch = text.match(/^Date:\s*(\S+)/m);
+                            if (vMatch) {
+                                const result = { version: vMatch[1] };
+                                if (dMatch)
+                                    result.releaseDate = new Date(dMatch[1]).toISOString();
+                                return result;
+                            }
+                        }
+                    }
+                }
+                catch (e) { }
+            }
         }
     }
     return { version: '0.0.0' };
@@ -660,6 +696,21 @@ function getLocalProjectVersion(projectName) {
                 if (pkg.version) {
                     return pkg.version;
                 }
+            }
+        }
+        catch (e) { }
+    }
+    const descriptionPaths = [
+        path.join(projectFolderPath, 'DESCRIPTION'),
+        path.join(projectFolderPath, 'R', 'DESCRIPTION')
+    ];
+    for (const p of descriptionPaths) {
+        try {
+            if (fs.existsSync(p)) {
+                const content = fs.readFileSync(p, 'utf8');
+                const vMatch = content.match(/^Version:\s*(\S+)/m);
+                if (vMatch)
+                    return vMatch[1];
             }
         }
         catch (e) { }
