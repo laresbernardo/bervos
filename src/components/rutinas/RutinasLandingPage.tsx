@@ -143,8 +143,8 @@ export const RutinasLandingPage: React.FC = () => {
               className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-2xl font-sans"
             >
               {lang === 'ES'
-                ? 'Un viaje íntimo a través de rutinas cotidianas y actuales de 196 culturas. Libro en español co-creado con IA, a publicarse durante el 2026.'
-                : 'An intimate journey through the current daily routines of 196 cultures. A book co-created with AI in Spanish, scheduled for publication in 2026.'}
+                ? 'Un viaje íntimo a través de rutinas cotidianas y actuales de 196 culturas. Un libro en español co-creado con IA, a publicarse durante el 2026.'
+                : 'An intimate journey through the current daily routines of 196 cultures. A book in Spanish co-created with AI, scheduled for publication in 2026.'}
             </motion.p>
 
             <motion.div
