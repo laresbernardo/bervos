@@ -161,6 +161,22 @@
       "version": "2.1.1"
     },
     {
+      "title": "Rosa",
+      "description": "Enterprise-grade self-hosted MMM app with AI Assistant, scenario simulations, reporting, and more.",
+      "link": "https://rosa.bervos.org/",
+      "tags": [
+        "MMM",
+        "Robyn",
+        "R",
+        "Shiny"
+      ],
+      "logo": "/rosa-logo.png",
+      "category": "productivity",
+      "applicationCategory": "BusinessApplication",
+      "updated": "2026-07-31",
+      "version": "1.1.0"
+    },
+    {
       "title": "BERVOS",
       "description": "Centralized ecosystem aggregating all BERVOS projects and open source solutions.",
       "link": "https://bervos.org/",

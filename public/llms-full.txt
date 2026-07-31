@@ -71,6 +71,12 @@ The name **BERVOS** represents three distinct architectural layers of the ecosys
 - **Tags**: Chrome, Extension, Audio, YouTube
 - **Description**: Lightweight Chrome Extension and Node.js server to download YouTube audio as high-quality MP3 with automatic iTunes metadata and high-res covers.
 
+### Rosa
+- **Deployment URL**: [https://rosa.bervos.org/](https://rosa.bervos.org/)
+- **Category**: Productivity (BusinessApplication)
+- **Tags**: MMM, Robyn, R, Shiny
+- **Description**: Enterprise-grade self-hosted MMM app with AI Assistant, scenario simulations, reporting, and more.
+
 ### BERVOS
 - **Deployment URL**: [https://bervos.org/](https://bervos.org/)
 - **Category**: Productivity (WebApplication)

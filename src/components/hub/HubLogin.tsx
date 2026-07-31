@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '../firebase';
+import { auth, googleProvider } from '../../firebase';
 import { motion } from 'framer-motion';
 import { Shield, ArrowLeft } from 'lucide-react';
 import { FaGoogle } from 'react-icons/fa';

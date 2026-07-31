@@ -1,7 +1,7 @@
 import React from 'react';
 import { signOut } from 'firebase/auth';
 import type { User } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth } from '../../firebase';
 import { motion } from 'framer-motion';
 import { ShieldAlert, LogOut, ArrowLeft } from 'lucide-react';
 

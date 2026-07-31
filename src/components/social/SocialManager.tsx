@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
 import { Search, X, Loader2, Check, MessageSquare, Edit3, Eye, Calendar, Share2, Sparkles, Download, Maximize2, Trash2, ArrowUpDown, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RotateCcw, Upload, Plus, RefreshCw, Key } from 'lucide-react';
 import { FaInstagram } from 'react-icons/fa';
-import ecosystemData from '../data/ecosystem.json';
+import ecosystemData from '../../data/ecosystem.json';
 
 interface SocialPost {
   id: string;

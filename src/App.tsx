@@ -2,16 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { Star, Users, ArrowUpRight, X, GitFork, Download, Search, Loader2 } from 'lucide-react';
 import { FaGithub, FaLinkedin, FaInstagram } from 'react-icons/fa';
 import { motion } from 'framer-motion';
-import DecryptedText from './components/DecryptedText';
+import DecryptedText from './components/ui/DecryptedText';
 
 // Firebase & Hub Imports
 import { onAuthStateChanged } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { auth } from './firebase';
-import { HubLogin } from './components/HubLogin';
-import { HubDashboard } from './components/HubDashboard';
-import { HubAccessDenied } from './components/HubAccessDenied';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { HubLogin } from './components/hub/HubLogin';
+import { HubDashboard } from './components/hub/HubDashboard';
+import { HubAccessDenied } from './components/hub/HubAccessDenied';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
+import { RosaLandingPage } from './components/rosa/RosaLandingPage';
 
 declare global {
   interface Window {
@@ -1064,6 +1065,11 @@ function App() {
     });
     return unsubscribe;
   }, []);
+
+  const isRosa = window.location.pathname === '/rosa' || window.location.hostname === 'rosa.bervos.org';
+  if (isRosa) {
+    return <RosaLandingPage />;
+  }
 
   const isHub = window.location.pathname === '/hub' || window.location.pathname === '/social';
 

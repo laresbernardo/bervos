@@ -635,6 +635,7 @@ function getLocalProjectVersion(projectName) {
         'pinmage': 'Pinmage',
         'tonaly': 'Tonaly',
         'yt2mp3': 'YT2MP3',
+        'rosa': 'Rosa',
         'bervos': 'BERVOS.org'
     };
     const folderName = directoryNames[normalizedName] || projectName;
@@ -696,6 +697,7 @@ async function getRepoCommits(projectName, repoUrl, limit = 15) {
         'pinmage': 'Pinmage',
         'tonaly': 'Tonaly',
         'yt2mp3': 'YT2MP3',
+        'rosa': 'Rosa',
         'bervos': 'BERVOS/BERVOS.org'
     };
     const folderName = directoryNames[normalizedName] || projectName;
@@ -752,6 +754,7 @@ async function getRepoCommits(projectName, repoUrl, limit = 15) {
             'pinmage': 'https://github.com/laresbernardo/pinmage',
             'tonaly': 'https://github.com/laresbernardo/tonaly',
             'yt2mp3': 'https://github.com/laresbernardo/YT2MP3.git',
+            'rosa': 'https://github.com/laresbernardo/Rosa.git',
             'bervos': 'https://github.com/laresbernardo/bervos.git'
         };
         gitUrl = gitUrlMap[normalizedName] || '';
@@ -882,6 +885,7 @@ async function fetchInitiativeMetrics(item) {
                 'pinmage': 'https://github.com/laresbernardo/pinmage',
                 'tonaly': 'https://github.com/laresbernardo/tonaly',
                 'yt2mp3': 'https://github.com/laresbernardo/YT2MP3.git',
+                'rosa': 'https://github.com/laresbernardo/Rosa.git',
                 'bervos': 'https://github.com/laresbernardo/bervos.git'
             };
             const repoUrl = item.codeRepository || gitUrlMap[normalizedName] || url || '';
@@ -954,6 +958,7 @@ async function fetchInitiativeMetrics(item) {
             'pinmage': 'https://github.com/laresbernardo/pinmage',
             'tonaly': 'https://github.com/laresbernardo/tonaly',
             'yt2mp3': 'https://github.com/laresbernardo/YT2MP3.git',
+            'rosa': 'https://github.com/laresbernardo/Rosa.git',
             'bervos': 'https://github.com/laresbernardo/bervos.git'
         };
         gh = extractOwnerRepo(backlogGitUrlMap[n]);

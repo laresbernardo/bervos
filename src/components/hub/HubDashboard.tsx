@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { signOut } from 'firebase/auth';
 import type { User } from 'firebase/auth';
-import { auth } from '../firebase';
-import { InitiativeCard } from './InitiativeCard';
-import type { InitiativeMetric } from './InitiativeCard';
+import { auth } from '../../firebase';
+import { InitiativeCard } from '../ui/InitiativeCard';
+import type { InitiativeMetric } from '../ui/InitiativeCard';
 import { RefreshCw, LogOut, Users, Download, ShieldAlert, Star, FolderGit, X, Search, Loader2, List, Sparkles, Wrench, FileText, GitBranch, Settings, GitCommit, Share2, Activity, UserPlus } from 'lucide-react';
-import ecosystem from '../data/ecosystem.json';
-import { SocialManager } from './SocialManager';
+import ecosystem from '../../data/ecosystem.json';
+import { SocialManager } from '../social/SocialManager';
 
 const UserAvatar: React.FC<{ src?: string; name: string; email: string }> = ({ src, name, email }) => {
   const [error, setError] = useState(false);
