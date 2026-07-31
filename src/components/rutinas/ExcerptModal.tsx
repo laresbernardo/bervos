@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, BookOpen, Globe2, Shuffle } from 'lucide-react';
 
@@ -150,6 +150,13 @@ interface ExcerptModalProps {
 
 export const ExcerptModal: React.FC<ExcerptModalProps> = ({ isOpen, onClose, lang }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [selectedIndex]);
 
   if (!isOpen) return null;
 
@@ -170,6 +177,7 @@ export const ExcerptModal: React.FC<ExcerptModalProps> = ({ isOpen, onClose, lan
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          ref={scrollRef}
           className="relative w-full max-w-3xl max-h-[92vh] overflow-y-auto bg-[#0d121f] border border-amber-500/30 rounded-2xl p-6 sm:p-10 shadow-2xl text-slate-100 font-sans scrollbar-thin scrollbar-thumb-amber-500/20"
         >
           <button

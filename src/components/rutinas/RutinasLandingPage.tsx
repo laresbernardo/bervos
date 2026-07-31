@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import {
   Globe2,
   BookOpen,
-  Languages,
   Bot,
   Feather,
   Mail,
@@ -82,14 +81,11 @@ export const RutinasLandingPage: React.FC = () => {
             {/* Language Toggle Button */}
             <button
               onClick={toggleLanguage}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-amber-500/40 text-xs font-mono text-amber-400 transition-all"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-amber-500/40 transition-all"
               title="Change Language / Cambiar Idioma"
             >
-              <Languages size={14} />
-              <span>{lang === 'ES' ? 'ESPAÑOL' : 'ENGLISH'}</span>
-              <span className="text-[10px] bg-amber-500/20 px-1.5 py-0.5 rounded text-amber-300">
-                {lang === 'ES' ? 'EN' : 'ES'}
-              </span>
+              <span className="text-lg leading-none">{lang === 'ES' ? '🇺🇸' : '🇪🇸'}</span>
+              <span className="text-[10px] font-mono text-amber-400">{lang === 'ES' ? 'EN' : 'ES'}</span>
             </button>
 
             <button
@@ -235,8 +231,8 @@ export const RutinasLandingPage: React.FC = () => {
               </h3>
               <p className="text-slate-400 text-sm leading-relaxed">
                 {lang === 'ES'
-                  ? 'Algoritmos generativos mezclan profesiones, conflictos y entornos culturales para evitar lugares comunes.'
-                  : 'Generative algorithms combine professions, conflicts, and cultural environments to bypass conventional clichés.'}
+                  ? 'Algoritmos generativos ayudan a generar perfiles de profesiones, conflictos, personalidades y entornos culturales propios para enriquecer la narrativa.'
+                  : 'Generative algorithms help build profiles of professions, conflicts, personalities, and unique cultural environments to enrich the narrative.'}
               </p>
             </div>
 
