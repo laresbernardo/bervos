@@ -64,14 +64,19 @@ interface HubDashboardProps {
 
 export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection = 'projects' }) => {
   const [metrics, setMetrics] = useState<InitiativeMetric[]>(() => {
+    const staticM = getStaticMetrics();
     try {
       const cached = localStorage.getItem('bervos_metrics');
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (parsed && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const existingIds = new Set(parsed.map((p: any) => (p.id || p.name || '').toLowerCase()));
+          const missingStatic = staticM.filter(s => !existingIds.has(s.id.toLowerCase()));
+          return [...parsed, ...missingStatic];
+        }
       }
     } catch (e) { }
-    return getStaticMetrics();
+    return staticM;
   });
   const [loading, setLoading] = useState(() => {
     try {
@@ -373,7 +378,11 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
         throw new Error(`Failed to load metrics (Status: ${res.status})`);
       }
 
-      const data = await res.json();
+      const rawData = await res.json();
+      const staticM = getStaticMetrics();
+      const existingIds = new Set((Array.isArray(rawData) ? rawData : []).map((p: any) => (p.id || p.name || '').toLowerCase()));
+      const missingStatic = staticM.filter(s => !existingIds.has(s.id.toLowerCase()));
+      const data = [...(Array.isArray(rawData) ? rawData : []), ...missingStatic];
       setMetrics(data);
       const cache = res.headers.get('X-Cache-Status');
       setCacheStatus(cache);

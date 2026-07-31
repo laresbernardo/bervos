@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 import { getAnalytics } from 'firebase/analytics';
 
 const firebaseConfig = {
@@ -16,6 +17,7 @@ const hasConfig = firebaseConfig.apiKey && firebaseConfig.projectId;
 
 const app = hasConfig ? initializeApp(firebaseConfig) : null as any;
 export const auth = app ? getAuth(app) : null as any;
+export const db = app ? getFirestore(app) : null as any;
 export const googleProvider = app ? new GoogleAuthProvider() : null as any;
 
 if (hasConfig) {
