@@ -43,6 +43,19 @@ export const RosaLandingPage: React.FC = () => {
       favicon.type = 'image/png';
     }
 
+    if (typeof window.gtag !== 'undefined') {
+      window.gtag('config', 'G-380P0NRV7V', {
+        page_title: document.title,
+        page_path: window.location.pathname,
+        page_location: window.location.href
+      });
+      window.gtag('event', 'page_view', {
+        page_title: document.title,
+        page_path: window.location.pathname,
+        page_location: window.location.href
+      });
+    }
+
     return () => {
       document.title = "BERVOS | Digital Solutions, Systems & Open Source";
       if (favicon) {

@@ -954,9 +954,9 @@ async function fetchInitiativeMetrics(item: any): Promise<any> {
     const isUtility = item.applicationCategory === 'UtilitiesApplication';
     metrics.applicationCategory = item.applicationCategory;
 
-    // Version: prefer local filesystem, then GitHub, then fallback
+    // Version: prefer local filesystem, then GitHub, then schema item version fallback
     const localVersion = getLocalProjectVersion(name);
-    metrics.version = localVersion || '1.0.0';
+    metrics.version = localVersion || item.softwareVersion || item.version || '1.0.0';
 
     // Try GitHub for real version if local is unavailable
     if (!localVersion) {
@@ -1029,9 +1029,6 @@ async function fetchInitiativeMetrics(item: any): Promise<any> {
           metrics.totalUsers = userMetrics.totalUsers;
           metrics.active30d = userMetrics.active30d;
         }
-        if (!localVersion && !item.codeRepository) {
-          metrics.version = '0.0.0';
-        }
       }
     }
   }
@@ -1039,6 +1036,9 @@ async function fetchInitiativeMetrics(item: any): Promise<any> {
   // Retrieve recent commits (prefer codeRepository for GitHub projects)
   const commitUrl = item.codeRepository || url;
   metrics.commits = await getRepoCommits(name, commitUrl);
+  if (metrics.commits && metrics.commits.length > 0) {
+    metrics.lastUpdated = metrics.commits[0].date;
+  }
 
   // Fetch BACKLOG.md count and content from GitHub repo
   const extractOwnerRepo = (u: string) => {
@@ -1652,7 +1652,7 @@ const REPOS_FOR_PIPELINE = [
   { name: 'YT2MP3', repo: 'laresbernardo/YT2MP3' },
   { name: 'LaresDJ', repo: 'laresbernardo/LaresDJ' },
   { name: 'WAme', repo: 'laresbernardo/WAme' },
-  { name: 'Relatos', repo: 'laresbernardo/relatos' },
+  { name: 'Rutinas', repo: 'laresbernardo/rutinas' },
   { name: 'Rosa', repo: 'laresbernardo/Rosa' },
   { name: 'BERVOS Hub', repo: 'laresbernardo/bervos' }
 ];

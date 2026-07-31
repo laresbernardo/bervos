@@ -85,6 +85,7 @@ def generate_json_ld(data):
             "url": project['link'],
             "applicationCategory": project.get('applicationCategory', 'WebApplication'),
             "operatingSystem": "All",
+            "softwareVersion": project.get('version', '1.0.0'),
             "author": {
                 "@id": f"{org['url']}#person"
             },

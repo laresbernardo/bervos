@@ -59,7 +59,7 @@ export const InitiativeCard: React.FC<InitiativeCardProps> = ({ item, onUsersCli
         <div className="flex justify-between items-start mb-6">
           <div className="space-y-1">
             <span className="mono-label !text-indigo-400">
-              {isOS ? 'OSS_MODULE' : isDesktop ? 'DESKTOP_APP' : 'WEB_SOLUTION'} // {item.version || '0.0.0'}
+              {isOS ? 'OSS_MODULE' : isDesktop ? 'DESKTOP_APP' : 'WEB_SOLUTION'} // {(item.version && item.version !== '0.0.0') ? item.version : '1.0.0'}
             </span>
             <h3 className="text-2xl font-black text-white tracking-tight mt-1">{item.name}</h3>
           </div>

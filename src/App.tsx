@@ -13,6 +13,7 @@ import { HubDashboard } from './components/hub/HubDashboard';
 import { HubAccessDenied } from './components/hub/HubAccessDenied';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { RosaLandingPage } from './components/rosa/RosaLandingPage';
+import { RutinasLandingPage } from './components/rutinas/RutinasLandingPage';
 
 declare global {
   interface Window {
@@ -348,7 +349,7 @@ function HomePage() {
 
   const getProjectVersion = useCallback((p: any) => {
     const live = liveMetrics[p.title.toLowerCase()]?.version;
-    const rawVersion = live || p.version || '1.0.0';
+    const rawVersion = (live && live !== '0.0.0') ? live : (p.version || '1.0.0');
     return rawVersion.replace(/^v+/i, '');
   }, [liveMetrics]);
 
@@ -1066,9 +1067,14 @@ function App() {
     return unsubscribe;
   }, []);
 
-  const isRosa = window.location.pathname === '/rosa' || window.location.hostname === 'rosa.bervos.org';
+  const isRosa = window.location.pathname === '/rosa' || window.location.hostname.includes('rosa');
   if (isRosa) {
     return <RosaLandingPage />;
+  }
+
+  const isRutinas = window.location.pathname === '/rutinas' || window.location.hostname.includes('rutinas');
+  if (isRutinas) {
+    return <RutinasLandingPage />;
   }
 
   const isHub = window.location.pathname === '/hub' || window.location.pathname === '/social';

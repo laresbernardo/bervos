@@ -74,14 +74,14 @@ The name **BERVOS** represents three distinct architectural layers of the ecosys
 ### Rosa
 - **Deployment URL**: [https://rosa.bervos.org/](https://rosa.bervos.org/)
 - **Category**: Productivity (BusinessApplication)
-- **Tags**: MMM, Robyn, R, Shiny
+- **Tags**: MMM, Robyn, R, Shiny, IA
 - **Description**: Enterprise-grade self-hosted MMM app with AI Assistant, scenario simulations, reporting, and more.
 
 ### Rutinas
 - **Deployment URL**: [https://rutinas.bervos.org/](https://rutinas.bervos.org/)
-- **Category**: Productivity (WebApplication)
-- **Tags**: Habits, Routines, Productivity, PWA
-- **Description**: Personalized habits, routines, and daily task tracking application for productivity and focus.
+- **Category**: Leisure (EducationalApplication)
+- **Tags**: Libro, Relatos, IA, Culturas, Literatura
+- **Description**: Un viaje íntimo a través de las rutinas cotidianas de 196 culturas. Libro en español co-creado con IA, a publicarse durante el 2026.
 
 ### BERVOS
 - **Deployment URL**: [https://bervos.org/](https://bervos.org/)

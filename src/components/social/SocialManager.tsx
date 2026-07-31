@@ -43,7 +43,8 @@ const ORIGINAL_VISUAL_DIRECTIONS: Record<string, string> = {
   'chessverse': 'Immersive chess opening practice chessboard rendering variations, tactical puzzles, and coordinate guides.',
   'tonaly': 'Interactive music theory circle of fifths ear training chart showing pitch relationships and interval selectors.',
   'laresdj': 'Professional 4-channel DJ mixer console deck layout showing faders, level meters, Traktor mappings, and BPM monitors.',
-  'rosa': 'Enterprise-grade self-hosted Marketing Mix Modeling (MMM) dashboard showing Meta Robyn integration, AI query assistant, scenario simulations, and PowerPoint export engine.'
+  'rosa': 'Enterprise-grade self-hosted Marketing Mix Modeling (MMM) dashboard showing Meta Robyn integration, AI query assistant, scenario simulations, and PowerPoint export engine.',
+  'rutinas': 'Bilingual book presentation dashboard showing an intimate 5x4 matrix of 196 human portraits across diverse cultures, AI co-creation framework, sample stories, and launch waitlist.'
 };
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; label: string }> = {

@@ -168,7 +168,8 @@
         "MMM",
         "Robyn",
         "R",
-        "Shiny"
+        "Shiny",
+        "IA"
       ],
       "logo": "/rosa-logo.png",
       "category": "productivity",
@@ -178,19 +179,21 @@
     },
     {
       "title": "Rutinas",
-      "description": "Personalized habits, routines, and daily task tracking application for productivity and focus.",
+      "description": "Un viaje íntimo a través de las rutinas cotidianas de 196 culturas. Libro en español co-creado con IA, a publicarse durante el 2026.",
       "link": "https://rutinas.bervos.org/",
+      "codeRepository": "https://github.com/laresbernardo/rutinas",
       "tags": [
-        "Habits",
-        "Routines",
-        "Productivity",
-        "PWA"
+        "Libro",
+        "Relatos",
+        "IA",
+        "Culturas",
+        "Literatura"
       ],
       "logo": "/rutinas-logo.png",
-      "category": "productivity",
-      "applicationCategory": "WebApplication",
+      "category": "leisure",
+      "applicationCategory": "EducationalApplication",
       "updated": "2026-07-31",
-      "version": "1.0.0"
+      "version": "0.1.0"
     },
     {
       "title": "BERVOS",
