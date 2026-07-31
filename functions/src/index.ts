@@ -1555,6 +1555,43 @@ app.get(['/users', '/api/users'], authenticateAdmin, async (req: express.Request
   }
 });
 
+/**
+ * POST /api/waitlist — Unauthenticated public endpoint to submit waitlist registrations safely via Admin SDK
+ */
+app.post('/api/waitlist', async (req: express.Request, res: express.Response) => {
+  try {
+    const { name, email, project, lang, comment, source } = req.body || {};
+    if (!email) {
+      res.status(400).json({ error: 'Email is required' });
+      return;
+    }
+
+    const db = admin.firestore();
+    const waitlistRef = db.collection('waitlist_users');
+    const existing = await waitlistRef
+      .where('email', '==', email.toLowerCase())
+      .where('project', '==', project || 'Rutinas')
+      .get();
+
+    if (existing.empty) {
+      await waitlistRef.add({
+        name: name || '',
+        email: email.toLowerCase(),
+        project: project || 'Rutinas',
+        lang: lang || 'ES',
+        comment: comment || '',
+        registeredAt: new Date().toISOString(),
+        source: source || 'waitlist'
+      });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[API] Error submitting waitlist registration:', err);
+    res.status(500).json({ error: 'Failed to record waitlist entry' });
+  }
+});
+
 
 // ============================================================
 // SOCIAL CONTENT MANAGEMENT API

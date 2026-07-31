@@ -6,7 +6,8 @@ import {
   Bot,
   Feather,
   Mail,
-  Bookmark
+  Bookmark,
+  Dices
 } from 'lucide-react';
 
 import { ExcerptModal } from './ExcerptModal';
@@ -142,8 +143,8 @@ export const RutinasLandingPage: React.FC = () => {
               className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-2xl font-sans"
             >
               {lang === 'ES'
-                ? 'Un viaje íntimo a través de las rutinas cotidianas de 196 culturas. Libro en español co-creado con Inteligencia Artificial, a publicarse durante el 2026.'
-                : 'An intimate journey through the daily routines of 196 cultures. A book co-created with AI, scheduled for publication in 2026.'}
+                ? 'Un viaje íntimo a través de rutinas cotidianas y actuales de 196 culturas. Libro en español co-creado con IA, a publicarse durante el 2026.'
+                : 'An intimate journey through the current daily routines of 196 cultures. A book co-created with AI in Spanish, scheduled for publication in 2026.'}
             </motion.p>
 
             <motion.div
@@ -198,55 +199,69 @@ export const RutinasLandingPage: React.FC = () => {
               {lang === 'ES' ? 'METODOLOGÍA DE CO-CREACIÓN // IA & EMPATÍA' : 'CO-CREATION METHODOLOGY // AI & EMPATHY'}
             </span>
             <h2 className="text-3xl sm:text-5xl font-black text-white">
-              {lang === 'ES' ? 'Escapar de los propios sesgos.' : 'Escaping Personal Bias.'}
+              {lang === 'ES' ? 'Escapar de los sesgos y estereotipos.' : 'Escaping Bias and Stereotypes.'}
             </h2>
             <p className="text-slate-400 text-base sm:text-lg">
               {lang === 'ES'
-                ? 'Bernardo Lares utiliza la Inteligencia Artificial no para sustituir la experiencia humana, sino como una brújula aleatoria para construir realidades creíbles e inmersivas.'
-                : 'Bernardo Lares utilizes Artificial Intelligence not to replace human experience, but as a randomized compass to craft authentic, immersive human stories.'}
+                ? 'El autor utiliza la Inteligencia Artificial como brújula aleatoria para construir realidades creíbles, actualizadas e inmersivas de personajes que jamás habría concebido únicamente por su conocimiento previo del mundo.'
+                : 'The author uses Artificial Intelligence as a randomized compass to construct credible, up-to-date, and immersive realities of characters he could never have conceived through his prior world knowledge alone.'}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="tech-card p-8 space-y-4 border-amber-500/20">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="tech-card p-6 space-y-4 border-amber-500/20">
               <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
                 <Globe2 size={24} />
               </div>
-              <h3 className="text-xl font-bold text-white">
+              <h3 className="text-lg font-bold text-white">
                 {lang === 'ES' ? '196 Culturas & Voces' : '196 Cultures & Voices'}
               </h3>
-              <p className="text-slate-400 text-sm leading-relaxed">
+              <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
                 {lang === 'ES'
-                  ? 'Cada relato explora la vida cotidiana de un personaje ficticio pero tangible en un país distinto del planeta.'
-                  : 'Every story explores the daily life of a tangible yet fictional character in a different country across the globe.'}
+                  ? 'Cada relato explora la vida cotidiana de un personaje ficticio pero tangible en un país distinto. Algo aprenderemos de cada uno de ellos.'
+                  : 'Each story explores the daily life of a tangible yet fictional character in a different country. We will learn something from each of them.'}
               </p>
             </div>
 
-            <div className="tech-card p-8 space-y-4 border-amber-500/20">
+            <div className="tech-card p-6 space-y-4 border-amber-500/20">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                <Dices size={24} />
+              </div>
+              <h3 className="text-lg font-bold text-white">
+                {lang === 'ES' ? 'El Juego Interactivo' : 'The Interactive Game'}
+              </h3>
+              <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
+                {lang === 'ES'
+                  ? 'Los países permanecen en secreto durante la lectura. Descubre las pistas, gira la página para comprobarlo y empareja los rostro en la portada con el relato.'
+                  : 'Countries remain secret while reading. Discover the clues, turn the page to check, and match the faces on the cover with their story.'}
+              </p>
+            </div>
+
+            <div className="tech-card p-6 space-y-4 border-amber-500/20">
               <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
                 <Bot size={24} />
               </div>
-              <h3 className="text-xl font-bold text-white">
+              <h3 className="text-lg font-bold text-white">
                 {lang === 'ES' ? 'IA como Catalizador' : 'AI as a Catalyst'}
               </h3>
-              <p className="text-slate-400 text-sm leading-relaxed">
+              <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
                 {lang === 'ES'
-                  ? 'Algoritmos generativos ayudan a generar perfiles de profesiones, conflictos, personalidades y entornos culturales propios para enriquecer la narrativa.'
-                  : 'Generative algorithms help build profiles of professions, conflicts, personalities, and unique cultural environments to enrich the narrative.'}
+                  ? 'Algoritmos generativos ayudan a generar perfiles de profesiones, conflictos, personalidades, entornos culturales propios y realistas para enriquecer el contenido de la narrativa.'
+                  : 'Generative algorithms help build profiles of professions, conflicts, personalities, unique cultural environments to enrich the narrative content realisticaly.'}
               </p>
             </div>
 
-            <div className="tech-card p-8 space-y-4 border-amber-500/20">
+            <div className="tech-card p-6 space-y-4 border-amber-500/20">
               <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
                 <Feather size={24} />
               </div>
-              <h3 className="text-xl font-bold text-white">
+              <h3 className="text-lg font-bold text-white">
                 {lang === 'ES' ? 'Curaduría & Edición' : 'Curating & Editing'}
               </h3>
-              <p className="text-slate-400 text-sm leading-relaxed">
+              <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
                 {lang === 'ES'
-                  ? 'Cada texto es minuciosamente curado y editado por el autor para asegurar realismo sensorial e inmersión íntima.'
-                  : 'Each story is meticulously curated and edited by the author to ensure sensory realism and intimate immersion.'}
+                  ? 'Cada historia es minuciosamente co-creada y editada para asegurar realismo sensorial e inmersión altamente íntima y humana.'
+                  : 'Each story is meticulously co-created and edited to ensure intimacy, human experience and sensory realism.'}
               </p>
             </div>
           </div>

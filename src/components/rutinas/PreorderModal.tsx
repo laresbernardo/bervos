@@ -39,7 +39,25 @@ export const PreorderModal: React.FC<PreorderModalProps> = ({ isOpen, onClose, l
       });
 
       if (res.ok) {
-        // Backup to Firestore for Hub visibility (upsert by email)
+        // Send to BERVOS Backend API for reliable Admin SDK Firestore recording
+        try {
+          await fetch('/api/waitlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name,
+              email,
+              project: 'Rutinas',
+              lang,
+              comment: comment || '',
+              source: 'waitlist'
+            })
+          });
+        } catch (apiErr) {
+          console.warn('[API] Server-side waitlist recording error:', apiErr);
+        }
+
+        // Backup to Client-side Firestore as secondary fallback
         if (db) {
           try {
             const waitlistRef = collection(db, 'waitlist_users');
@@ -58,7 +76,7 @@ export const PreorderModal: React.FC<PreorderModalProps> = ({ isOpen, onClose, l
               });
             }
           } catch (err) {
-            console.warn('[Firestore] Waitlist backup error:', err);
+            console.warn('[Firestore] Client waitlist backup error:', err);
           }
         }
         setStatus('success');

@@ -215,7 +215,7 @@ export const RosaLandingPage: React.FC = () => {
             <span className="mono-label !text-rose-400">WHY ROSA IS A GAME-CHANGER</span>
             <h2 className="text-3xl sm:text-5xl font-black text-white">Built for Data Scientists, Marketers & Executives.</h2>
             <p className="text-slate-400 text-base sm:text-lg">
-              Developed by Meta Robyn’s main developer, Rosa resolves traditional MMM friction by unifying mathematical accuracy, AI speed, and local data security into a single app.
+              Developed by Meta <a href="https://github.com/facebookexperimental/Robyn" target="_blank" rel="noopener noreferrer" className="text-rose-400 hover:text-rose-300 underline font-semibold transition-colors">Robyn</a>’s main developer, Rosa resolves traditional MMM friction by unifying mathematical accuracy, AI speed, and local data security into a single app.
             </p>
           </div>
 
@@ -229,7 +229,7 @@ export const RosaLandingPage: React.FC = () => {
               {
                 icon: Cpu,
                 title: 'Robyn-Powered Core',
-                desc: 'Built directly upon Robyn as its underlying engine. Fully interoperable, enhanced with unique UI extensions, model refreshers, and audit logs.'
+                desc: <>Built directly upon <a href="https://github.com/facebookexperimental/Robyn" target="_blank" rel="noopener noreferrer" className="text-rose-400 hover:text-rose-300 underline font-semibold transition-colors">Robyn</a> as its underlying engine. Fully interoperable, enhanced with unique UI extensions, model refreshers, and audit logs.</>
               },
               {
                 icon: Bot,
