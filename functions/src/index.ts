@@ -842,6 +842,41 @@ async function getRepoCommits(projectName: string, repoUrl: string, limit = 15):
 }
 
 /**
+ * Fetches the count of repository collaborators/access list via GitHub API.
+ */
+async function getRepoCollaboratorCount(owner: string, repo: string): Promise<number> {
+  const headers: Record<string, string> = { 'User-Agent': 'bervos-hub' };
+  const token = process.env.GITHUB_TOKEN;
+  if (token) {
+    headers['Authorization'] = `token ${token}`;
+  }
+
+  try {
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/collaborators?per_page=100`, { headers });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        return data.length;
+      }
+    }
+  } catch (e) {
+    console.warn(`[GitHub API] Failed to fetch collaborators for ${owner}/${repo}:`, e);
+  }
+
+  // Fallback: Read local git authors count if sibling repo exists
+  try {
+    const parentDir = path.join(__dirname, '..', '..', '..', '..');
+    const folderPath = path.join(parentDir, repo);
+    if (fs.existsSync(path.join(folderPath, '.git'))) {
+      const authors = execSync('git log --format="%aE" | sort -u', { cwd: folderPath, encoding: 'utf8', timeout: 1000 }).trim();
+      if (authors) return authors.split('\n').filter(Boolean).length;
+    }
+  } catch (e) {}
+
+  return 0;
+}
+
+/**
  * Fetches metrics for a single initiative item.
  */
 async function fetchInitiativeMetrics(item: any): Promise<any> {
@@ -956,28 +991,44 @@ async function fetchInitiativeMetrics(item: any): Promise<any> {
       }
     }
 
-    const projectApp = getProjectApp(projectId);
-    if (projectApp) {
-      if (isUtility) {
-        // Utility/Desktop App: Pull downloads/file hits
-        metrics.downloads = await getTelemetryHits(projectApp, projectId);
+    const normalizedName = name.toLowerCase();
+    if (normalizedName === 'rosa' || item.applicationCategory === 'BusinessApplication') {
+      const repoUrl = item.codeRepository || 'https://github.com/laresbernardo/Rosa';
+      const repoMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+      if (repoMatch) {
+        const owner = repoMatch[1];
+        const repo = repoMatch[2].replace(/\.git$/, '');
+        const collabCount = await getRepoCollaboratorCount(owner, repo);
+        metrics.totalUsers = collabCount > 0 ? collabCount : (item.totalUsers || 1);
+        metrics.active30d = collabCount > 0 ? collabCount : (item.active30d || 1);
       } else {
-        // Web App with login: Pull MAU and unique users count
-        const userMetrics = await getAppUserMetrics(projectApp);
-        metrics.totalUsers = userMetrics.totalUsers;
-        metrics.active30d = userMetrics.active30d;
+        metrics.totalUsers = item.totalUsers || 1;
+        metrics.active30d = item.active30d || 1;
       }
     } else {
-      // Local CLI/REST Development Fallbacks
-      if (isUtility) {
-        metrics.downloads = await getTelemetryHitsViaCli(projectId);
+      const projectApp = getProjectApp(projectId);
+      if (projectApp) {
+        if (isUtility) {
+          // Utility/Desktop App: Pull downloads/file hits
+          metrics.downloads = await getTelemetryHits(projectApp, projectId);
+        } else {
+          // Web App with login: Pull MAU and unique users count
+          const userMetrics = await getAppUserMetrics(projectApp);
+          metrics.totalUsers = userMetrics.totalUsers;
+          metrics.active30d = userMetrics.active30d;
+        }
       } else {
-        const userMetrics = await getAppUserMetricsViaCli(projectId);
-        metrics.totalUsers = userMetrics.totalUsers;
-        metrics.active30d = userMetrics.active30d;
-      }
-      if (!localVersion && !item.codeRepository) {
-        metrics.version = '0.0.0';
+        // Local CLI/REST Development Fallbacks
+        if (isUtility) {
+          metrics.downloads = await getTelemetryHitsViaCli(projectId);
+        } else {
+          const userMetrics = await getAppUserMetricsViaCli(projectId);
+          metrics.totalUsers = userMetrics.totalUsers;
+          metrics.active30d = userMetrics.active30d;
+        }
+        if (!localVersion && !item.codeRepository) {
+          metrics.version = '0.0.0';
+        }
       }
     }
   }
