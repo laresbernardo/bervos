@@ -8,6 +8,7 @@ export interface InitiativeMetric {
   name: string;
   type: 'SoftwareApplication' | 'SoftwareSourceCode';
   url?: string;
+  logo?: string;
   description?: string;
   uptime?: boolean;
   latency?: number;
@@ -56,12 +57,22 @@ export const InitiativeCard: React.FC<InitiativeCardProps> = ({ item, onUsersCli
       className="tech-card p-8 flex flex-col justify-between min-h-[360px] group"
     >
       <div>
-        <div className="flex justify-between items-start mb-6">
+        <div className="flex justify-between items-start mb-4">
           <div className="space-y-1">
             <span className="mono-label !text-indigo-400">
               {isOS ? 'OSS_MODULE' : isDesktop ? 'DESKTOP_APP' : 'WEB_SOLUTION'} // {(item.version && item.version !== '0.0.0') ? item.version : '1.0.0'}
             </span>
-            <h3 className="text-2xl font-black text-white tracking-tight mt-1">{item.name}</h3>
+            <div className="flex items-center gap-3 mt-1">
+              {item.logo && (
+                <img
+                  src={item.logo}
+                  alt={item.name}
+                  className="w-8 h-8 rounded-lg object-cover bg-white/5 border border-white/10 shrink-0"
+                  onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                />
+              )}
+              <h3 className="text-2xl font-black text-white tracking-tight">{item.name}</h3>
+            </div>
           </div>
 
           <div className="flex flex-col items-end gap-2 shrink-0">
@@ -126,6 +137,12 @@ export const InitiativeCard: React.FC<InitiativeCardProps> = ({ item, onUsersCli
             </div>
           </div>
         </div>
+
+        {item.description && (
+          <p className="text-slate-400 text-xs sm:text-sm leading-relaxed mt-2 mb-2 line-clamp-3 font-sans">
+            {item.description}
+          </p>
+        )}
       </div>
 
       <div>

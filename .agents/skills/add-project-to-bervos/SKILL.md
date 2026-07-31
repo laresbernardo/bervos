@@ -1,6 +1,6 @@
 ---
 name: "add-project-to-bervos"
-description: "Comprehensive step-by-step procedure for adding any new project type (Web App, R Package, macOS App, Desktop Utility, Open Source) to BERVOS.org. Covers ecosystem registration, dynamic versioning, hub integration, custom subdomains, landing page setup with dynamic favicons, and GEO/metadata sync."
+description: "Comprehensive step-by-step procedure for adding any new project type (Web App, R Package, macOS App, Desktop Utility, Open Source) to BERVOS.org. Covers ecosystem registration, dynamic versioning, hub integration, custom subdomains, landing page setup with dynamic favicons, automatic OpenGraph social link preview handling, and GEO/metadata sync."
 ---
 
 # Add Project to BERVOS.org Skill
@@ -32,7 +32,7 @@ Add a new JSON object entry under the `"projects"` array:
   "tags": ["Tag1", "Tag2", "Tag3"],
   "logo": "/project-logo.png",
   "category": "productivity",
-  "applicationCategory": "WebApplication", // or "BusinessApplication", "UtilitiesApplication", "FinanceApplication", etc.
+  "applicationCategory": "WebApplication",
   "updated": "YYYY-MM-DD",
   "version": "1.0.0"
 }
@@ -61,87 +61,67 @@ Add a new JSON object entry under the `"projects"` array:
    { name: 'ProjectName', repo: 'laresbernardo/ProjectRepo' }
    ```
 
-4. **Metrics / Users Resolution (`fetchInitiativeMetrics`)**:
-   - For **Enterprise / Private Apps** (like *Rosa*): User metric resolves to repository collaborator / access list count (`getRepoCollaboratorCount`).
-   - For **Web Apps**: Resolves to Firebase Auth users (`getAppUserMetrics`).
-   - For **Utilities**: Resolves to Telemetry download hits (`getTelemetryHits`).
+---
+
+### Step 3: Server-Side OpenGraph & Social Link Preview Engine (`ssrHandler` & `firebase.json`)
+
+**Critical Learning**: Social media platforms (Telegram, WhatsApp, LinkedIn, Twitter/X, Facebook, iMessage) scrape HTML link previews **without executing client-side JavaScript**. If requests land on a generic `index.html`, scrapers see default main site meta tags instead of the project logo.
+
+1. **Dynamic SSR Function (`functions/src/index.ts`)**:
+   The `ssrHandler` Cloud Function automatically intercepts request headers (`req.headers.host`), matches the domain or path against `src/data/ecosystem.json`, and dynamically injects the project's exact title, description, and OpenGraph logo URL (`og:image`, `twitter:image`):
+   ```ts
+   // ssrHandler reads ecosystem.json and dynamically maps:
+   // - title -> `${match.title} | ${match.description}`
+   // - og:image -> `https://bervos.org${match.logo}`
+   // - og:description -> match.description
+   ```
+
+2. **Wildcard Rewrites (`firebase.json`)**:
+   Ensure `firebase.json` routes wildcard HTML requests to `ssrHandler`:
+   ```json
+   {
+     "hosting": {
+       "rewrites": [
+         { "source": "/api/**", "function": "hubApi" },
+         { "source": "**", "function": "ssrHandler" }
+       ]
+     }
+   }
+   ```
 
 ---
 
-### Step 3: Hub Dashboard & Social Manager Sync
+### Step 4: Hub Dashboard Sync & Deduplication (`src/components/hub/HubDashboard.tsx`)
 
-1. **Hub Dashboard (`src/components/hub/HubDashboard.tsx`)**:
-   Add key mapping to `GIT_REPO_MAP`:
+1. **Repo Mapping (`GIT_REPO_MAP`)**:
    ```ts
    'projectkey': 'laresbernardo/ProjectRepo'
    ```
 
-2. **Social Media Pipeline (`src/components/social/SocialManager.tsx`)**:
-   Add prompt direction to `ORIGINAL_VISUAL_DIRECTIONS`:
-   ```ts
-   'projectkey': 'Branded architecture/interface diagram description for AI visual generation.'
-   ```
+2. **Deduplication Safeguard**:
+   All metrics state initializers and API response handlers must wrap project collections in `deduplicateMetrics()` to prevent duplicate initiative cards when merging static and live API payloads.
 
 ---
 
-### Step 4: Dedicated Landing Page & Custom Subdomain (If Applicable)
+### Step 5: Dedicated Landing Page & Favicon Setup
 
-If the project has a custom landing page (like `rosa.bervos.org`):
+1. **Modular Folder**:
+   Create `src/components/<projectkey>/<Project>LandingPage.tsx`.
 
-1. **Modular Folder Structure**:
-   Create a clean module folder under `src/components/<projectkey>/`:
-   - `src/components/<projectkey>/<Project>LandingPage.tsx`
-   - Modals, background animations, and custom assets.
-
-2. **Dynamic Favicon Setup (1:1 Aspect Ratio)**:
-   - **Important**: Browser tabs force favicons into a square 1:1 canvas. Generate a square PNG (`public/<projectkey>-favicon.png` e.g., 512x512) centered with transparent background to prevent horizontal stretching.
-   - In `<Project>LandingPage.tsx`, dynamically set favicon on mount and clean up on unmount:
-     ```tsx
-     useEffect(() => {
-       document.title = "Project Title | Description";
-       const favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
-       const previousHref = favicon ? favicon.href : '/favicon.svg';
-       const previousType = favicon ? favicon.type : 'image/svg+xml';
-
-       if (favicon) {
-         favicon.href = '/projectkey-favicon.png';
-         favicon.type = 'image/png';
-       }
-
-       return () => {
-         document.title = "BERVOS | Digital Solutions, Systems & Open Source";
-         if (favicon) {
-           favicon.href = previousHref;
-           favicon.type = previousType;
-         }
-       };
-     }, []);
-     ```
+2. **Dynamic Favicon & DOM Meta Tags**:
+   Set 1:1 ratio square favicon (`public/<projectkey>-favicon.png`) and DOM meta tags on mount, restoring defaults on unmount.
 
 3. **Subdomain Routing & DNS**:
-   - **`src/App.tsx`**: Add route / hostname check for `projectkey.bervos.org` or `/projectkey`.
-   - **GoDaddy / DNS**: Create CNAME record `projectkey` pointing to Firebase Hosting default domain (e.g. `bervos-official-5df71.web.app`).
-   - **Firebase Console**: Add Custom Domain `projectkey.bervos.org`.
+   - `src/App.tsx`: Route `window.location.hostname.includes('projectkey')`.
+   - GoDaddy / DNS: CNAME `projectkey` -> `bervos-official-5df71.web.app`.
+   - Firebase Console: Add custom domain `projectkey.bervos.org`.
 
 ---
 
-### Step 5: Metadata Sync, Verification & Deployment
+### Step 6: Metadata Sync & Build Verification
 
-1. **Run Metadata Generator**:
-   ```bash
-   python3 execution/generate_ai_metadata.py
-   ```
-   *Injects schema into `index.html` and regenerates `sitemap.xml`, `robots.txt`, `llms.txt`, `llms-full.txt`.*
-
-2. **Build Applications**:
-   ```bash
-   cd functions && npm run build && cd .. && npm run build
-   ```
-
-3. **Commit & Deploy**:
-   ```bash
-   git add .
-   git commit -m "feat(ecosystem): add ProjectName to BERVOS ecosystem"
-   git push origin main
-   ```
-   *GitHub Actions automatically builds and deploys to Firebase Hosting & Functions.*
+```bash
+python3 execution/generate_ai_metadata.py
+cd functions && npm run build && cd .. && npm run build
+npx -y firebase-tools@latest deploy --only hosting,functions --project bervos-official
+```

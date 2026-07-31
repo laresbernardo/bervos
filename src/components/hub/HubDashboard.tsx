@@ -28,6 +28,22 @@ const UserAvatar: React.FC<{ src?: string; name: string; email: string }> = ({ s
   );
 };
 
+const deduplicateMetrics = (list: InitiativeMetric[]): InitiativeMetric[] => {
+  const seen = new Set<string>();
+  const result: InitiativeMetric[] = [];
+
+  for (const item of list) {
+    if (!item) continue;
+    const nameKey = (item.name || item.id || '').toLowerCase().trim();
+    if (nameKey && !seen.has(nameKey)) {
+      seen.add(nameKey);
+      result.push(item);
+    }
+  }
+
+  return result;
+};
+
 const getStaticMetrics = (): InitiativeMetric[] => {
   const { projects, openSource } = ecosystem;
 
@@ -40,9 +56,13 @@ const getStaticMetrics = (): InitiativeMetric[] => {
       name: p.title,
       type,
       url: p.link,
+      logo: p.logo,
       description: p.description,
       version: p.version,
       applicationCategory: p.applicationCategory,
+      totalUsers: (p as any).totalUsers || 1,
+      active30d: (p as any).active30d || 1,
+      uptime: true
     };
   });
 
@@ -54,7 +74,7 @@ const getStaticMetrics = (): InitiativeMetric[] => {
     description: o.description,
   }));
 
-  return [...staticProj, ...staticOS] as InitiativeMetric[];
+  return deduplicateMetrics([...staticProj, ...staticOS]) as InitiativeMetric[];
 };
 
 interface HubDashboardProps {
@@ -70,9 +90,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const existingIds = new Set(parsed.map((p: any) => (p.id || p.name || '').toLowerCase()));
-          const missingStatic = staticM.filter(s => !existingIds.has(s.id.toLowerCase()));
-          return [...parsed, ...missingStatic];
+          return deduplicateMetrics([...parsed, ...staticM]);
         }
       }
     } catch (e) { }
@@ -380,9 +398,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
 
       const rawData = await res.json();
       const staticM = getStaticMetrics();
-      const existingIds = new Set((Array.isArray(rawData) ? rawData : []).map((p: any) => (p.id || p.name || '').toLowerCase()));
-      const missingStatic = staticM.filter(s => !existingIds.has(s.id.toLowerCase()));
-      const data = [...(Array.isArray(rawData) ? rawData : []), ...missingStatic];
+      const data = deduplicateMetrics([...(Array.isArray(rawData) ? rawData : []), ...staticM]);
       setMetrics(data);
       const cache = res.headers.get('X-Cache-Status');
       setCacheStatus(cache);
@@ -406,7 +422,8 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
               headers: { 'Authorization': `Bearer ${freshToken}` }
             });
             if (freshRes.ok) {
-              const freshData = await freshRes.json();
+              const freshRaw = await freshRes.json();
+              const freshData = deduplicateMetrics([...(Array.isArray(freshRaw) ? freshRaw : []), ...getStaticMetrics()]);
               setMetrics(freshData);
               const freshCache = freshRes.headers.get('X-Cache-Status') || 'HIT';
               setCacheStatus(freshCache);
@@ -419,7 +436,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
               console.log('[SWR] Metrics updated successfully.');
             }
           } catch (e) {
-            console.error('[SWR] Silent re-fetch failed:', e);
+            console.error('[SWR] Re-fetch failed:', e);
           }
         }, 4000);
       }
