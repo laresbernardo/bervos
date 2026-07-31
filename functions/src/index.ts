@@ -1646,68 +1646,78 @@ app.post('/api/social/import', authenticateAdmin, async (req: express.Request, r
  * Dynamically injects open graph (og:image, og:title, og:description) and twitter card metadata
  * based on Host header or URL path for social scrapers (Telegram, WhatsApp, LinkedIn, Twitter, Facebook).
  */
-export const ssrHandler = functions.https.onRequest(async (req, res) => {
-  const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString().toLowerCase();
-  const pathname = req.path.toLowerCase();
-
-  let indexPath = path.join(__dirname, 'index.html');
-  if (!fs.existsSync(indexPath)) {
-    indexPath = path.join(__dirname, '..', 'dist', 'index.html');
-  }
-
-  let html = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, 'utf8') : '';
-
-  let title = 'BERVOS | Digital Solutions, Systems & Open Source';
-  let description = 'BERVOS - A family of flexible digital solutions, systems, and open-source packages designed to learn, drive true action, and optimize growth.';
-  let ogImage = 'https://bervos.org/logo-white.png';
-  let url = 'https://bervos.org/';
-
+export const ssrHandler = functions.https.onRequest(async (req: express.Request, res: express.Response) => {
   try {
-    const ecoPath = path.join(__dirname, '..', 'src', 'data', 'ecosystem.json');
-    const ecoParent = path.join(__dirname, '..', '..', 'src', 'data', 'ecosystem.json');
-    const targetEco = fs.existsSync(ecoPath) ? ecoPath : (fs.existsSync(ecoParent) ? ecoParent : null);
+    const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString().toLowerCase();
+    const pathname = (req.path || '').toLowerCase();
 
-    if (targetEco) {
-      const eco = JSON.parse(fs.readFileSync(targetEco, 'utf8'));
-      const projects = eco.projects || [];
-      const match = projects.find((p: any) => {
-        const key = (p.title || '').toLowerCase();
-        const linkHost = (p.link || '').toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
-        return (key && host.includes(key)) || (linkHost && host.includes(linkHost)) || (key && pathname.startsWith(`/${key}`));
-      });
+    let indexPath = path.join(__dirname, 'index.html');
+    if (!fs.existsSync(indexPath)) {
+      indexPath = path.join(__dirname, '..', 'index.html');
+    }
+    if (!fs.existsSync(indexPath)) {
+      indexPath = path.join(__dirname, '..', 'dist', 'index.html');
+    }
 
-      if (match) {
-        title = `${match.title} | ${match.description.split('.')[0]}`;
-        description = match.description;
-        url = match.link || `https://${host}/`;
-        if (match.logo) {
-          ogImage = match.logo.startsWith('http') ? match.logo : `https://bervos.org${match.logo.startsWith('/') ? '' : '/'}${match.logo}`;
+    let html = fs.existsSync(indexPath)
+      ? fs.readFileSync(indexPath, 'utf8')
+      : '<!doctype html><html lang="en"><head><meta charset="UTF-8"/><title>BERVOS</title></head><body><div id="root"></div></body></html>';
+
+    let title = 'BERVOS | Digital Solutions, Systems & Open Source';
+    let description = 'BERVOS - A family of flexible digital solutions, systems, and open-source packages designed to learn, drive true action, and optimize growth.';
+    let ogImage = 'https://bervos.org/logo-white.png';
+    let url = 'https://bervos.org/';
+
+    try {
+      const ecoLocal = path.join(__dirname, 'ecosystem.json');
+      const ecoSrc = path.join(__dirname, '..', 'src', 'data', 'ecosystem.json');
+      const targetEco = fs.existsSync(ecoLocal) ? ecoLocal : (fs.existsSync(ecoSrc) ? ecoSrc : null);
+
+      if (targetEco) {
+        const eco = JSON.parse(fs.readFileSync(targetEco, 'utf8'));
+        const projects = eco.projects || [];
+        const match = projects.find((p: any) => {
+          const key = (p.title || '').toLowerCase();
+          const linkHost = (p.link || '').toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+          return (key && host.includes(key)) || (linkHost && host.includes(linkHost)) || (key && pathname.startsWith(`/${key}`));
+        });
+
+        if (match) {
+          title = `${match.title} | ${match.description.split('.')[0]}`;
+          description = match.description;
+          url = match.link || `https://${host}/`;
+          if (match.logo) {
+            ogImage = match.logo.startsWith('http') ? match.logo : `https://bervos.org${match.logo.startsWith('/') ? '' : '/'}${match.logo}`;
+          }
         }
       }
+    } catch (e) {
+      console.warn('[SSR] Dynamic metadata match error:', e);
     }
-  } catch (e) {
-    console.warn('[SSR] Dynamic metadata match error:', e);
-  }
 
-  html = html
-    .replace(/<title>.*?<\/title>/gi, `<title>${title}</title>`)
-    .replace(/<meta property="og:title" content=".*?" \/>/gi, `<meta property="og:title" content="${title}" />`)
-    .replace(/<meta property="og:description" content=".*?" \/>/gi, `<meta property="og:description" content="${description}" />`)
-    .replace(/<meta property="og:image" content=".*?" \/>/gi, `<meta property="og:image" content="${ogImage}" />`)
-    .replace(/<meta property="og:url" content=".*?" \/>/gi, `<meta property="og:url" content="${url}" />`)
-    .replace(/<meta name="description" id="meta-description" content=".*?" \/>/gi, `<meta name="description" id="meta-description" content="${description}" />`);
-
-  if (!html.includes('twitter:image')) {
-    html = html.replace('</head>', `  <meta name="twitter:card" content="summary_large_image" />\n  <meta name="twitter:title" content="${title}" />\n  <meta name="twitter:description" content="${description}" />\n  <meta name="twitter:image" content="${ogImage}" />\n</head>`);
-  } else {
     html = html
-      .replace(/<meta name="twitter:title" content=".*?" \/>/gi, `<meta name="twitter:title" content="${title}" />`)
-      .replace(/<meta name="twitter:description" content=".*?" \/>/gi, `<meta name="twitter:description" content="${description}" />`)
-      .replace(/<meta name="twitter:image" content=".*?" \/>/gi, `<meta name="twitter:image" content="${ogImage}" />`);
-  }
+      .replace(/<title>.*?<\/title>/gi, `<title>${title}</title>`)
+      .replace(/<meta property="og:title" content=".*?" \/>/gi, `<meta property="og:title" content="${title}" />`)
+      .replace(/<meta property="og:description" content=".*?" \/>/gi, `<meta property="og:description" content="${description}" />`)
+      .replace(/<meta property="og:image" content=".*?" \/>/gi, `<meta property="og:image" content="${ogImage}" />`)
+      .replace(/<meta property="og:url" content=".*?" \/>/gi, `<meta property="og:url" content="${url}" />`)
+      .replace(/<meta name="description" id="meta-description" content=".*?" \/>/gi, `<meta name="description" id="meta-description" content="${description}" />`);
 
-  res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600');
-  res.status(200).send(html);
+    if (!html.includes('twitter:image')) {
+      html = html.replace('</head>', `  <meta name="twitter:card" content="summary_large_image" />\n  <meta name="twitter:title" content="${title}" />\n  <meta name="twitter:description" content="${description}" />\n  <meta name="twitter:image" content="${ogImage}" />\n</head>`);
+    } else {
+      html = html
+        .replace(/<meta name="twitter:title" content=".*?" \/>/gi, `<meta name="twitter:title" content="${title}" />`)
+        .replace(/<meta name="twitter:description" content=".*?" \/>/gi, `<meta name="twitter:description" content="${description}" />`)
+        .replace(/<meta name="twitter:image" content=".*?" \/>/gi, `<meta name="twitter:image" content="${ogImage}" />`);
+    }
+
+    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600');
+    res.status(200).send(html);
+  } catch (err: any) {
+    console.error('[SSR] Error rendering HTML:', err);
+    res.status(500).send('Server Error');
+  }
 });
 
 const REPOS_FOR_PIPELINE = [
