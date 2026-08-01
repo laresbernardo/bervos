@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, BookOpen, Globe2, Shuffle } from 'lucide-react';
+import { X, Globe2, Shuffle } from 'lucide-react';
 
 interface SampleStory {
   id: string;
@@ -105,24 +105,6 @@ const SAMPLE_STORIES: SampleStory[] = [
     ]
   },
   {
-    id: 'rusia',
-    countryES: 'Rusia',
-    countryEN: 'Russia',
-    flag: '🇷🇺',
-    titleES: 'Donde nada se pudre',
-    titleEN: 'Where Nothing Rots',
-    bodyES: [
-      'El río ruge bajo la madera antes de que amanezca. A cuarenta y ocho grados bajo cero, la inacción congela una cabaña en tres horas. Stepan aviva la burzhuika con astillas de alerce y alimenta al fuego con una miga de pan para Baianai, el espíritu del cauce. Fiel al rito de cada amanecer, vierte un chorro de vodka en la infusión caliente de chaga y deja que el ardor le llene el pecho.',
-      'Su hija le insistió el invierno pasado para que se fuera a un departamento de dos cuartos en Yakutsk, pero a Stepan le sobran razones para quedarse. Para cualquiera en la ciudad, su vida aquí parece un castigo; para él, en cambio, es la única abundancia real. Tiene el fuego de su estufa, el crujido de los árboles y prefiere la dignidad del frío antes que ahogarse en el aire sofocante de un bloque de concreto.',
-      'En el lednik, la cueva subterránea cavada a mano hace treinta años, acomoda el pez helado junto a la muñeca de trapo que su nieta Masha olvidó al marcharse. La ciudad promete dinero y prisa, pero allá las cosas se rompen y se olvidan. Aquí abajo, la carne no se pudre y los recuerdos tampoco.'
-    ],
-    bodyEN: [
-      'The river groans beneath the timber before dawn. At forty-eight degrees below zero, inactivity freezes a cabin in three hours. Stepan stokes the woodstove with larch splinters and feeds a breadcrumb to Baianai, spirit of the riverbed. True to his morning ritual, he pours a splash of vodka into hot chaga tea and lets the warmth fill his chest.',
-      'His daughter urged him last winter to move into a two-room apartment in Yakutsk, but Stepan has plenty of reasons to stay. To city folk, his life here seems a sentence; to him, it is the only true abundance. He has his stove, the crackle of timber, and prefers the cold’s dignity over suffocating inside a concrete tower radiator.',
-      'In the lednik, the hand-carved ice cellar dug thirty years ago, he rests the frozen fish beside the rag doll his granddaughter Masha left behind. The city promises money and rush, but there things break and fade. Down here, meat does not rot, and neither do memories.'
-    ]
-  },
-  {
     id: 'finlandia',
     countryES: 'Finlandia',
     countryEN: 'Finland',
@@ -192,12 +174,9 @@ export const ExcerptModal: React.FC<ExcerptModalProps> = ({ isOpen, onClose, lan
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-                    <BookOpen size={18} />
-                  </div>
                   <div>
                     <span className="mono-label !text-amber-400 text-xs">
-                      {lang === 'ES' ? 'MUESTRAS DEL RELATO // 196 CULTURAS' : 'STORY SAMPLES // 196 CULTURES'}
+                      {lang === 'ES' ? 'MUESTRAS DE RELATOS' : 'SAMPLE STORIES'}
                     </span>
                     <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
                       {current.flag} {lang === 'ES' ? current.countryES : current.countryEN}
@@ -220,11 +199,10 @@ export const ExcerptModal: React.FC<ExcerptModalProps> = ({ isOpen, onClose, lan
                   <button
                     key={story.id}
                     onClick={() => setSelectedIndex(idx)}
-                    className={`px-3 py-1 rounded-lg text-xs font-mono transition-all flex items-center gap-1.5 border ${
-                      idx === selectedIndex
-                        ? 'bg-amber-500 text-slate-950 font-bold border-amber-400 shadow-md shadow-amber-500/20'
-                        : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
-                    }`}
+                    className={`px-3 py-1 rounded-lg text-xs font-mono transition-all flex items-center gap-1.5 border ${idx === selectedIndex
+                      ? 'bg-amber-500 text-slate-950 font-bold border-amber-400 shadow-md shadow-amber-500/20'
+                      : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
+                      }`}
                   >
                     <span>{story.flag}</span>
                     <span>{lang === 'ES' ? story.countryES : story.countryEN}</span>
@@ -262,7 +240,7 @@ export const ExcerptModal: React.FC<ExcerptModalProps> = ({ isOpen, onClose, lan
             <div className="pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
                 <Globe2 size={14} className="text-amber-400" />
-                <span>196 {lang === 'ES' ? 'CULTURAS EN EL ATLAS' : 'CULTURES IN THE ATLAS'}</span>
+                <span>1/196 {lang === 'ES' ? 'RELATOS' : 'STORIES'}</span>
               </div>
               <div className="flex items-center gap-3">
                 <button

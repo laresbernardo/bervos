@@ -1732,6 +1732,8 @@ exports.ssrHandler = functions.https.onRequest(async (req, res) => {
         let description = 'BERVOS - A family of flexible digital solutions, systems, and open-source packages designed to learn, drive true action, and optimize growth.';
         let ogImage = 'https://bervos.org/logo-white.png';
         let url = 'https://bervos.org/';
+        let projectLogo = '/logo-white.png';
+        let projectTitleName = 'BERVOS';
         try {
             const ecoLocal = path.join(__dirname, 'ecosystem.json');
             const ecoSrc = path.join(__dirname, '..', 'src', 'data', 'ecosystem.json');
@@ -1748,7 +1750,9 @@ exports.ssrHandler = functions.https.onRequest(async (req, res) => {
                     title = `${match.title} | ${match.description.split('.')[0]}`;
                     description = match.description;
                     url = match.link || `https://${host}/`;
+                    projectTitleName = match.title;
                     if (match.logo) {
+                        projectLogo = match.logo;
                         ogImage = match.logo.startsWith('http') ? match.logo : `https://bervos.org${match.logo.startsWith('/') ? '' : '/'}${match.logo}`;
                     }
                 }
@@ -1759,11 +1763,16 @@ exports.ssrHandler = functions.https.onRequest(async (req, res) => {
         }
         html = html
             .replace(/<title>.*?<\/title>/gi, `<title>${title}</title>`)
+            .replace(/<link rel="icon" .*?\/>/gi, `<link rel="icon" type="image/png" href="${projectLogo}" />`)
+            .replace(/<link rel="apple-touch-icon" .*?>/gi, `<link rel="apple-touch-icon" href="${projectLogo}">`)
             .replace(/<meta property="og:title" content=".*?" \/>/gi, `<meta property="og:title" content="${title}" />`)
             .replace(/<meta property="og:description" content=".*?" \/>/gi, `<meta property="og:description" content="${description}" />`)
             .replace(/<meta property="og:image" content=".*?" \/>/gi, `<meta property="og:image" content="${ogImage}" />`)
             .replace(/<meta property="og:url" content=".*?" \/>/gi, `<meta property="og:url" content="${url}" />`)
             .replace(/<meta name="description" id="meta-description" content=".*?" \/>/gi, `<meta name="description" id="meta-description" content="${description}" />`);
+        if (!html.includes('apple-mobile-web-app-title')) {
+            html = html.replace('</head>', `  <meta name="apple-mobile-web-app-title" content="${projectTitleName}" />\n  <meta name="application-name" content="${projectTitleName}" />\n</head>`);
+        }
         if (!html.includes('twitter:image')) {
             html = html.replace('</head>', `  <meta name="twitter:card" content="summary_large_image" />\n  <meta name="twitter:title" content="${title}" />\n  <meta name="twitter:description" content="${description}" />\n  <meta name="twitter:image" content="${ogImage}" />\n</head>`);
         }

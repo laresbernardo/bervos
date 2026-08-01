@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, X, Mail } from 'lucide-react';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 interface QuoteModalProps {
   isOpen: boolean;
@@ -39,6 +41,22 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({ isOpen, onClose }) => {
       });
 
       if (response.ok) {
+        if (db) {
+          try {
+            await addDoc(collection(db, 'demo_leads'), {
+              name: formData.name,
+              email: formData.email.toLowerCase(),
+              company: formData.company || 'N/A',
+              message: formData.message,
+              project: 'Rosa',
+              type: 'quote_request',
+              source: 'quote_modal',
+              timestamp: new Date().toISOString()
+            });
+          } catch (err) {
+            console.warn('[Firestore] Quote lead backup error:', err);
+          }
+        }
         setStatus('success');
       } else {
         setStatus('error');

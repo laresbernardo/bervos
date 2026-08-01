@@ -24,24 +24,26 @@ import { FaGithub, FaRProject } from 'react-icons/fa';
 import { QuoteModal } from './QuoteModal';
 import { VideoModal } from './VideoModal';
 import { LicenseModal } from './LicenseModal';
+import { WhyRosaModal } from './WhyRosaModal';
 import { MmmTimeSeriesBackground } from './MmmTimeSeriesBackground';
+import { updatePageMetadata } from '../../utils/meta';
 
 export const RosaLandingPage: React.FC = () => {
   const [isQuoteOpen, setIsQuoteOpen] = useState(false);
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [isLicenseOpen, setIsLicenseOpen] = useState(false);
+  const [isWhyRosaOpen, setIsWhyRosaOpen] = useState(false);
 
   useEffect(() => {
-    document.title = "Rosa | Enterprise Self-Hosted Robyn-Powered MMM Application";
-
-    const favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
-    const previousHref = favicon ? favicon.href : '/favicon.svg';
-    const previousType = favicon ? favicon.type : 'image/svg+xml';
-
-    if (favicon) {
-      favicon.href = '/rosa-favicon.png';
-      favicon.type = 'image/png';
-    }
+    const cleanupMeta = updatePageMetadata({
+      title: "Rosa | Enterprise Self-Hosted Robyn-Powered MMM Application",
+      description: "Enterprise-grade self-hosted Robyn-powered Marketing Mix Modeling (MMM) Application with built-in AI Assistant, scenario simulations, automated reporting, and complete data privacy.",
+      favicon: "/rosa-favicon.png",
+      appleTouchIcon: "/rosa-favicon.png",
+      appName: "Rosa",
+      ogImage: "https://bervos.org/rosa-logo.png",
+      url: window.location.href
+    });
 
     if (typeof window.gtag !== 'undefined') {
       window.gtag('config', 'G-380P0NRV7V', {
@@ -56,13 +58,7 @@ export const RosaLandingPage: React.FC = () => {
       });
     }
 
-    return () => {
-      document.title = "BERVOS | Digital Solutions, Systems & Open Source";
-      if (favicon) {
-        favicon.href = previousHref;
-        favicon.type = previousType;
-      }
-    };
+    return cleanupMeta;
   }, []);
 
   return (
@@ -82,6 +78,13 @@ export const RosaLandingPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsWhyRosaOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+            >
+              <Sparkles size={14} className="text-rose-400" />
+              <span>Why Rosa?</span>
+            </button>
             <button
               onClick={() => setIsLicenseOpen(true)}
               className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
@@ -215,7 +218,11 @@ export const RosaLandingPage: React.FC = () => {
             <span className="mono-label !text-rose-400">WHY ROSA IS A GAME-CHANGER</span>
             <h2 className="text-3xl sm:text-5xl font-black text-white">Built for Data Scientists, Marketers & Executives.</h2>
             <p className="text-slate-400 text-base sm:text-lg">
-              Developed by Meta <a href="https://github.com/facebookexperimental/Robyn" target="_blank" rel="noopener noreferrer" className="text-rose-400 hover:text-rose-300 underline font-semibold transition-colors">Robyn</a>’s main developer, Rosa resolves traditional MMM friction by unifying mathematical accuracy, AI speed, and local data security into a single app.
+              Developed by Meta Robyn’s <a href="https://www.linkedin.com/in/laresbernardo/" target="_blank" rel="noopener noreferrer" className="text-white font-bold hover:underline transition-colors">main developer</a>, Rosa resolves traditional MMM friction by unifying mathematical accuracy, AI speed, and local data security into a single app.
+              <button onClick={() => setIsWhyRosaOpen(true)} className="inline-flex items-center gap-1 text-xs text-rose-400 hover:text-rose-300 font-mono underline underline-offset-4 ml-3 transition-colors">
+                <Sparkles size={12} />
+                Discover why Rosa
+              </button>
             </p>
           </div>
 
@@ -401,7 +408,15 @@ export const RosaLandingPage: React.FC = () => {
                 REQUEST ACCESS
               </button>
 
-              <div className="flex items-center justify-center gap-4 text-slate-400 text-xs pt-2">
+              <div className="flex items-center justify-center gap-4 sm:gap-6 text-slate-400 text-xs pt-2">
+                <button
+                  onClick={() => setIsWhyRosaOpen(true)}
+                  className="flex items-center gap-1.5 text-rose-400 hover:text-rose-300 underline underline-offset-4 transition-colors cursor-pointer"
+                >
+                  <Sparkles size={14} />
+                  Why Rosa?
+                </button>
+                <span className="text-slate-600">•</span>
                 <button
                   onClick={() => setIsLicenseOpen(true)}
                   className="flex items-center gap-1.5 text-rose-400 hover:text-rose-300 underline underline-offset-4 transition-colors cursor-pointer"
@@ -426,6 +441,7 @@ export const RosaLandingPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-6">
             <a href="/" className="hover:text-rose-400 transition-colors">BERVOS Home</a>
+            <button onClick={() => setIsWhyRosaOpen(true)} className="hover:text-rose-400 transition-colors">Why Rosa?</button>
             <button onClick={() => setIsLicenseOpen(true)} className="hover:text-rose-400 transition-colors">Rosa Licence</button>
             <button onClick={() => setIsQuoteOpen(true)} className="hover:text-rose-400 transition-colors">Contact</button>
           </div>
@@ -440,6 +456,9 @@ export const RosaLandingPage: React.FC = () => {
 
       {/* License Modal */}
       <LicenseModal isOpen={isLicenseOpen} onClose={() => setIsLicenseOpen(false)} />
+
+      {/* Why Rosa Modal */}
+      <WhyRosaModal isOpen={isWhyRosaOpen} onClose={() => setIsWhyRosaOpen(false)} />
     </div>
   );
 };

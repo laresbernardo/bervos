@@ -13,6 +13,7 @@ import {
 import { ExcerptModal } from './ExcerptModal';
 import { PreorderModal } from './PreorderModal';
 import { HumanConnectionsBackground } from './HumanConnectionsBackground';
+import { updatePageMetadata } from '../../utils/meta';
 
 export const RutinasLandingPage: React.FC = () => {
   const [lang, setLang] = useState<'ES' | 'EN'>('ES');
@@ -20,18 +21,22 @@ export const RutinasLandingPage: React.FC = () => {
   const [isPreorderOpen, setIsPreorderOpen] = useState(false);
 
   useEffect(() => {
-    document.title = lang === 'ES'
+    const title = lang === 'ES'
       ? "RUTINAS | Atlas Íntimo de la Humanidad — Bernardo Lares"
       : "RUTINAS | Intimate Atlas of Humanity — Bernardo Lares";
+    const description = lang === 'ES'
+      ? "Un viaje íntimo a través de rutinas cotidianas de 196 culturas actuales. Un libro para conectar y aprender a través de los ojos de otros."
+      : "An intimate journey through daily routines of 196 current cultures. A book in Spanish to connect and learn through the eyes of others.";
 
-    const favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
-    const previousHref = favicon ? favicon.href : '/favicon.svg';
-    const previousType = favicon ? favicon.type : 'image/svg+xml';
-
-    if (favicon) {
-      favicon.href = '/rutinas-favicon.png';
-      favicon.type = 'image/png';
-    }
+    const cleanupMeta = updatePageMetadata({
+      title,
+      description,
+      favicon: "/rutinas-favicon.png",
+      appleTouchIcon: "/rutinas-favicon.png",
+      appName: "Rutinas",
+      ogImage: "https://bervos.org/rutinas-logo.png",
+      url: window.location.href
+    });
 
     if (typeof window.gtag !== 'undefined') {
       window.gtag('config', 'G-380P0NRV7V', {
@@ -46,13 +51,7 @@ export const RutinasLandingPage: React.FC = () => {
       });
     }
 
-    return () => {
-      document.title = "BERVOS | Digital Solutions, Systems & Open Source";
-      if (favicon) {
-        favicon.href = previousHref;
-        favicon.type = previousType;
-      }
-    };
+    return cleanupMeta;
   }, [lang]);
 
   const toggleLanguage = () => {
@@ -111,7 +110,7 @@ export const RutinasLandingPage: React.FC = () => {
               className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-xs font-mono text-amber-300"
             >
               <Globe2 size={14} className="text-amber-400" />
-              <span>{lang === 'ES' ? 'ATLAS ÍNTIMO DE LA HUMANIDAD // 196 CULTURAS' : 'INTIMATE ATLAS OF HUMANITY // 196 CULTURES'}</span>
+              <span>{lang === 'ES' ? 'ATLAS ÍNTIMO DE LA HUMANIDAD' : 'INTIMATE ATLAS OF HUMANITY'}</span>
             </motion.div>
 
             <motion.h1
@@ -143,8 +142,8 @@ export const RutinasLandingPage: React.FC = () => {
               className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-2xl font-sans"
             >
               {lang === 'ES'
-                ? 'Un viaje íntimo a través de rutinas cotidianas y actuales de 196 culturas. Un libro en español co-creado con IA, a publicarse durante el 2026.'
-                : 'An intimate journey through the current daily routines of 196 cultures. A book in Spanish co-created with AI, scheduled for publication in 2026.'}
+                ? 'Un viaje íntimo a través de relatos de rutinas cotidianas y actuales de 196 culturas. Un libro para viajar y aprender a través de los ojos de otros.'
+                : 'An intimate journey through stories of daily modern routines of 196 cultures. A book to travel and learn through the eyes of others.'}
             </motion.p>
 
             <motion.div
@@ -158,7 +157,7 @@ export const RutinasLandingPage: React.FC = () => {
                 className="px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-sm rounded-xl transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-amber-500/25 flex items-center gap-3"
               >
                 <BookOpen size={18} />
-                {lang === 'ES' ? 'LEER MUESTRA DE RELATO' : 'READ SAMPLE STORY'}
+                {lang === 'ES' ? 'LEER MUESTRAS DE RELATOS' : 'READ SAMPLE STORIES'}
               </button>
               <button
                 onClick={() => setIsPreorderOpen(true)}
@@ -203,8 +202,8 @@ export const RutinasLandingPage: React.FC = () => {
             </h2>
             <p className="text-slate-400 text-base sm:text-lg">
               {lang === 'ES'
-                ? 'El autor utiliza la Inteligencia Artificial como brújula aleatoria para construir realidades creíbles, actualizadas e inmersivas de personajes que jamás habría concebido únicamente por su conocimiento previo del mundo.'
-                : 'The author uses Artificial Intelligence as a randomized compass to construct credible, up-to-date, and immersive realities of characters he could never have conceived through his prior world knowledge alone.'}
+                ? 'El autor utiliza la Inteligencia Artificial como brújula para construir realidades creíbles, actualizadas e inmersivas de personajes que jamás habría concebido únicamente por su conocimiento previo del mundo y sus culturas locales tan variadas.'
+                : 'The author uses Artificial Intelligence as a compass to construct credible, up-to-date, and immersive realities of characters he could never have conceived through his prior world knowledge and varied local cultures alone.'}
             </p>
           </div>
 
@@ -214,25 +213,26 @@ export const RutinasLandingPage: React.FC = () => {
                 <Globe2 size={24} />
               </div>
               <h3 className="text-lg font-bold text-white">
-                {lang === 'ES' ? '196 Culturas & Voces' : '196 Cultures & Voices'}
+                {lang === 'ES' ? '196 Países & Voces Únicas' : '196 Countries & Unique Voices'}
               </h3>
               <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
                 {lang === 'ES'
-                  ? 'Cada relato explora la vida cotidiana de un personaje ficticio pero tangible en un país distinto. Algo aprenderemos de cada uno de ellos.'
-                  : 'Each story explores the daily life of a tangible yet fictional character in a different country. We will learn something from each of them.'}
+                  ? 'Cada relato explora un día en la vida de un personaje ficticio pero tangible. Sin duda, aprenderemos una cosa u otra de cada uno de ellos y sus culturas.'
+                  : 'Each story explores a day in the life of a tangible yet fictional character. Without a doubt, we will learn a thing or two from each of them and their cultures.'}
               </p>
             </div>
 
-            <div className="tech-card p-6 space-y-4 border-amber-500/20">
-              <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+            <div className="tech-card p-6 space-y-4 border-amber-500/50 bg-gradient-to-b from-amber-500/10 via-amber-950/20 to-[#0d121f] shadow-xl shadow-amber-500/10 relative overflow-hidden group hover:border-amber-400/70 transition-all">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-amber-500" />
+              <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300 shadow-md shadow-amber-500/20 group-hover:scale-110 transition-transform">
                 <Dices size={24} />
               </div>
-              <h3 className="text-lg font-bold text-white">
+              <h3 className="text-lg font-black text-amber-300">
                 {lang === 'ES' ? 'El Juego Interactivo' : 'The Interactive Game'}
               </h3>
-              <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
                 {lang === 'ES'
-                  ? 'Los países permanecen en secreto durante la lectura. Descubre las pistas, gira la página para comprobarlo y empareja los rostro en la portada con el relato.'
+                  ? 'Los países permanecen en secreto durante la lectura. Descubre las pistas, gira la página para comprobarlo y empareja los rostros en la portada con el relato.'
                   : 'Countries remain secret while reading. Discover the clues, turn the page to check, and match the faces on the cover with their story.'}
               </p>
             </div>
@@ -260,8 +260,8 @@ export const RutinasLandingPage: React.FC = () => {
               </h3>
               <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
                 {lang === 'ES'
-                  ? 'Cada historia es minuciosamente co-creada y editada para asegurar realismo sensorial e inmersión altamente íntima y humana.'
-                  : 'Each story is meticulously co-created and edited to ensure intimacy, human experience and sensory realism.'}
+                  ? 'Cada historia es minuciosamente co-creada para asegurar realismo sensorial e inmersión altamente íntima y humana.'
+                  : 'Each story is meticulously co-created to ensure intimacy, human experience and sensory realism.'}
               </p>
             </div>
           </div>
@@ -280,7 +280,7 @@ export const RutinasLandingPage: React.FC = () => {
           <div className="flex items-center gap-6">
             <a href="/" className="hover:text-amber-400 transition-colors">BERVOS Home</a>
             <button onClick={() => setIsExcerptOpen(true)} className="hover:text-amber-400 transition-colors">
-              {lang === 'ES' ? 'Muestra' : 'Sample'}
+              {lang === 'ES' ? 'Muestras' : 'Samples'}
             </button>
             <button onClick={() => setIsPreorderOpen(true)} className="hover:text-amber-400 transition-colors">
               {lang === 'ES' ? 'Lista de Espera' : 'Waitlist'}

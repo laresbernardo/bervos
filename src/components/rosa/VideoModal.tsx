@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Lock, CheckCircle2, ShieldCheck, Mail, User, Building2, Edit2 } from 'lucide-react';
+import { X, Play, Lock, CheckCircle2, Mail, User, Building2 } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 
@@ -15,7 +15,6 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'error'>('idle');
-  const [isEditingData, setIsEditingData] = useState(false);
 
   useEffect(() => {
     try {
@@ -57,9 +56,11 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
           try {
             await addDoc(collection(db, 'demo_leads'), {
               name,
-              email,
+              email: email.toLowerCase(),
               company: company || 'N/A',
-              project: 'Rosa MMM',
+              project: 'Rosa',
+              type: 'watch_video',
+              source: 'watch_video_modal',
               timestamp: new Date().toISOString()
             });
           } catch (err) {
@@ -75,7 +76,6 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
         } catch { }
 
         setUnlocked(true);
-        setIsEditingData(false);
         setStatus('idle');
 
         // Track GA lead event
@@ -114,16 +114,6 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
             </div>
 
             <div className="flex items-center gap-3">
-              {unlocked && !isEditingData && (
-                <button
-                  onClick={() => setIsEditingData(true)}
-                  className="px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] font-mono flex items-center gap-1.5 border border-white/10 transition-colors"
-                  title="Verify or update your details"
-                >
-                  <Edit2 size={12} className="text-rose-400" />
-                  <span>Verify Data</span>
-                </button>
-              )}
               <button
                 onClick={onClose}
                 className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
@@ -135,19 +125,17 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
 
           {/* Body Content */}
           <div className="p-6 sm:p-8">
-            {!unlocked || isEditingData ? (
+            {!unlocked ? (
               <div className="max-w-md mx-auto space-y-6">
                 <div className="text-center space-y-2">
                   <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto">
                     <Lock size={22} />
                   </div>
                   <h3 className="text-2xl font-black text-white tracking-tight">
-                    {unlocked ? 'Verify Your Details' : 'Unlock Product Demo Video'}
+                    Unlock Product Demo Video
                   </h3>
                   <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto">
-                    {unlocked
-                      ? 'Confirm or update your contact information to continue watching.'
-                      : 'Please provide your details below to instantly unlock the interactive walkthrough of Rosa MMM.'}
+                    Please provide your details below to unlock the interactive walkthrough of Rosa.
                   </p>
                 </div>
 
@@ -212,16 +200,11 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
                     ) : (
                       <>
                         <Play size={15} className="fill-white" />
-                        <span>{unlocked ? 'UPDATE & WATCH DEMO' : 'UNLOCK DEMO VIDEO'}</span>
+                        <span>UNLOCK DEMO VIDEO</span>
                       </>
                     )}
                   </button>
                 </form>
-
-                <div className="flex items-center justify-center gap-2 text-[10px] font-mono text-slate-500">
-                  <ShieldCheck size={13} className="text-emerald-400" />
-                  <span>Data sent directly to author. Privacy guaranteed.</span>
-                </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -240,12 +223,6 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
                     <CheckCircle2 size={14} className="text-emerald-400" />
                     <span>Unlocked for: <strong className="text-white">{name}</strong> ({email})</span>
                   </div>
-                  <button
-                    onClick={() => setIsEditingData(true)}
-                    className="text-rose-400 hover:underline text-[11px] font-mono"
-                  >
-                    Edit Info
-                  </button>
                 </div>
               </div>
             )}

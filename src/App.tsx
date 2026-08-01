@@ -7,7 +7,8 @@ import DecryptedText from './components/ui/DecryptedText';
 // Firebase & Hub Imports
 import { onAuthStateChanged } from 'firebase/auth';
 import type { User } from 'firebase/auth';
-import { auth } from './firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 import { HubLogin } from './components/hub/HubLogin';
 import { HubDashboard } from './components/hub/HubDashboard';
 import { HubAccessDenied } from './components/hub/HubAccessDenied';
@@ -482,6 +483,22 @@ function HomePage() {
       });
 
       if (response.ok) {
+        if (db) {
+          try {
+            await addDoc(collection(db, 'demo_leads'), {
+              name: contactData.name,
+              email: contactData.email.toLowerCase(),
+              subject: contactData.subject,
+              message: contactData.message,
+              project: 'BERVOS',
+              type: 'contact_form',
+              source: 'contact_modal',
+              timestamp: new Date().toISOString()
+            });
+          } catch (err) {
+            console.warn('[Firestore] Contact lead backup error:', err);
+          }
+        }
         setContactStatus('success');
         trackEvent('contact_form_success', 'engagement', 'Message Sent');
       } else {
