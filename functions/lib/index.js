@@ -1758,7 +1758,7 @@ exports.ssrHandler = functions.https.onRequest(async (req, res) => {
                     return (key && host.includes(key)) || (linkHost && host.includes(linkHost)) || (key && pathname.startsWith(`/${key}`));
                 });
                 if (match) {
-                    title = `${match.title} | ${match.description.split('.')[0]}`;
+                    title = match.metaTitle || match.title;
                     description = match.description;
                     url = match.link || `https://${host}/`;
                     projectTitleName = match.title;

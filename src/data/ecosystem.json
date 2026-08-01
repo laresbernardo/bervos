@@ -162,6 +162,7 @@
     },
     {
       "title": "Rosa",
+      "metaTitle": "Rosa | Self-hosted Enterprise MMM with AI",
       "description": "Enterprise-grade self-hosted MMM app with AI Assistant, scenario simulations, reporting, and more.",
       "link": "https://rosa.bervos.org/",
       "tags": [
@@ -179,6 +180,7 @@
     },
     {
       "title": "Rutinas",
+      "metaTitle": "RUTINAS, Atlas Íntimo de la Humanidad",
       "description": "Un viaje íntimo a través de rutinas cotidianas y actuales de 196 culturas. Libro en español co-creado con IA, a publicarse durante el 2026.",
       "link": "https://rutinas.bervos.org/",
       "codeRepository": "https://github.com/laresbernardo/rutinas",

@@ -1817,7 +1817,7 @@ export const ssrHandler = functions.https.onRequest(async (req: express.Request,
         });
 
         if (match) {
-          title = `${match.title} | ${match.description.split('.')[0]}`;
+          title = match.metaTitle || match.title;
           description = match.description;
           url = match.link || `https://${host}/`;
           projectTitleName = match.title;
