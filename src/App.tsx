@@ -611,7 +611,9 @@ function HomePage() {
                   animateOn="inViewHover"
                 />
               </h2>
-              <p className="text-slate-400 text-lg max-w-md border-l border-indigo-500/30 pl-4">Specialized tools for various domains.</p>
+              <p className="text-slate-400 text-lg max-w-xl border-l border-indigo-500/30 pl-4">
+                A suite of <span className="font-mono text-indigo-300 font-bold px-1.5 py-0.5 bg-indigo-500/10 rounded border border-indigo-500/20">{projects.length}</span> specialized tools for various domains.
+              </p>
             </motion.div>
             <div className="text-indigo-500/10 text-8xl font-black hidden md:block select-none leading-none tracking-tighter">PROJECTS_01</div>
           </div>
@@ -899,7 +901,9 @@ function HomePage() {
                   animateOn="inViewHover"
                 />
               </h2>
-              <p className="text-slate-400 text-lg max-w-md border-l border-cyan-500/30 pl-4">Contributions to open sourced solutions.</p>
+              <p className="text-slate-400 text-lg max-w-xl border-l border-cyan-500/30 pl-4">
+                A collection of <span className="font-mono text-cyan-300 font-bold px-1.5 py-0.5 bg-cyan-500/10 rounded border border-cyan-500/20">{openSource.length}</span> contributions to open-source solutions.
+              </p>
             </motion.div>
             <div className="text-cyan-500/10 text-8xl font-black hidden md:block select-none leading-none tracking-tighter">OSS_LIB_02</div>
           </div>
