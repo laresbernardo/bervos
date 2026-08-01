@@ -1791,9 +1791,21 @@ export const ssrHandler = functions.https.onRequest(async (req: express.Request,
     let projectTitleName = 'BERVOS';
 
     try {
-      const ecoLocal = path.join(__dirname, 'ecosystem.json');
-      const ecoSrc = path.join(__dirname, '..', 'src', 'data', 'ecosystem.json');
-      const targetEco = fs.existsSync(ecoLocal) ? ecoLocal : (fs.existsSync(ecoSrc) ? ecoSrc : null);
+      const ecoPathsToTry = [
+        path.join(__dirname, 'ecosystem.json'),
+        path.join(__dirname, '..', 'ecosystem.json'),
+        path.join(__dirname, '..', '..', 'src', 'data', 'ecosystem.json'),
+        path.join(process.cwd(), 'ecosystem.json'),
+        path.join(process.cwd(), 'src', 'data', 'ecosystem.json')
+      ];
+
+      let targetEco: string | null = null;
+      for (const p of ecoPathsToTry) {
+        if (fs.existsSync(p)) {
+          targetEco = p;
+          break;
+        }
+      }
 
       if (targetEco) {
         const eco = JSON.parse(fs.readFileSync(targetEco, 'utf8'));
@@ -1811,7 +1823,8 @@ export const ssrHandler = functions.https.onRequest(async (req: express.Request,
           projectTitleName = match.title;
           if (match.logo) {
             projectLogo = match.logo;
-            ogImage = match.logo.startsWith('http') ? match.logo : `https://bervos.org${match.logo.startsWith('/') ? '' : '/'}${match.logo}`;
+            const cleanLogo = match.logo.startsWith('/') ? match.logo : `/${match.logo}`;
+            ogImage = match.logo.startsWith('http') ? match.logo : `https://${host}${cleanLogo}`;
           }
         }
       }
@@ -1820,26 +1833,32 @@ export const ssrHandler = functions.https.onRequest(async (req: express.Request,
     }
 
     html = html
-      .replace(/<title>.*?<\/title>/gi, `<title>${title}</title>`)
-      .replace(/<link rel="icon" .*?\/>/gi, `<link rel="icon" type="image/png" href="${projectLogo}" />`)
-      .replace(/<link rel="apple-touch-icon" .*?>/gi, `<link rel="apple-touch-icon" href="${projectLogo}">`)
-      .replace(/<meta property="og:title" content=".*?" \/>/gi, `<meta property="og:title" content="${title}" />`)
-      .replace(/<meta property="og:description" content=".*?" \/>/gi, `<meta property="og:description" content="${description}" />`)
-      .replace(/<meta property="og:image" content=".*?" \/>/gi, `<meta property="og:image" content="${ogImage}" />`)
-      .replace(/<meta property="og:url" content=".*?" \/>/gi, `<meta property="og:url" content="${url}" />`)
-      .replace(/<meta name="description" id="meta-description" content=".*?" \/>/gi, `<meta name="description" id="meta-description" content="${description}" />`);
+      .replace(/<title>[\s\S]*?<\/title>/gi, `<title>${title}</title>`)
+      .replace(/<link\s+rel="icon"[\s\S]*?\/?>/gi, `<link rel="icon" type="image/png" href="${projectLogo}" />`)
+      .replace(/<link\s+rel="apple-touch-icon"[\s\S]*?\/?>/gi, `<link rel="apple-touch-icon" href="${projectLogo}">`)
+      .replace(/<meta\s+property="og:title"[\s\S]*?\/?>/gi, `<meta property="og:title" content="${title}" />`)
+      .replace(/<meta\s+property="og:description"[\s\S]*?\/?>/gi, `<meta property="og:description" content="${description}" />`)
+      .replace(/<meta\s+property="og:image"[\s\S]*?\/?>/gi, `<meta property="og:image" content="${ogImage}" />`)
+      .replace(/<meta\s+property="og:url"[\s\S]*?\/?>/gi, `<meta property="og:url" content="${url}" />`)
+      .replace(/<meta\s+name="description"[\s\S]*?\/?>/gi, `<meta name="description" id="meta-description" content="${description}" />`);
 
     if (!html.includes('apple-mobile-web-app-title')) {
       html = html.replace('</head>', `  <meta name="apple-mobile-web-app-title" content="${projectTitleName}" />\n  <meta name="application-name" content="${projectTitleName}" />\n</head>`);
+    }
+
+    if (!html.includes('og:site_name')) {
+      html = html.replace('</head>', `  <meta property="og:site_name" content="${projectTitleName}" />\n</head>`);
+    } else {
+      html = html.replace(/<meta\s+property="og:site_name"[\s\S]*?\/?>/gi, `<meta property="og:site_name" content="${projectTitleName}" />`);
     }
 
     if (!html.includes('twitter:image')) {
       html = html.replace('</head>', `  <meta name="twitter:card" content="summary_large_image" />\n  <meta name="twitter:title" content="${title}" />\n  <meta name="twitter:description" content="${description}" />\n  <meta name="twitter:image" content="${ogImage}" />\n</head>`);
     } else {
       html = html
-        .replace(/<meta name="twitter:title" content=".*?" \/>/gi, `<meta name="twitter:title" content="${title}" />`)
-        .replace(/<meta name="twitter:description" content=".*?" \/>/gi, `<meta name="twitter:description" content="${description}" />`)
-        .replace(/<meta name="twitter:image" content=".*?" \/>/gi, `<meta name="twitter:image" content="${ogImage}" />`);
+        .replace(/<meta\s+(?:name|property)="twitter:title"[\s\S]*?\/?>/gi, `<meta name="twitter:title" content="${title}" />`)
+        .replace(/<meta\s+(?:name|property)="twitter:description"[\s\S]*?\/?>/gi, `<meta name="twitter:description" content="${description}" />`)
+        .replace(/<meta\s+(?:name|property)="twitter:image"[\s\S]*?\/?>/gi, `<meta name="twitter:image" content="${ogImage}" />`);
     }
 
     res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600');

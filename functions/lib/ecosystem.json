@@ -1,0 +1,234 @@
+{
+  "owner": {
+    "name": "Bernardo Lares",
+    "github": "https://github.com/laresbernardo",
+    "linkedin": "https://linkedin.com/in/laresbernardo",
+    "email": "laresbernardo@gmail.com",
+    "website": "https://bervos.org/"
+  },
+  "organization": {
+    "name": "BERVOS",
+    "url": "https://bervos.org/",
+    "logo": "https://bervos.org/logo-white.png",
+    "description": "A family of flexible digital solutions, systems, and open-source packages designed to learn, drive true action, and optimize growth."
+  },
+  "projects": [
+    {
+      "title": "Billio",
+      "description": "Collaborative multi-currency and AI-powered Financial Management operating system for families.",
+      "link": "https://billio.bervos.org/",
+      "tags": [
+        "Finance",
+        "Travel",
+        "Collaboration",
+        "Investment"
+      ],
+      "logo": "/billio-logo.png",
+      "category": "productivity",
+      "applicationCategory": "FinanceApplication",
+      "updated": "2026-07-06",
+      "version": "2.4.0"
+    },
+    {
+      "title": "Chessverse",
+      "description": "Modern platform to practice chess openings and thousands of puzzles, tracking performance, and available offline.",
+      "link": "https://chessverse.bervos.org/",
+      "tags": [
+        "Chess",
+        "Puzzles",
+        "Openings",
+        "Practice",
+        "PWA"
+      ],
+      "logo": "/chessverse-logo.png",
+      "category": "leisure",
+      "applicationCategory": "GameApplication",
+      "updated": "2026-05-13",
+      "version": "1.0.5"
+    },
+    {
+      "title": "tripitdown",
+      "description": "Precision-focused and customizable travel itinerary tool powered by local-guides AI Agents with versions management.",
+      "link": "https://tripitdown.bervos.org/",
+      "tags": [
+        "Itinerary",
+        "Travel",
+        "Maps",
+        "Collaboration",
+        "PWA"
+      ],
+      "logo": "/tripitdown-logo.png",
+      "category": "productivity",
+      "applicationCategory": "TravelApplication",
+      "updated": "2026-06-28",
+      "version": "0.1.90"
+    },
+    {
+      "title": "Aura",
+      "description": "Beautiful free macOS dashboard app turning your Music and Photos libraries into offline, private visual analytics.",
+      "link": "https://aura.bervos.org/",
+      "tags": [
+        "macOS",
+        "SwiftUI",
+        "Music",
+        "Photos",
+        "Analytics"
+      ],
+      "logo": "/aura-logo.png",
+      "category": "productivity",
+      "applicationCategory": "UtilitiesApplication",
+      "updated": "2026-07-04",
+      "version": "1.3.0"
+    },
+    {
+      "title": "Scribo",
+      "description": "Master Arabic and Japanese characters and kanas through immersive practice and historical accuracy results.",
+      "link": "https://scribo.bervos.org/",
+      "tags": [
+        "Languages",
+        "Practice",
+        "PWA"
+      ],
+      "logo": "/scribo-logo.png",
+      "category": "leisure",
+      "applicationCategory": "EducationalApplication",
+      "updated": "2026-07-04",
+      "version": "0.0.0"
+    },
+    {
+      "title": "LaresDJ",
+      "description": "The ultimate virtual community and resource hub for DJs and music producers, offering tutorials, community forums, equipment maps, custom skins, and curated download packs.",
+      "link": "https://laresdj.bervos.org/",
+      "tags": [
+        "DJ",
+        "Production",
+        "Music",
+        "Community"
+      ],
+      "logo": "/laresdj-logo.png",
+      "category": "leisure",
+      "applicationCategory": "SocialNetworkingApplication",
+      "updated": "2026-05-23",
+      "version": "0.0.1"
+    },
+    {
+      "title": "Pinmage",
+      "description": "Analyzes scanned photo albums or individual photos using AI to deduce dates and places, writing them directly into native EXIF & GPS image metadata.",
+      "link": "https://pinmage.bervos.org/",
+      "tags": [
+        "AI",
+        "Photos",
+        "Metadata",
+        "EXIF",
+        "macOS"
+      ],
+      "logo": "/pinmage-logo.png",
+      "category": "productivity",
+      "applicationCategory": "UtilitiesApplication",
+      "updated": "2026-07-04",
+      "version": "1.1.0"
+    },
+    {
+      "title": "Tonaly",
+      "description": "Immersive ear training studio designed for musicians and audiophiles. Develop absolute note recognition, master relative intervals, and unlock deep performance insights.",
+      "link": "https://tonaly.bervos.org/",
+      "tags": [
+        "Music",
+        "Audio",
+        "Practice",
+        "PWA"
+      ],
+      "logo": "/tonaly-logo.png",
+      "category": "leisure",
+      "applicationCategory": "EducationalApplication",
+      "updated": "2026-06-11",
+      "version": "0.1.8"
+    },
+    {
+      "title": "YT2MP3",
+      "description": "Lightweight Chrome Extension and Node.js server to download YouTube audio as high-quality MP3 with automatic iTunes metadata and high-res covers.",
+      "link": "https://github.com/laresbernardo/YT2MP3",
+      "tags": [
+        "Chrome",
+        "Extension",
+        "Audio",
+        "YouTube"
+      ],
+      "logo": "/yt2mp3-logo.png",
+      "category": "productivity",
+      "applicationCategory": "UtilitiesApplication",
+      "updated": "2026-07-04",
+      "version": "2.1.1"
+    },
+    {
+      "title": "Rosa",
+      "description": "Enterprise-grade self-hosted MMM app with AI Assistant, scenario simulations, reporting, and more.",
+      "link": "https://rosa.bervos.org/",
+      "tags": [
+        "MMM",
+        "Robyn",
+        "R",
+        "Shiny",
+        "IA"
+      ],
+      "logo": "/rosa-logo.png",
+      "category": "productivity",
+      "applicationCategory": "BusinessApplication",
+      "updated": "2026-07-31",
+      "version": "1.1.0"
+    },
+    {
+      "title": "Rutinas",
+      "description": "Un viaje íntimo a través de rutinas cotidianas y actuales de 196 culturas. Libro en español co-creado con IA, a publicarse durante el 2026.",
+      "link": "https://rutinas.bervos.org/",
+      "codeRepository": "https://github.com/laresbernardo/rutinas",
+      "tags": [
+        "Libro",
+        "Relatos",
+        "IA",
+        "Culturas",
+        "Literatura"
+      ],
+      "logo": "/rutinas-logo.png",
+      "category": "leisure",
+      "applicationCategory": "EducationalApplication",
+      "updated": "2026-07-31",
+      "version": "0.1.0"
+    },
+    {
+      "title": "BERVOS",
+      "description": "Centralized ecosystem aggregating all BERVOS projects and open source solutions.",
+      "link": "https://bervos.org/",
+      "tags": [
+        "Website",
+        "Portal",
+        "Business"
+      ],
+      "logo": "/logo.svg",
+      "category": "productivity",
+      "applicationCategory": "WebApplication",
+      "updated": "2026-07-20",
+      "version": "1.0.5"
+    }
+  ],
+  "openSource": [
+    {
+      "name": "Robyn",
+      "description": "Marketing Mix Modeling (MMM) by Meta Marketing Science.",
+      "stars": "1.5k",
+      "forks": "430",
+      "downloads": "137k",
+      "contributors": "33",
+      "link": "https://github.com/facebookexperimental/Robyn"
+    },
+    {
+      "name": "lares",
+      "description": "R package for data science, analytics, and business intelligence.",
+      "stars": "240",
+      "forks": "50",
+      "downloads": "213k",
+      "contributors": "6",
+      "link": "https://github.com/laresbernardo/lares"
+    }
+  ]
+}
