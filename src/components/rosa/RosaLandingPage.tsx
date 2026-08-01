@@ -36,7 +36,7 @@ export const RosaLandingPage: React.FC = () => {
 
   useEffect(() => {
     const cleanupMeta = updatePageMetadata({
-      title: "Rosa | Enterprise Self-Hosted Robyn-Powered MMM Application",
+      title: "Rosa | MMM Self-Hosted Enterprise Solution",
       description: "Enterprise-grade self-hosted Robyn-powered Marketing Mix Modeling (MMM) Application with built-in AI Assistant, scenario simulations, automated reporting, and complete data privacy.",
       favicon: "/rosa-favicon.png",
       appleTouchIcon: "/rosa-favicon.png",
