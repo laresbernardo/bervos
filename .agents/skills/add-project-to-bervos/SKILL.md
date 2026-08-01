@@ -65,15 +65,20 @@ Add a new JSON object entry under the `"projects"` array:
 
 ### Step 3: Server-Side OpenGraph & Social Link Preview Engine (`ssrHandler` & `firebase.json`)
 
-**Critical Learning**: Social media platforms (Telegram, WhatsApp, LinkedIn, Twitter/X, Facebook, iMessage) scrape HTML link previews **without executing client-side JavaScript**. If requests land on a generic `index.html`, scrapers see default main site meta tags instead of the project logo.
+**Critical Learnings**:
+1. **Scraper Behavior**: Social media platforms (Telegram, WhatsApp, LinkedIn, Twitter/X, Facebook, iMessage) scrape HTML link previews **without executing client-side JavaScript**. If requests land on generic `index.html` without dynamic SSR, scrapers see default main site meta tags instead of the project logo/title.
+2. **File Path Resolution in Cloud Functions**: When `functions/src/index.ts` compiles to `functions/lib/index.js`, `__dirname` is `functions/lib`. Build scripts MUST copy `ecosystem.json` to both `functions/ecosystem.json` AND `functions/lib/ecosystem.json`. In `ssrHandler`, inspect an array of candidate paths (`path.join(__dirname, 'ecosystem.json')`, `path.join(__dirname, '..', 'ecosystem.json')`, etc.) to prevent fallback to generic defaults.
+3. **Multiline Meta Tag Matching**: Meta tags in `index.html` can be formatted across multiple lines. Always use multiline-safe regex patterns (`[\s\S]*?`) when replacing `<meta property="og:description" ... />`, `<title>`, and `<meta property="og:image" ... />`.
+4. **Social Cache Busting**: WhatsApp and Telegram cache link previews aggressively per URL. When testing updated social cards after deployment, append a query parameter (e.g. `https://project.bervos.org/?v=1`) to bypass stale scraper caches.
 
 1. **Dynamic SSR Function (`functions/src/index.ts`)**:
-   The `ssrHandler` Cloud Function automatically intercepts request headers (`req.headers.host`), matches the domain or path against `src/data/ecosystem.json`, and dynamically injects the project's exact title, description, and OpenGraph logo URL (`og:image`, `twitter:image`):
+   The `ssrHandler` Cloud Function automatically intercepts request headers (`req.headers.host`), matches the domain or path against `src/data/ecosystem.json`, and dynamically injects the project's exact title, description, `og:site_name`, and OpenGraph logo URL (`og:image`, `twitter:image`):
    ```ts
-   // ssrHandler reads ecosystem.json and dynamically maps:
-   // - title -> `${match.title} | ${match.description}`
-   // - og:image -> `https://bervos.org${match.logo}`
+   // ssrHandler reads ecosystem.json from candidate paths and dynamically maps:
+   // - title -> `${match.title} | ${match.description.split('.')[0]}`
+   // - og:image -> `https://${host}${match.logo}`
    // - og:description -> match.description
+   // - og:site_name -> match.title
    ```
 
 2. **Wildcard Rewrites (`firebase.json`)**:
