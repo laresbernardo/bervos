@@ -1373,6 +1373,42 @@ async function saveUsersCache(data) {
         console.warn('[UsersCache] Failed to save users cache to Firestore:', err);
     }
 }
+let memoryLogsCache = null;
+async function getLogsCache() {
+    if (memoryLogsCache && (Date.now() - memoryLogsCache.timestamp < 120000)) {
+        return memoryLogsCache;
+    }
+    try {
+        const db = admin.firestore();
+        const doc = await db.collection('cache').doc('logs').get();
+        if (doc.exists) {
+            const data = doc.data();
+            if (data && data.timestamp && Array.isArray(data.logs)) {
+                memoryLogsCache = { timestamp: data.timestamp, data: data.logs };
+                return memoryLogsCache;
+            }
+        }
+    }
+    catch (err) {
+        console.warn('[LogsCache] Failed to read logs cache from Firestore:', err);
+    }
+    return null;
+}
+async function saveLogsCache(data) {
+    const timestamp = Date.now();
+    memoryLogsCache = { timestamp, data };
+    try {
+        const db = admin.firestore();
+        await db.collection('cache').doc('logs').set({
+            timestamp,
+            logs: data,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+    }
+    catch (err) {
+        console.warn('[LogsCache] Failed to save logs cache to Firestore:', err);
+    }
+}
 async function getAppUsersViaCli(projectId) {
     // Never execute blocking npx CLI shell commands in Cloud Functions runtime to avoid 8s timeouts
     if (process.env.K_SERVICE || process.env.FUNCTION_TARGET || process.env.FIREBASE_CONFIG) {
@@ -3158,149 +3194,161 @@ async function fetchTelemetryLogsViaCli(projectId, projectName) {
     }
     return logs;
 }
-app.get(['/logs', '/api/logs'], authenticateAdmin, async (req, res) => {
+async function fetchAllLogsAggregated() {
+    const initiatives = await getInitiativesFromSchema();
+    const userJoinLogs = [];
+    const downloadLogs = [];
+    // 1. Gather User Join Logs
+    const aggregatedUsers = await fetchAllUsersAggregated();
+    for (const user of aggregatedUsers) {
+        for (const [projectName, details] of Object.entries(user.projectDetails || {})) {
+            const firstActive = details.firstActive;
+            if (firstActive) {
+                userJoinLogs.push({
+                    id: `user-join-${user.email}-${projectName}-${firstActive}`,
+                    type: 'USER_JOIN',
+                    project: projectName,
+                    userEmail: user.email,
+                    userDisplayName: user.displayName || user.email.split('@')[0],
+                    userPhotoURL: user.photoURL || '',
+                    timestamp: firstActive
+                });
+            }
+        }
+    }
+    // 2. Gather Download Logs for Utility apps
+    for (const item of initiatives) {
+        const type = item['@type'];
+        const name = item.name;
+        const isUtility = item.applicationCategory === 'UtilitiesApplication';
+        if (type === 'SoftwareApplication' && isUtility) {
+            const projectId = getProjectId(item);
+            const projectApp = getProjectApp(projectId);
+            let logs = [];
+            if (projectApp) {
+                logs = await fetchTelemetryLogsForProject(projectApp, projectId, name);
+            }
+            else {
+                logs = await fetchTelemetryLogsViaCli(projectId, name);
+            }
+            downloadLogs.push(...logs);
+        }
+    }
+    // 3. Gather Social Scheduler Logs
+    const socialLogs = [];
     try {
-        const initiatives = await getInitiativesFromSchema();
-        const userJoinLogs = [];
-        const downloadLogs = [];
-        // 1. Gather User Join Logs
-        const aggregatedUsers = await fetchAllUsersAggregated();
-        for (const user of aggregatedUsers) {
-            for (const [projectName, details] of Object.entries(user.projectDetails || {})) {
-                const firstActive = details.firstActive;
-                if (firstActive) {
-                    userJoinLogs.push({
-                        id: `user-join-${user.email}-${projectName}-${firstActive}`,
-                        type: 'USER_JOIN',
-                        project: projectName,
-                        userEmail: user.email,
-                        userDisplayName: user.displayName || user.email.split('@')[0],
-                        userPhotoURL: user.photoURL || '',
-                        timestamp: firstActive
-                    });
-                }
-            }
-        }
-        // 2. Gather Download Logs for Utility apps
-        for (const item of initiatives) {
-            const type = item['@type'];
-            const name = item.name;
-            const isUtility = item.applicationCategory === 'UtilitiesApplication';
-            if (type === 'SoftwareApplication' && isUtility) {
-                const projectId = getProjectId(item);
-                const projectApp = getProjectApp(projectId);
-                let logs = [];
-                if (projectApp) {
-                    logs = await fetchTelemetryLogsForProject(projectApp, projectId, name);
-                }
-                else {
-                    logs = await fetchTelemetryLogsViaCli(projectId, name);
-                }
-                downloadLogs.push(...logs);
-            }
-        }
-        // 3. Gather Social Scheduler Logs
-        const socialLogs = [];
-        try {
-            const db = admin.firestore();
-            const socialSnap = await db.collection('social_posts').get();
-            for (const doc of socialSnap.docs) {
-                const data = doc.data();
-                const project = data.project || 'Social';
-                // Success Publish Event
-                if (data.status === 'Published' && data.published_at) {
-                    socialLogs.push({
-                        id: `social-publish-${doc.id}`,
-                        type: 'SOCIAL_PUBLISH',
-                        project: project,
-                        title: data.hook || 'Instagram post published',
-                        caption: data.caption_english || '',
-                        timestamp: data.published_at
-                    });
-                }
-                // Failure/Error Event
-                if (data.user_feedback && data.user_feedback.includes('Scheduler Publish Error')) {
-                    const match = data.user_feedback.match(/\[Scheduler Publish Error at ([^\]]+)\]:\s*([\s\S]*)/);
-                    let timestamp = data.updated_at || new Date().toISOString();
-                    let errorMessage = data.user_feedback;
-                    if (match && match[1]) {
-                        timestamp = match[1];
-                        errorMessage = match[2];
-                    }
-                    socialLogs.push({
-                        id: `social-error-${doc.id}-${timestamp}`,
-                        type: 'SOCIAL_ERROR',
-                        project: project,
-                        errorMessage: errorMessage,
-                        timestamp
-                    });
-                }
-            }
-        }
-        catch (err) {
-            console.warn('[Logs API] Failed to fetch social posts for logs:', err);
-        }
-        // 4. Fallback mock download logs for local testing/emulator
-        if (process.env.FUNCTIONS_EMULATOR === 'true' && downloadLogs.length === 0) {
-            const tools = ['Aura', 'Pinmage', 'YT2MP3'];
-            const platforms = ['macOS', 'Windows', 'iOS', 'Linux'];
-            const versions = ['1.3.0', '1.1.0', '2.1.1', '1.0.4'];
-            const now = Date.now();
-            for (let i = 0; i < 25; i++) {
-                const project = tools[i % tools.length];
-                const timestamp = new Date(now - i * 4 * 3600 * 1000).toISOString();
-                downloadLogs.push({
-                    id: `mock-download-${project}-${i}`,
-                    type: 'DOWNLOAD',
+        const db = admin.firestore();
+        const socialSnap = await db.collection('social_posts').get();
+        for (const doc of socialSnap.docs) {
+            const data = doc.data();
+            const project = data.project || 'Social';
+            // Success Publish Event
+            if (data.status === 'Published' && data.published_at) {
+                socialLogs.push({
+                    id: `social-publish-${doc.id}`,
+                    type: 'SOCIAL_PUBLISH',
                     project: project,
-                    tool: project,
-                    version: versions[i % versions.length],
-                    os: platforms[i % platforms.length],
+                    title: data.hook || 'Instagram post published',
+                    caption: data.caption_english || '',
+                    timestamp: data.published_at
+                });
+            }
+            // Failure/Error Event
+            if (data.user_feedback && data.user_feedback.includes('Scheduler Publish Error')) {
+                const match = data.user_feedback.match(/\[Scheduler Publish Error at ([^\]]+)\]:\s*([\s\S]*)/);
+                let timestamp = data.updated_at || new Date().toISOString();
+                let errorMessage = data.user_feedback;
+                if (match && match[1]) {
+                    timestamp = match[1];
+                    errorMessage = match[2];
+                }
+                socialLogs.push({
+                    id: `social-error-${doc.id}-${timestamp}`,
+                    type: 'SOCIAL_ERROR',
+                    project: project,
+                    errorMessage: errorMessage,
                     timestamp
                 });
             }
         }
-        // 5. Fallback mock social logs for emulator testing
-        if (process.env.FUNCTIONS_EMULATOR === 'true' && socialLogs.length === 0) {
-            const projects = ['Chessverse', 'Tonaly', 'LaresDJ', 'Billio'];
-            const now = Date.now();
-            for (let i = 0; i < 8; i++) {
-                const project = projects[i % projects.length];
-                const timestamp = new Date(now - i * 8 * 3600 * 1000).toISOString();
-                if (i % 3 === 2) {
-                    socialLogs.push({
-                        id: `mock-social-error-${project}-${i}`,
-                        type: 'SOCIAL_ERROR',
-                        project: project,
-                        errorMessage: 'Instagram Graph API error: The Page Access Token has expired or is invalid. Please refresh the token.',
-                        timestamp
-                    });
-                }
-                else {
-                    socialLogs.push({
-                        id: `mock-social-publish-${project}-${i}`,
-                        type: 'SOCIAL_PUBLISH',
-                        project: project,
-                        title: `New visual showcase post for ${project}`,
-                        caption: `Check out our latest update for ${project}! We have added offline support and custom dashboards.`,
-                        timestamp
-                    });
-                }
+    }
+    catch (err) {
+        console.warn('[Logs API] Failed to fetch social posts for logs:', err);
+    }
+    // 4. Fallback mock download logs for local testing/emulator
+    if (process.env.FUNCTIONS_EMULATOR === 'true' && downloadLogs.length === 0) {
+        const tools = ['Aura', 'Pinmage', 'YT2MP3'];
+        const platforms = ['macOS', 'Windows', 'iOS', 'Linux'];
+        const versions = ['1.3.0', '1.1.0', '2.1.1', '1.0.4'];
+        const now = Date.now();
+        for (let i = 0; i < 25; i++) {
+            const project = tools[i % tools.length];
+            const timestamp = new Date(now - i * 4 * 3600 * 1000).toISOString();
+            downloadLogs.push({
+                id: `mock-download-${project}-${i}`,
+                type: 'DOWNLOAD',
+                project: project,
+                tool: project,
+                version: versions[i % versions.length],
+                os: platforms[i % platforms.length],
+                timestamp
+            });
+        }
+    }
+    // 5. Fallback mock social logs for emulator testing
+    if (process.env.FUNCTIONS_EMULATOR === 'true' && socialLogs.length === 0) {
+        const projects = ['Chessverse', 'Tonaly', 'LaresDJ', 'Billio'];
+        const now = Date.now();
+        for (let i = 0; i < 8; i++) {
+            const project = projects[i % projects.length];
+            const timestamp = new Date(now - i * 8 * 3600 * 1000).toISOString();
+            if (i % 3 === 2) {
+                socialLogs.push({
+                    id: `mock-social-error-${project}-${i}`,
+                    type: 'SOCIAL_ERROR',
+                    project: project,
+                    errorMessage: 'Instagram Graph API error: The Page Access Token has expired or is invalid. Please refresh the token.',
+                    timestamp
+                });
+            }
+            else {
+                socialLogs.push({
+                    id: `mock-social-publish-${project}-${i}`,
+                    type: 'SOCIAL_PUBLISH',
+                    project: project,
+                    title: `New visual showcase post for ${project}`,
+                    caption: `Check out our latest update for ${project}! We have added offline support and custom dashboards.`,
+                    timestamp
+                });
             }
         }
-        // 6. Combine and sort all logs chronologically descending (newest first)
-        const parseLogTime = (val) => {
-            if (!val)
-                return 0;
-            let t = Date.parse(val);
-            if (!isNaN(t))
-                return t;
-            if (/^\d+$/.test(val))
-                return parseInt(val, 10);
+    }
+    // 6. Combine and sort all logs chronologically descending (newest first)
+    const parseLogTime = (val) => {
+        if (!val)
             return 0;
-        };
-        const allLogs = [...userJoinLogs, ...downloadLogs, ...socialLogs].sort((a, b) => parseLogTime(b.timestamp) - parseLogTime(a.timestamp));
-        res.json(allLogs);
+        let t = Date.parse(val);
+        if (!isNaN(t))
+            return t;
+        if (/^\d+$/.test(val))
+            return parseInt(val, 10);
+        return 0;
+    };
+    return [...userJoinLogs, ...downloadLogs, ...socialLogs].sort((a, b) => parseLogTime(b.timestamp) - parseLogTime(a.timestamp));
+}
+app.get(['/logs', '/api/logs'], authenticateAdmin, async (req, res) => {
+    try {
+        const isRefresh = req.query.refresh === 'true';
+        const cached = !isRefresh ? await getLogsCache() : null;
+        if (cached && (Date.now() - cached.timestamp < 120000)) {
+            res.setHeader('X-Cache-Status', 'HIT');
+            res.json(cached.data);
+            return;
+        }
+        const freshLogs = await fetchAllLogsAggregated();
+        saveLogsCache(freshLogs).catch(e => console.warn('[LogsCache] Save error:', e));
+        res.setHeader('X-Cache-Status', 'MISS');
+        res.json(freshLogs);
     }
     catch (err) {
         console.error('[API] Unexpected error in /logs endpoint:', err);

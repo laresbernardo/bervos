@@ -304,12 +304,23 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
     fetchUsers();
   }, [fetchUsers]);
 
-  const fetchLogs = useCallback(async () => {
-    setLoadingLogs(true);
+  const parseLogTimeHelper = (val?: string) => {
+    if (!val) return 0;
+    let t = Date.parse(val);
+    if (!isNaN(t)) return t;
+    if (/^\d+$/.test(val)) return parseInt(val, 10);
+    return 0;
+  };
+
+  const fetchLogs = useCallback(async (isRefresh = false) => {
+    if (logsList.length === 0 || isRefresh) {
+      setLoadingLogs(true);
+    }
     setLogsError(null);
     try {
       const idToken = await user.getIdToken();
-      const res = await fetch('/api/logs', {
+      const url = isRefresh ? '/api/logs?refresh=true' : '/api/logs';
+      const res = await fetch(url, {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
       if (!res.ok) {
@@ -318,10 +329,12 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
       const data = await res.json();
       setLogsList(data);
 
-      // Calculate unread logs count
-      const lastSeen = localStorage.getItem('bervos_last_seen_log_time');
-      if (lastSeen) {
-        const unread = data.filter((log: any) => log.timestamp > lastSeen).length;
+      // Calculate unread logs count using numeric timestamp comparison
+      const lastSeenVal = localStorage.getItem('bervos_last_seen_log_time') || '0';
+      const lastSeenTime = parseLogTimeHelper(lastSeenVal);
+
+      if (lastSeenTime > 0) {
+        const unread = data.filter((log: any) => parseLogTimeHelper(log.timestamp) > lastSeenTime).length;
         setUnreadLogsCount(unread);
       } else {
         setUnreadLogsCount(data.length > 0 ? Math.min(data.length, 10) : 0);
@@ -331,16 +344,22 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
     } finally {
       setLoadingLogs(false);
     }
-  }, [user]);
+  }, [user, logsList.length]);
 
   const handleOpenLogsModal = useCallback(() => {
     setIsLogsModalOpen(true);
     fetchLogs();
-    // Save current time as last seen
     const nowStr = new Date().toISOString();
     localStorage.setItem('bervos_last_seen_log_time', nowStr);
     setUnreadLogsCount(0);
   }, [fetchLogs]);
+
+  const handleCloseLogsModal = useCallback(() => {
+    setIsLogsModalOpen(false);
+    const nowStr = new Date().toISOString();
+    localStorage.setItem('bervos_last_seen_log_time', nowStr);
+    setUnreadLogsCount(0);
+  }, []);
 
   const handleShowBacklog = useCallback((projectId: string) => {
     const project = metrics.find(m => m.id === projectId);
@@ -1430,12 +1449,22 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
                   Chronological records of user registrations and download telemetry across the BERVOS ecosystem.
                 </p>
               </div>
-              <button
-                onClick={() => setIsLogsModalOpen(false)}
-                className="p-2 bg-white/5 border border-white/10 hover:border-white/20 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
-              >
-                <X size={16} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => fetchLogs(true)}
+                  disabled={loadingLogs}
+                  title="Re-fetch fresh activity logs"
+                  className="p-2 bg-white/5 border border-white/10 hover:border-indigo-500/40 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center"
+                >
+                  <RefreshCw size={16} className={loadingLogs ? "animate-spin text-indigo-400" : ""} />
+                </button>
+                <button
+                  onClick={handleCloseLogsModal}
+                  className="p-2 bg-white/5 border border-white/10 hover:border-white/20 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
 
             {/* Filtering / Search Bar */}
