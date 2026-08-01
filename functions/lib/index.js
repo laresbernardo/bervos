@@ -851,9 +851,9 @@ async function getRepoCommits(projectName, repoUrl, limit = 15) {
     return [];
 }
 /**
- * Fetches the count of repository collaborators/access list via GitHub API.
+ * Fetches the list of repository collaborators/access list via GitHub API.
  */
-async function getRepoCollaboratorCount(owner, repo) {
+async function getRepoCollaboratorList(owner, repo) {
     const headers = { 'User-Agent': 'bervos-hub' };
     const token = process.env.GITHUB_TOKEN;
     if (token) {
@@ -864,25 +864,39 @@ async function getRepoCollaboratorCount(owner, repo) {
         if (res.ok) {
             const data = await res.json();
             if (Array.isArray(data)) {
-                return data.length;
+                return data.map((u) => ({
+                    login: u.login,
+                    email: u.email || `${u.login}@github.com`,
+                    avatarUrl: u.avatar_url || ''
+                }));
             }
         }
     }
     catch (e) {
-        console.warn(`[GitHub API] Failed to fetch collaborators for ${owner}/${repo}:`, e);
+        console.warn(`[GitHub API] Failed to fetch collaborator list for ${owner}/${repo}:`, e);
     }
-    // Fallback: Read local git authors count if sibling repo exists
+    // Local git authors fallback if sibling repo exists
     try {
         const parentDir = path.join(__dirname, '..', '..', '..', '..');
         const folderPath = path.join(parentDir, repo);
         if (fs.existsSync(path.join(folderPath, '.git'))) {
-            const authors = (0, child_process_1.execSync)('git log --format="%aE" | sort -u', { cwd: folderPath, encoding: 'utf8', timeout: 1000 }).trim();
-            if (authors)
-                return authors.split('\n').filter(Boolean).length;
+            const authors = (0, child_process_1.execSync)('git log --format="%aN|%aE" | sort -u', { cwd: folderPath, encoding: 'utf8', timeout: 1000 }).trim();
+            if (authors) {
+                return authors.split('\n').filter(Boolean).map(line => {
+                    const parts = line.split('|');
+                    const name = parts[0] || parts[1];
+                    const email = parts[1] || `${name}@github.com`;
+                    return { login: name, email, avatarUrl: '' };
+                });
+            }
         }
     }
     catch (e) { }
-    return 0;
+    return [];
+}
+async function getRepoCollaboratorCount(owner, repo) {
+    const list = await getRepoCollaboratorList(owner, repo);
+    return list.length;
 }
 /**
  * Fetches metrics for a single initiative item.
@@ -1016,18 +1030,23 @@ async function fetchInitiativeMetrics(item) {
             }
         }
         else if (normalizedName === 'rosa' || item.applicationCategory === 'BusinessApplication') {
-            const repoUrl = item.codeRepository || 'https://github.com/laresbernardo/Rosa';
-            const repoMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
-            if (repoMatch) {
-                const owner = repoMatch[1];
-                const repo = repoMatch[2].replace(/\.git$/, '');
-                const collabCount = await getRepoCollaboratorCount(owner, repo);
-                metrics.totalUsers = collabCount > 0 ? collabCount : (item.totalUsers || 1);
-                metrics.active30d = collabCount > 0 ? collabCount : (item.active30d || 1);
+            try {
+                const bervosDb = admin.firestore();
+                const demoLeadsSnap = await bervosDb.collection('demo_leads')
+                    .where('project', '==', 'Rosa').get();
+                const repoUrl = item.codeRepository || 'https://github.com/laresbernardo/Rosa';
+                const repoMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+                let collabCount = 0;
+                if (repoMatch) {
+                    collabCount = await getRepoCollaboratorCount(repoMatch[1], repoMatch[2].replace(/\.git$/, ''));
+                }
+                const totalRosa = demoLeadsSnap.size + collabCount;
+                metrics.totalUsers = totalRosa;
+                metrics.active30d = totalRosa;
             }
-            else {
-                metrics.totalUsers = item.totalUsers || 1;
-                metrics.active30d = item.active30d || 1;
+            catch (err) {
+                metrics.totalUsers = 0;
+                metrics.active30d = 0;
             }
         }
         else {
@@ -1478,8 +1497,64 @@ async function fetchAllUsersAggregated() {
             }
         }
     }
+    // ── Merge GitHub Repo Collaborators for Rosa ──
+    try {
+        const rosaCollabs = await getRepoCollaboratorList('laresbernardo', 'Rosa');
+        const nowIso = new Date().toISOString();
+        for (const collab of rosaCollabs) {
+            if (!collab.email)
+                continue;
+            const key = collab.email.toLowerCase();
+            const existing = allUsersMap.get(key);
+            if (existing) {
+                if (!existing.projects.includes('Rosa'))
+                    existing.projects.push('Rosa');
+                if (!existing.displayName && collab.login)
+                    existing.displayName = collab.login;
+                if (!existing.photoURL && collab.avatarUrl)
+                    existing.photoURL = collab.avatarUrl;
+                if (!existing.projectDetails)
+                    existing.projectDetails = {};
+                if (!existing.projectDetails['Rosa']) {
+                    existing.projectDetails['Rosa'] = {
+                        firstActive: nowIso,
+                        lastActive: nowIso,
+                        channel: 'Repo Access',
+                        channels: ['Repo Access']
+                    };
+                }
+                else {
+                    if (!existing.projectDetails['Rosa'].channels)
+                        existing.projectDetails['Rosa'].channels = [];
+                    if (!existing.projectDetails['Rosa'].channels.includes('Repo Access')) {
+                        existing.projectDetails['Rosa'].channels.push('Repo Access');
+                    }
+                }
+            }
+            else {
+                allUsersMap.set(key, {
+                    email: collab.email,
+                    displayName: collab.login,
+                    photoURL: collab.avatarUrl || '',
+                    projects: ['Rosa'],
+                    lastActive: nowIso,
+                    firstActive: nowIso,
+                    projectDetails: {
+                        'Rosa': {
+                            firstActive: nowIso,
+                            lastActive: nowIso,
+                            channel: 'Repo Access',
+                            channels: ['Repo Access']
+                        }
+                    }
+                });
+            }
+        }
+    }
+    catch (err) {
+        console.warn('[Users] Error merging Rosa repo collaborators:', err);
+    }
     // ── Merge waitlist_users and demo_leads from BERVOS Firestore ──
-    // This captures non-auth projects like Rutinas (waitlist signups) and Rosa (demo leads)
     try {
         const bervosDb = admin.firestore();
         const collections = [
@@ -1495,6 +1570,16 @@ async function fetchAllUsersAggregated() {
                         continue;
                     const rawProject = data.project || (sourceLabel === 'waitlist' ? 'Rutinas' : 'Rosa');
                     const projectName = rawProject.charAt(0).toUpperCase() + rawProject.slice(1);
+                    let userChannel = 'Signup / Lead';
+                    if (data.type === 'watch_video' || data.source === 'watch_video_modal') {
+                        userChannel = 'Video Demo';
+                    }
+                    else if (data.type === 'quote_request' || data.source === 'quote_modal' || data.source === 'contact_form') {
+                        userChannel = 'Contact Lead';
+                    }
+                    else if (sourceLabel === 'waitlist') {
+                        userChannel = 'Waitlist Signup';
+                    }
                     const regVal = data.registeredAt || data.timestamp || data.createdAt;
                     let registeredAt = '';
                     if (regVal) {
@@ -1537,8 +1622,19 @@ async function fetchAllUsersAggregated() {
                         if (!existing.projectDetails[projectName]) {
                             existing.projectDetails[projectName] = {
                                 firstActive: registeredAt,
-                                lastActive: registeredAt
+                                lastActive: registeredAt,
+                                channel: userChannel,
+                                channels: [userChannel],
+                                company: data.company
                             };
+                        }
+                        else {
+                            if (!existing.projectDetails[projectName].channels) {
+                                existing.projectDetails[projectName].channels = [];
+                            }
+                            if (!existing.projectDetails[projectName].channels.includes(userChannel)) {
+                                existing.projectDetails[projectName].channels.push(userChannel);
+                            }
                         }
                     }
                     else {
@@ -1552,7 +1648,10 @@ async function fetchAllUsersAggregated() {
                             projectDetails: {
                                 [projectName]: {
                                     firstActive: registeredAt,
-                                    lastActive: registeredAt
+                                    lastActive: registeredAt,
+                                    channel: userChannel,
+                                    channels: [userChannel],
+                                    company: data.company
                                 }
                             }
                         });

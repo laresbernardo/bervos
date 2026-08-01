@@ -158,7 +158,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
     projects: string[];
     lastActive: string;
     firstActive: string;
-    projectDetails?: Record<string, { firstActive: string; lastActive: string }>;
+    projectDetails?: Record<string, { firstActive: string; lastActive: string; channel?: string; channels?: string[]; company?: string }>;
   }>>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
@@ -273,14 +273,15 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
     });
   }, [metrics, getRepoPath]);
 
-  const fetchUsers = useCallback(async () => {
-    if (usersList.length === 0) {
+  const fetchUsers = useCallback(async (isRefresh = false) => {
+    if (usersList.length === 0 || isRefresh) {
       setLoadingUsers(true);
     }
     setUsersError(null);
     try {
       const idToken = await user.getIdToken();
-      const res = await fetch('/api/users', {
+      const url = isRefresh ? '/api/users?refresh=true' : '/api/users';
+      const res = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${idToken}`
         }
@@ -1110,12 +1111,22 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
                   Showing aggregated user sign-ups and multi-platform registration tracking.
                 </p>
               </div>
-              <button
-                onClick={() => setIsUsersModalOpen(false)}
-                className="p-2 bg-white/5 border border-white/10 hover:border-white/20 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
-              >
-                <X size={16} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => fetchUsers(true)}
+                  disabled={loadingUsers}
+                  title="Re-fetch fresh user directory data"
+                  className="p-2 bg-white/5 border border-white/10 hover:border-indigo-500/40 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center"
+                >
+                  <RefreshCw size={16} className={loadingUsers ? "animate-spin text-indigo-400" : ""} />
+                </button>
+                <button
+                  onClick={() => setIsUsersModalOpen(false)}
+                  className="p-2 bg-white/5 border border-white/10 hover:border-white/20 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
 
             {/* Filtering / Search Bar */}
@@ -1206,7 +1217,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
 
                         const matchesProject =
                           selectedProjectFilter === 'ALL' ||
-                          u.projects.includes(selectedProjectFilter);
+                          u.projects.some(p => p.toLowerCase() === selectedProjectFilter.toLowerCase());
 
                         return matchesSearch && matchesProject;
                       })
@@ -1315,21 +1326,42 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
                                 </div>
                               </div>
 
-                              {/* Middle row: Projects (full width) */}
-                              <div className="flex flex-wrap gap-1.5 py-1">
+                              {/* Middle row: Projects & Channel Badges */}
+                              <div className="flex flex-wrap items-center gap-1.5 py-1">
                                 {u.projects.map((proj, idx) => {
                                   const isSelected = selectedProjectFilter === proj;
+                                  const details = u.projectDetails?.[proj];
+                                  const channels = details?.channels || (details?.channel ? [details.channel] : []);
+                                  const company = details?.company;
+
                                   return (
-                                    <button
-                                      key={idx}
-                                      onClick={() => setSelectedProjectFilter(prev => prev === proj ? 'ALL' : proj)}
-                                      className={`text-[8px] font-mono px-2 py-0.5 rounded uppercase tracking-wider transition-all cursor-pointer ${isSelected
-                                        ? 'bg-indigo-500 border border-indigo-400 text-white font-bold'
-                                        : 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/30'
-                                        }`}
-                                    >
-                                      {proj}
-                                    </button>
+                                    <React.Fragment key={idx}>
+                                      <button
+                                        onClick={() => setSelectedProjectFilter(prev => prev === proj ? 'ALL' : proj)}
+                                        className={`text-[8px] font-mono px-2 py-0.5 rounded uppercase tracking-wider transition-all cursor-pointer ${isSelected
+                                          ? 'bg-indigo-500 border border-indigo-400 text-white font-bold'
+                                          : 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/30'
+                                          }`}
+                                      >
+                                        {proj}
+                                      </button>
+                                      {channels.map((ch: string, cIdx: number) => {
+                                        let chClass = 'bg-slate-500/10 border-slate-500/20 text-slate-400';
+                                        if (ch === 'Video Demo') chClass = 'bg-pink-500/10 border-pink-500/30 text-pink-300';
+                                        if (ch === 'Contact Lead') chClass = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300';
+                                        if (ch === 'Repo Access') chClass = 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300';
+                                        return (
+                                          <span key={cIdx} className={`text-[8px] font-mono px-1.5 py-0.5 rounded border uppercase tracking-wider ${chClass}`}>
+                                            {ch === 'Video Demo' ? '🎬 ' : ch === 'Contact Lead' ? '📩 ' : ch === 'Repo Access' ? '👨‍💻 ' : ''}{ch}
+                                          </span>
+                                        );
+                                      })}
+                                      {company && company !== 'N/A' && (
+                                        <span className="text-[8px] font-mono px-1.5 py-0.5 rounded border bg-amber-500/10 border-amber-500/20 text-amber-300 uppercase tracking-wider">
+                                          🏢 {company}
+                                        </span>
+                                      )}
+                                    </React.Fragment>
                                   );
                                 })}
                               </div>
