@@ -14,7 +14,7 @@
 - [Tonaly](https://tonaly.bervos.org/): Immersive ear training studio designed for musicians and audiophiles. Develop absolute note recognition, master relative intervals, and unlock deep performance insights.
 - [YT2MP3](https://github.com/laresbernardo/YT2MP3): Lightweight Chrome Extension and Node.js server to download YouTube audio as high-quality MP3 with automatic iTunes metadata and high-res covers.
 - [Rosa](https://rosa.bervos.org/): Enterprise-grade self-hosted MMM app with AI Assistant, scenario simulations, reporting, and more.
-- [Rutinas](https://rutinas.bervos.org/): Un viaje íntimo a través de las rutinas cotidianas de 196 culturas. Libro en español co-creado con IA, a publicarse durante el 2026.
+- [Rutinas](https://rutinas.bervos.org/): Un viaje íntimo a través de rutinas cotidianas y actuales de 196 culturas. Libro en español co-creado con IA, a publicarse durante el 2026.
 - [BERVOS](https://bervos.org/): Centralized ecosystem aggregating all BERVOS projects and open source solutions.
 
 ## Open Source Libraries

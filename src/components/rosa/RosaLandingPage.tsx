@@ -62,11 +62,11 @@ export const RosaLandingPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#080b12] text-slate-100 selection:bg-rose-500/30 overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-[#080b12] text-slate-100 selection:bg-vinotinto/40 overflow-x-hidden font-sans">
       {/* Background Decorative Grids & Time Series */}
       <div className="fixed inset-0 pointer-events-none z-0 opacity-15">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-to-b from-rose-600/30 via-pink-600/10 to-transparent blur-[120px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(#e11d48_1px,transparent_1px)] [background-size:32px_32px] opacity-20" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-to-b from-vinotinto/40 via-vinotinto-dark/20 to-transparent blur-[120px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(#960117_1px,transparent_1px)] [background-size:32px_32px] opacity-25" />
       </div>
 
       {/* Navigation Header */}
@@ -82,14 +82,14 @@ export const RosaLandingPage: React.FC = () => {
               onClick={() => setIsWhyRosaOpen(true)}
               className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
             >
-              <Sparkles size={14} className="text-rose-400" />
+              <Sparkles size={14} className="text-vinotinto-light" />
               <span>Why Rosa?</span>
             </button>
             <button
               onClick={() => setIsLicenseOpen(true)}
               className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
             >
-              <FileText size={14} className="text-rose-400" />
+              <FileText size={14} className="text-vinotinto-light" />
               <span>Rosa Licence</span>
             </button>
             <a
@@ -99,11 +99,11 @@ export const RosaLandingPage: React.FC = () => {
               className="hidden sm:flex items-center gap-2 text-xs font-mono text-slate-400 hover:text-white transition-colors"
             >
               <FaGithub size={16} />
-              <span className="bg-rose-500/10 text-rose-400 text-[10px] px-2 py-0.5 rounded border border-rose-500/20 font-sans">Private Repo</span>
+              <span className="bg-vinotinto/15 text-vinotinto-light text-[10px] px-2 py-0.5 rounded border border-vinotinto/30 font-sans">Private Repo</span>
             </a>
             <button
               onClick={() => setIsQuoteOpen(true)}
-              className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-lg transition-all shadow-lg shadow-rose-600/20 flex items-center gap-2"
+              className="px-4 py-2 bg-vinotinto hover:bg-vinotinto-hover text-white font-bold text-xs rounded-lg transition-all shadow-lg shadow-vinotinto/30 flex items-center gap-2"
             >
               <Mail size={14} />
               Contact Us
@@ -124,7 +124,7 @@ export const RosaLandingPage: React.FC = () => {
               transition={{ delay: 0.1 }}
               className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] text-white"
             >
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-pink-400 to-amber-300">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-vinotinto-light via-rose-400 to-amber-300">
                 Marketing Mix Modeling
               </span> <br />
               With Built-in AI.
@@ -134,7 +134,7 @@ export const RosaLandingPage: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-slate-300 text-lg sm:text-xl leading-relaxed max-w-2xl border-l-2 border-rose-500/30 pl-5"
+              className="text-slate-300 text-lg sm:text-xl leading-relaxed max-w-2xl border-l-2 border-vinotinto/40 pl-5"
             >
               Enterprise-grade self-hosted Robyn-powered Marketing Mix Modeling (MMM) Application with built-in AI Assistant, scenario simulations, automated reporting, and complete data privacy.
             </motion.p>
@@ -147,7 +147,7 @@ export const RosaLandingPage: React.FC = () => {
             >
               <button
                 onClick={() => setIsQuoteOpen(true)}
-                className="px-8 py-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-black text-sm rounded-xl transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-rose-600/25 flex items-center gap-3"
+                className="px-8 py-4 bg-gradient-to-r from-vinotinto to-vinotinto-hover hover:from-vinotinto-hover hover:to-vinotinto-light text-white font-black text-sm rounded-xl transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-vinotinto/40 flex items-center gap-3"
               >
                 REQUEST ACCESS
                 <ArrowRight size={16} />
@@ -156,7 +156,7 @@ export const RosaLandingPage: React.FC = () => {
                 onClick={() => setIsVideoOpen(true)}
                 className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-sm rounded-xl transition-all flex items-center gap-3 hover:scale-[1.02] active:scale-95"
               >
-                <Play size={16} className="text-rose-400 fill-rose-400" />
+                <Play size={16} className="text-vinotinto-light fill-vinotinto-light" />
                 WATCH DEMO (VIDEO)
               </button>
             </motion.div>
@@ -170,11 +170,11 @@ export const RosaLandingPage: React.FC = () => {
               transition={{ delay: 0.2, duration: 0.8 }}
               className="relative w-56 h-56 sm:w-64 sm:h-64 flex items-center justify-center"
             >
-              <div className="absolute inset-0 bg-gradient-to-tr from-rose-500/25 to-pink-500/25 rounded-full blur-2xl opacity-70" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-vinotinto/35 to-vinotinto-light/20 rounded-full blur-2xl opacity-70" />
               <img
                 src="/rosa-logo.png"
                 alt="Rosa Logo Artwork"
-                className="w-full h-full object-contain relative z-10 drop-shadow-[0_10px_35px_rgba(225,29,72,0.45)] hover:scale-105 transition-transform duration-500"
+                className="w-full h-full object-contain relative z-10 drop-shadow-[0_10px_35px_rgba(150,1,23,0.55)] hover:scale-105 transition-transform duration-500"
               />
             </motion.div>
           </div>
@@ -183,27 +183,27 @@ export const RosaLandingPage: React.FC = () => {
           <div className="lg:col-span-12 mt-4 pt-6 border-t border-white/10">
             <div className="flex items-center justify-between gap-4 overflow-x-auto scrollbar-none text-xs font-medium text-slate-300">
               <div className="flex items-center gap-2 whitespace-nowrap">
-                <Cpu size={15} className="text-rose-400 flex-shrink-0" />
+                <Cpu size={15} className="text-vinotinto-light flex-shrink-0" />
                 <span>Meta Robyn Interoperable</span>
               </div>
               <div className="flex items-center gap-2 whitespace-nowrap">
-                <ShieldCheck size={15} className="text-rose-400 flex-shrink-0" />
+                <ShieldCheck size={15} className="text-vinotinto-light flex-shrink-0" />
                 <span>100% Private & Self-Hosted</span>
               </div>
               <div className="flex items-center gap-2 whitespace-nowrap">
-                <FileSpreadsheet size={15} className="text-rose-400 flex-shrink-0" />
+                <FileSpreadsheet size={15} className="text-vinotinto-light flex-shrink-0" />
                 <span>PowerPoint & Data Exports</span>
               </div>
               <div className="flex items-center gap-2 whitespace-nowrap">
-                <Bot size={15} className="text-rose-400 flex-shrink-0" />
+                <Bot size={15} className="text-vinotinto-light flex-shrink-0" />
                 <span>Trained AI Assistant</span>
               </div>
               <div className="flex items-center gap-2 whitespace-nowrap">
-                <TrendingUp size={15} className="text-rose-400 flex-shrink-0" />
+                <TrendingUp size={15} className="text-vinotinto-light flex-shrink-0" />
                 <span>Scenario Simulation Engine</span>
               </div>
               <div className="flex items-center gap-2 whitespace-nowrap">
-                <Server size={15} className="text-rose-400 flex-shrink-0" />
+                <Server size={15} className="text-vinotinto-light flex-shrink-0" />
                 <span>Docker & Cloud Ready</span>
               </div>
             </div>
@@ -215,11 +215,11 @@ export const RosaLandingPage: React.FC = () => {
       <section className="py-24 px-6 relative z-10 border-t border-white/5 bg-white/[0.01]">
         <div className="max-w-7xl mx-auto space-y-16">
           <div className="text-center max-w-3xl mx-auto space-y-4">
-            <span className="mono-label !text-rose-400">WHY ROSA IS A GAME-CHANGER</span>
+            <span className="mono-label !text-vinotinto-light">WHY ROSA IS A GAME-CHANGER</span>
             <h2 className="text-3xl sm:text-5xl font-black text-white">Built for Data Scientists, Marketers & Executives.</h2>
             <p className="text-slate-400 text-base sm:text-lg">
               Developed by Meta Robyn’s <a href="https://www.linkedin.com/in/laresbernardo/" target="_blank" rel="noopener noreferrer" className="text-white font-bold hover:underline transition-colors">main developer</a>, Rosa resolves traditional MMM friction by unifying mathematical accuracy, AI speed, and local data security into a single app.
-              <button onClick={() => setIsWhyRosaOpen(true)} className="inline-flex items-center gap-1 text-xs text-rose-400 hover:text-rose-300 font-mono underline underline-offset-4 ml-3 transition-colors">
+              <button onClick={() => setIsWhyRosaOpen(true)} className="inline-flex items-center gap-1 text-xs text-vinotinto-light hover:text-rose-300 font-mono underline underline-offset-4 ml-3 transition-colors">
                 <Sparkles size={12} />
                 Discover why Rosa
               </button>
@@ -231,12 +231,12 @@ export const RosaLandingPage: React.FC = () => {
               {
                 icon: ShieldCheck,
                 title: 'Secure & 100% Private',
-                desc: 'Standalone solution running locally or on your private cloud. You own the code and deployment—zero external telemetry or data leaks.'
+                desc: 'Standalone solution running locally or on your private cloud. You own the code and deployment. Zero external telemetry or data sharing or leaks.'
               },
               {
                 icon: Cpu,
                 title: 'Robyn-Powered Core',
-                desc: <>Built directly upon <a href="https://github.com/facebookexperimental/Robyn" target="_blank" rel="noopener noreferrer" className="text-rose-400 hover:text-rose-300 underline font-semibold transition-colors">Robyn</a> as its underlying engine. Fully interoperable, enhanced with unique UI extensions, model refreshers, and audit logs.</>
+                desc: <>Built directly upon <a href="https://github.com/facebookexperimental/Robyn" target="_blank" rel="noopener noreferrer" className="text-vinotinto-light hover:text-rose-300 underline font-semibold transition-colors">Robyn</a> as its underlying engine. Fully interoperable, enhanced with unique UI extensions, model selection flow, tested default parameters, audit logs.</>
               },
               {
                 icon: Bot,
@@ -250,7 +250,7 @@ export const RosaLandingPage: React.FC = () => {
               },
               {
                 icon: FileSpreadsheet,
-                title: 'Automated PowerPoint Reports',
+                title: 'Automated Reporting',
                 desc: 'Generates fully editable PowerPoint (.pptx) executive slide decks, ready for stakeholder presentations without manual work.'
               },
               {
@@ -265,9 +265,9 @@ export const RosaLandingPage: React.FC = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.05 }}
-                className="tech-card p-8 hover:border-rose-500/40 transition-all group relative overflow-hidden"
+                className="tech-card p-8 hover:border-vinotinto/50 transition-all group relative overflow-hidden"
               >
-                <div className="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-6 group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 rounded-xl bg-vinotinto/15 border border-vinotinto/30 flex items-center justify-center text-vinotinto-light mb-6 group-hover:scale-110 transition-transform">
                   <f.icon size={24} />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-3">{f.title}</h3>
@@ -283,11 +283,11 @@ export const RosaLandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto space-y-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/10 pb-8">
             <div>
-              <span className="mono-label !text-rose-400 mb-2 block">SYSTEM_REQUIREMENTS // SPECS</span>
+              <span className="mono-label !text-vinotinto-light mb-2 block">SYSTEM_REQUIREMENTS // SPECS</span>
               <h2 className="text-3xl sm:text-4xl font-black text-white">Minimum Technical Requirements</h2>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-xs font-mono bg-rose-500/10 text-rose-300 border border-rose-500/20 px-3 py-1.5 rounded-lg flex items-center gap-2">
+              <span className="text-xs font-mono bg-vinotinto/15 text-vinotinto-light border border-vinotinto/30 px-3 py-1.5 rounded-lg flex items-center gap-2">
                 <FaRProject size={14} /> R &gt;= 4.5.0 Recommended
               </span>
             </div>
@@ -305,31 +305,31 @@ export const RosaLandingPage: React.FC = () => {
                 <tbody className="divide-y divide-white/5 font-sans">
                   <tr>
                     <td className="py-4 px-6 font-bold text-white flex items-center gap-2">
-                      <Server size={16} className="text-rose-400" /> OS / Platform
+                      <Server size={16} className="text-vinotinto-light" /> Platform
                     </td>
                     <td className="py-4 px-6">R-compatible (Linux, macOS, Windows). Run locally or in private cloud.</td>
                   </tr>
                   <tr>
                     <td className="py-4 px-6 font-bold text-white flex items-center gap-2">
-                      <Cpu size={16} className="text-rose-400" /> CPU Cores
+                      <Cpu size={16} className="text-vinotinto-light" /> CPU Cores
                     </td>
                     <td className="py-4 px-6">Parallel computing supported. 6 - 12 cores recommended for optimal performance.</td>
                   </tr>
                   <tr>
                     <td className="py-4 px-6 font-bold text-white flex items-center gap-2">
-                      <Clock size={16} className="text-rose-400" /> Memory
+                      <Clock size={16} className="text-vinotinto-light" /> Memory
                     </td>
                     <td className="py-4 px-6">&gt;= 8GB RAM required for parallel hyperparameter optimization.</td>
                   </tr>
                   <tr>
                     <td className="py-4 px-6 font-bold text-white flex items-center gap-2">
-                      <Lock size={16} className="text-rose-400" /> Data
+                      <Lock size={16} className="text-vinotinto-light" /> Data
                     </td>
                     <td className="py-4 px-6">Manual CSV/JSON uploads. Optional multiple providers for AI assistants & model storage.</td>
                   </tr>
                   <tr>
                     <td className="py-4 px-6 font-bold text-white flex items-center gap-2">
-                      <FileCode size={16} className="text-rose-400" /> Docker
+                      <FileCode size={16} className="text-vinotinto-light" /> Docker
                     </td>
                     <td className="py-4 px-6">Containerized Dockerfile included for instant server deployment and scaling.</td>
                   </tr>
@@ -337,10 +337,10 @@ export const RosaLandingPage: React.FC = () => {
               </table>
             </div>
 
-            <div className="lg:col-span-4 tech-card p-8 space-y-6 flex flex-col justify-between border-rose-500/20">
+            <div className="lg:col-span-4 tech-card p-8 space-y-6 flex flex-col justify-between border-vinotinto/30">
               <div className="space-y-4">
-                <div className="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
-                  <Sparkles size={20} />
+                <div className="w-10 h-10 rounded-lg bg-vinotinto/15 border border-vinotinto/30 flex items-center justify-center text-vinotinto-light">
+                  <CheckCircle2 size={20} />
                 </div>
                 <h3 className="text-xl font-bold text-white">Private Cloud & Docker Ready</h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
@@ -351,9 +351,9 @@ export const RosaLandingPage: React.FC = () => {
               <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
                 <span className="mono-label !text-slate-400 text-[10px]">RESOURCES_INCLUDED</span>
                 <ul className="text-xs text-slate-300 space-y-1.5">
-                  <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-rose-400" /> Full Rosa R codebase & GUI</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-rose-400" /> Curated documentation suite</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-rose-400" /> Dockerfile & environment scripts</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-vinotinto-light" /> Full Rosa R codebase & GUI</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-vinotinto-light" /> Curated documentation suite</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-vinotinto-light" /> Dockerfile & environment scripts</li>
                 </ul>
               </div>
             </div>
@@ -364,9 +364,9 @@ export const RosaLandingPage: React.FC = () => {
       {/* Partnership & Deliverables Section */}
       <section className="py-24 px-6 relative z-10 border-t border-white/5 bg-white/[0.01]">
         <div className="max-w-7xl mx-auto">
-          <div className="tech-card p-10 md:p-14 border-rose-500/30 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          <div className="tech-card p-10 md:p-14 border-vinotinto/40 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             <div className="lg:col-span-7 space-y-6">
-              <span className="mono-label !text-rose-400">PARTNERSHIP & CONSULTANCY</span>
+              <span className="mono-label !text-vinotinto-light">PARTNERSHIP & CONSULTANCY</span>
               <h2 className="text-3xl sm:text-4xl font-black text-white leading-tight">
                 Full Repository Access & Dedicated Onboarding Package
               </h2>
@@ -384,15 +384,15 @@ export const RosaLandingPage: React.FC = () => {
                   'Fixes for Future Breaking Changes'
                 ].map((item, i) => (
                   <div key={i} className="flex items-center gap-3 text-sm text-slate-200">
-                    <CheckCircle2 size={16} className="text-rose-400 flex-shrink-0" />
+                    <CheckCircle2 size={16} className="text-vinotinto-light flex-shrink-0" />
                     <span>{item}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="lg:col-span-5 text-center p-8 rounded-2xl bg-gradient-to-b from-rose-950/40 to-slate-950/80 border border-rose-500/30 space-y-6">
-              <span className="mono-label !text-rose-300">CUSTOM ENTERPRISE ACCESS</span>
+            <div className="lg:col-span-5 text-center p-8 rounded-2xl bg-[#0b0e17] border border-white/10 space-y-6">
+              <span className="mono-label !text-vinotinto-light">CUSTOM ENTERPRISE ACCESS</span>
               <div className="space-y-2">
                 <h3 className="text-2xl font-black text-white">Get Access</h3>
                 <p className="text-xs text-slate-400 max-w-xs mx-auto">
@@ -402,7 +402,7 @@ export const RosaLandingPage: React.FC = () => {
 
               <button
                 onClick={() => setIsQuoteOpen(true)}
-                className="w-full py-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-black text-sm rounded-xl transition-all shadow-xl shadow-rose-600/30 flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-vinotinto hover:bg-vinotinto-hover text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-vinotinto/25 flex items-center justify-center gap-2"
               >
                 <Mail size={16} />
                 REQUEST ACCESS
@@ -411,17 +411,17 @@ export const RosaLandingPage: React.FC = () => {
               <div className="flex items-center justify-center gap-4 sm:gap-6 text-slate-400 text-xs pt-2">
                 <button
                   onClick={() => setIsWhyRosaOpen(true)}
-                  className="flex items-center gap-1.5 text-rose-400 hover:text-rose-300 underline underline-offset-4 transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 text-slate-400 hover:text-vinotinto-light underline underline-offset-4 transition-colors cursor-pointer"
                 >
-                  <Sparkles size={14} />
+                  <Sparkles size={14} className="text-vinotinto-light" />
                   Why Rosa?
                 </button>
                 <span className="text-slate-600">•</span>
                 <button
                   onClick={() => setIsLicenseOpen(true)}
-                  className="flex items-center gap-1.5 text-rose-400 hover:text-rose-300 underline underline-offset-4 transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 text-slate-400 hover:text-vinotinto-light underline underline-offset-4 transition-colors cursor-pointer"
                 >
-                  <ShieldCheck size={14} />
+                  <ShieldCheck size={14} className="text-vinotinto-light" />
                   Rosa Licence
                 </button>
               </div>
@@ -440,10 +440,10 @@ export const RosaLandingPage: React.FC = () => {
             <span className="font-mono text-slate-400">Rosa &copy; {new Date().getFullYear()} BERVOS Ecosystem</span>
           </div>
           <div className="flex items-center gap-6">
-            <a href="/" className="hover:text-rose-400 transition-colors">BERVOS Home</a>
-            <button onClick={() => setIsWhyRosaOpen(true)} className="hover:text-rose-400 transition-colors">Why Rosa?</button>
-            <button onClick={() => setIsLicenseOpen(true)} className="hover:text-rose-400 transition-colors">Rosa Licence</button>
-            <button onClick={() => setIsQuoteOpen(true)} className="hover:text-rose-400 transition-colors">Contact</button>
+            <a href="/" className="hover:text-vinotinto-light transition-colors">BERVOS Home</a>
+            <button onClick={() => setIsWhyRosaOpen(true)} className="hover:text-vinotinto-light transition-colors">Why Rosa?</button>
+            <button onClick={() => setIsLicenseOpen(true)} className="hover:text-vinotinto-light transition-colors">Rosa Licence</button>
+            <button onClick={() => setIsQuoteOpen(true)} className="hover:text-vinotinto-light transition-colors">Contact</button>
           </div>
         </div>
       </footer>

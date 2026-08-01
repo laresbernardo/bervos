@@ -73,9 +73,9 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({ isOpen, onClose }) => {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         onClick={(e) => e.stopPropagation()}
-        className="tech-card p-8 max-w-xl w-full relative border border-rose-500/30 shadow-2xl shadow-rose-950/40"
+        className="tech-card p-8 max-w-xl w-full relative border border-vinotinto/40 shadow-2xl shadow-vinotinto-dark/60"
       >
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-rose-500 to-transparent" />
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-vinotinto to-transparent" />
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
@@ -84,14 +84,14 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({ isOpen, onClose }) => {
         </button>
 
         <div className="mb-6">
-          <span className="mono-label !text-rose-400 block mb-1">ROSA_SYSTEM // SUPPORT_TRANSMISSION</span>
+          <span className="mono-label !text-vinotinto-light block mb-1">ROSA_SYSTEM // SUPPORT_TRANSMISSION</span>
           <h3 className="text-2xl font-bold text-white">Request Access & Support</h3>
           <p className="text-xs text-slate-400 mt-1">Get custom enterprise deployment details, repository access, and consulting packages.</p>
         </div>
 
         {status === 'success' ? (
           <div className="py-10 text-center space-y-6">
-            <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-center justify-center mx-auto text-rose-400">
+            <div className="w-16 h-16 bg-vinotinto/15 border border-vinotinto/30 rounded-2xl flex items-center justify-center mx-auto text-vinotinto-light">
               <CheckCircle2 size={36} />
             </div>
             <div className="space-y-2">
@@ -102,7 +102,7 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({ isOpen, onClose }) => {
             </div>
             <button
               onClick={onClose}
-              className="px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-rose-600/20 text-sm"
+              className="px-6 py-3 bg-vinotinto hover:bg-vinotinto-hover text-white font-bold rounded-xl transition-all shadow-lg shadow-vinotinto/30 text-sm"
             >
               Return to Rosa
             </button>
@@ -119,7 +119,7 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({ isOpen, onClose }) => {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   disabled={status === 'sending'}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-rose-500/50 transition-colors"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-vinotinto/50 transition-colors"
                 />
               </div>
               <div className="space-y-1">
@@ -131,7 +131,7 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({ isOpen, onClose }) => {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   disabled={status === 'sending'}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-rose-500/50 transition-colors"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-vinotinto/50 transition-colors"
                 />
               </div>
             </div>
@@ -144,7 +144,7 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({ isOpen, onClose }) => {
                 value={formData.company}
                 onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                 disabled={status === 'sending'}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-rose-500/50 transition-colors"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-vinotinto/50 transition-colors"
               />
             </div>
 
@@ -157,18 +157,18 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({ isOpen, onClose }) => {
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                 disabled={status === 'sending'}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-rose-500/50 transition-colors resize-none"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-vinotinto/50 transition-colors resize-none"
               />
             </div>
 
             {status === 'error' && (
-              <p className="text-rose-400 text-xs font-bold text-center">Transmission error. Please try again or email admin@bervos.org directly.</p>
+              <p className="text-vinotinto-light text-xs font-bold text-center">Transmission error. Please try again or email admin@bervos.org directly.</p>
             )}
 
             <button
               type="submit"
               disabled={status === 'sending'}
-              className="w-full py-3.5 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-rose-600/20 text-sm flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-gradient-to-r from-vinotinto to-vinotinto-hover hover:from-vinotinto-hover hover:to-vinotinto-light text-white font-bold rounded-xl transition-all shadow-lg shadow-vinotinto/30 text-sm flex items-center justify-center gap-2"
             >
               {status === 'sending' ? (
                 'TRANSMITTING INQUIRY...'

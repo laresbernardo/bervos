@@ -49,8 +49,8 @@ export const MmmTimeSeriesBackground: React.FC = () => {
       <svg className="w-full h-full" viewBox="0 0 1200 650" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
         <defs>
           <linearGradient id="stackBase" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#e11d48" stopOpacity="0.45" />
-            <stop offset="100%" stopColor="#9f1239" stopOpacity="0.25" />
+            <stop offset="0%" stopColor="#960117" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="#63000d" stopOpacity="0.25" />
           </linearGradient>
           <linearGradient id="stackDigital" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.40" />
@@ -65,8 +65,8 @@ export const MmmTimeSeriesBackground: React.FC = () => {
             <stop offset="100%" stopColor="#d97706" stopOpacity="0.25" />
           </linearGradient>
           <linearGradient id="stackOffline" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.50" />
-            <stop offset="100%" stopColor="#be123c" stopOpacity="0.30" />
+            <stop offset="0%" stopColor="#be123c" stopOpacity="0.50" />
+            <stop offset="100%" stopColor="#63000d" stopOpacity="0.30" />
           </linearGradient>
         </defs>
 
@@ -120,8 +120,8 @@ export const MmmTimeSeriesBackground: React.FC = () => {
         {/* Sleek Glowing Separator Stroke Lines */}
         <motion.path
           d={buildLinePath('y1')}
-          stroke="#f43f5e"
-          strokeWidth="1.2"
+          stroke="#960117"
+          strokeWidth="1.5"
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
           transition={{ duration: 1.2, ease: "easeInOut" }}
@@ -152,9 +152,9 @@ export const MmmTimeSeriesBackground: React.FC = () => {
         />
         <motion.path
           d={buildLinePath('y5')}
-          stroke="#fda4af"
+          stroke="#e03248"
           strokeWidth="2.5"
-          className="drop-shadow-[0_0_12px_rgba(244,63,94,0.8)]"
+          className="drop-shadow-[0_0_12px_rgba(150,1,23,0.8)]"
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
           transition={{ duration: 1.2, delay: 0.4, ease: "easeInOut" }}

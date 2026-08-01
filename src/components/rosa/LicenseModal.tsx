@@ -17,9 +17,9 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose }) =
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         onClick={(e) => e.stopPropagation()}
-        className="tech-card p-8 max-w-3xl w-full relative border border-rose-500/30 shadow-2xl shadow-rose-950/40 max-h-[85vh] flex flex-col"
+        className="tech-card p-8 max-w-3xl w-full relative border border-vinotinto/40 shadow-2xl shadow-vinotinto-dark/60 max-h-[85vh] flex flex-col"
       >
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-rose-500 to-transparent" />
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-vinotinto to-transparent" />
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors z-10"
@@ -28,7 +28,7 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose }) =
         </button>
 
         <div className="mb-6 flex-shrink-0">
-          <span className="mono-label !text-rose-400 block mb-1">ROSA_SYSTEM // OFFICIAL_LICENCE</span>
+          <span className="mono-label !text-vinotinto-light block mb-1">ROSA_SYSTEM // OFFICIAL_LICENCE</span>
           <h3 className="text-2xl font-bold text-white">Rosa Licence</h3>
           <p className="text-xs text-slate-400 mt-1 font-mono">Synced from repository LICENCE file (Proprietary EULA)</p>
         </div>
@@ -108,7 +108,7 @@ In no event shall the Licensor be liable to the Licensee or any third party for 
         <div className="mt-6 pt-4 border-t border-white/10 flex justify-end flex-shrink-0">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition-all"
+            className="px-6 py-2.5 bg-vinotinto hover:bg-vinotinto-hover text-white font-bold rounded-xl text-xs transition-all"
           >
             Close Licence
           </button>

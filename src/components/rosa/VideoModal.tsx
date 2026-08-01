@@ -102,13 +102,13 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-4xl relative bg-[#04060a] rounded-2xl overflow-hidden border border-rose-500/30 shadow-2xl shadow-rose-950/60 text-slate-100 font-sans"
+          className="w-full max-w-4xl relative bg-[#04060a] rounded-2xl overflow-hidden border border-vinotinto/40 shadow-2xl shadow-vinotinto-dark/70 text-slate-100 font-sans"
         >
           {/* Modal Header */}
           <div className="h-14 bg-white/5 border-b border-white/10 px-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50 animate-pulse" />
-              <span className="mono-label !text-rose-300 text-xs tracking-wider">
+              <div className="w-3 h-3 rounded-full bg-vinotinto-light shadow-sm shadow-vinotinto/50 animate-pulse" />
+              <span className="mono-label !text-vinotinto-light text-xs tracking-wider">
                 ROSA_DEMO // PRODUCT_WALKTHROUGH
               </span>
             </div>
@@ -128,7 +128,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
             {!unlocked ? (
               <div className="max-w-md mx-auto space-y-6">
                 <div className="text-center space-y-2">
-                  <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto">
+                  <div className="w-12 h-12 rounded-2xl bg-vinotinto/15 border border-vinotinto/30 text-vinotinto-light flex items-center justify-center mx-auto">
                     <Lock size={22} />
                   </div>
                   <h3 className="text-2xl font-black text-white tracking-tight">
@@ -142,7 +142,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
                 <form onSubmit={handleSubmit} className="space-y-4 pt-2">
                   <div>
                     <label className="block text-[11px] font-mono text-slate-400 mb-1 flex items-center gap-1.5">
-                      <User size={13} className="text-rose-400" />
+                      <User size={13} className="text-vinotinto-light" />
                       <span>Full Name</span>
                     </label>
                     <input
@@ -151,13 +151,13 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. Alex Morgan"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-rose-500/50 transition-colors"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-vinotinto/50 transition-colors"
                     />
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-mono text-slate-400 mb-1 flex items-center gap-1.5">
-                      <Mail size={13} className="text-rose-400" />
+                      <Mail size={13} className="text-vinotinto-light" />
                       <span>Email Address</span>
                     </label>
                     <input
@@ -166,13 +166,13 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="alex@company.com"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-rose-500/50 transition-colors"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-vinotinto/50 transition-colors"
                     />
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-mono text-slate-400 mb-1 flex items-center gap-1.5">
-                      <Building2 size={13} className="text-rose-400" />
+                      <Building2 size={13} className="text-vinotinto-light" />
                       <span>Company / Organization (Optional)</span>
                     </label>
                     <input
@@ -180,12 +180,12 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
                       value={company}
                       onChange={(e) => setCompany(e.target.value)}
                       placeholder="e.g. Acme Corp / Marketing Analytics"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-rose-500/50 transition-colors"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-vinotinto/50 transition-colors"
                     />
                   </div>
 
                   {status === 'error' && (
-                    <p className="text-xs text-rose-400 text-center font-mono">
+                    <p className="text-xs text-vinotinto-light text-center font-mono">
                       Submission error. Please verify your data and try again.
                     </p>
                   )}
@@ -193,7 +193,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
                   <button
                     type="submit"
                     disabled={status === 'sending'}
-                    className="w-full py-3.5 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-black text-xs rounded-xl shadow-lg shadow-rose-600/25 transition-all flex items-center justify-center gap-2"
+                    className="w-full py-3.5 bg-gradient-to-r from-vinotinto to-vinotinto-hover hover:from-vinotinto-hover hover:to-vinotinto-light text-white font-black text-xs rounded-xl shadow-lg shadow-vinotinto/30 transition-all flex items-center justify-center gap-2"
                   >
                     {status === 'sending' ? (
                       <span>UNLOCKING...</span>
