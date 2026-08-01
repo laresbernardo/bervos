@@ -654,7 +654,7 @@ function getLocalProjectVersion(projectName: string): string | null {
     'tonaly': 'Tonaly',
     'yt2mp3': 'YT2MP3',
     'rosa': 'Rosa',
-    'rutinas': 'rutinas',
+    'rutinas': 'Rutinas',
     'bervos': 'BERVOS.org'
   };
 
@@ -736,6 +736,7 @@ async function getRepoCommits(projectName: string, repoUrl: string, limit = 15):
     'tonaly': 'Tonaly',
     'yt2mp3': 'YT2MP3',
     'rosa': 'Rosa',
+    'rutinas': 'Rutinas',
     'bervos': 'BERVOS/BERVOS.org'
   };
 
