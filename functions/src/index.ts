@@ -1342,10 +1342,51 @@ async function getAppUsers(app: admin.app.App): Promise<UserRecord[]> {
   }
 }
 
+let memoryUsersCache: { timestamp: number; data: any[] } | null = null;
+
+async function getUsersCache(): Promise<{ timestamp: number; data: any[] } | null> {
+  if (memoryUsersCache && (Date.now() - memoryUsersCache.timestamp < 120000)) {
+    return memoryUsersCache;
+  }
+  try {
+    const db = admin.firestore();
+    const doc = await db.collection('cache').doc('users').get();
+    if (doc.exists) {
+      const data = doc.data();
+      if (data && data.timestamp && Array.isArray(data.users)) {
+        memoryUsersCache = { timestamp: data.timestamp, data: data.users };
+        return memoryUsersCache;
+      }
+    }
+  } catch (err) {
+    console.warn('[UsersCache] Failed to read users cache from Firestore:', err);
+  }
+  return null;
+}
+
+async function saveUsersCache(data: any[]): Promise<void> {
+  const timestamp = Date.now();
+  memoryUsersCache = { timestamp, data };
+  try {
+    const db = admin.firestore();
+    await db.collection('cache').doc('users').set({
+      timestamp,
+      users: data,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+  } catch (err) {
+    console.warn('[UsersCache] Failed to save users cache to Firestore:', err);
+  }
+}
+
 async function getAppUsersViaCli(projectId: string): Promise<UserRecord[]> {
+  // Never execute blocking npx CLI shell commands in Cloud Functions runtime to avoid 8s timeouts
+  if (process.env.K_SERVICE || process.env.FUNCTION_TARGET || process.env.FIREBASE_CONFIG) {
+    return [];
+  }
   const tempFile = path.join(os.tmpdir(), `users-${projectId}-${Date.now()}.json`);
   try {
-    execSync(`npx firebase auth:export "${tempFile}" --format json --project ${projectId}`, { stdio: 'ignore', timeout: 8000 });
+    execSync(`npx firebase auth:export "${tempFile}" --format json --project ${projectId}`, { stdio: 'ignore', timeout: 2000 });
     if (fs.existsSync(tempFile)) {
       const content = fs.readFileSync(tempFile, 'utf8').trim();
       try { fs.unlinkSync(tempFile); } catch (e) { }
@@ -1363,7 +1404,7 @@ async function getAppUsersViaCli(projectId: string): Promise<UserRecord[]> {
       }
     }
   } catch (err) {
-    console.error(`[Local CLI Fallback] Failed to fetch users for project ${projectId}:`, err);
+    console.warn(`[Local CLI Fallback] Skipped CLI fetch for project ${projectId}`);
   }
   return [];
 }
@@ -1388,10 +1429,13 @@ async function fetchAllUsersAggregated(): Promise<Array<{
     projectDetails: Record<string, { firstActive: string; lastActive: string }>;
   }>();
 
-  for (const item of initiatives) {
-    const type = item['@type'];
-    const name = item.name;
-    if (type === 'SoftwareApplication' && item.applicationCategory !== 'UtilitiesApplication') {
+  const softwareApps = initiatives.filter(
+    item => item['@type'] === 'SoftwareApplication' && item.applicationCategory !== 'UtilitiesApplication'
+  );
+
+  const fetchResults = await Promise.all(
+    softwareApps.map(async (item) => {
+      const name = item.name;
       const projectId = getProjectId(item);
       const projectApp = getProjectApp(projectId);
 
@@ -1402,7 +1446,6 @@ async function fetchAllUsersAggregated(): Promise<Array<{
         users = await getAppUsersViaCli(projectId);
       }
 
-      // Local workspace backup file fallback (e.g. chessverse-users.json, scribo-users.json, etc.)
       if (users.length === 0) {
         const workspaceDir = path.join(__dirname, '..', '..');
         const normalizedName = name.toLowerCase();
@@ -1426,52 +1469,55 @@ async function fetchAllUsersAggregated(): Promise<Array<{
           }
         }
       }
+      return { name, users };
+    })
+  );
 
-      for (const user of users) {
-        if (!user.email) continue;
-        const key = user.email.toLowerCase();
-        const existing = allUsersMap.get(key);
-        const lastActive = user.lastSignInTime || user.createdAt || '';
-        const firstActive = user.createdAt || user.lastSignInTime || '';
-        if (existing) {
-          if (!existing.projects.includes(name)) {
-            existing.projects.push(name);
-          }
-          if (lastActive && (!existing.lastActive || lastActive > existing.lastActive)) {
-            existing.lastActive = lastActive;
-          }
-          if (firstActive && (!existing.firstActive || firstActive < existing.firstActive)) {
-            existing.firstActive = firstActive;
-          }
-          if (!existing.displayName && user.displayName) {
-            existing.displayName = user.displayName;
-          }
-          if (!existing.photoURL && user.photoURL) {
-            existing.photoURL = user.photoURL;
-          }
-          if (!existing.projectDetails) {
-            existing.projectDetails = {};
-          }
-          existing.projectDetails[name] = {
-            firstActive: firstActive,
-            lastActive: lastActive
-          };
-        } else {
-          allUsersMap.set(key, {
-            email: user.email,
-            displayName: user.displayName || user.email.split('@')[0],
-            photoURL: user.photoURL || '',
-            projects: [name],
-            lastActive: lastActive,
-            firstActive: firstActive,
-            projectDetails: {
-              [name]: {
-                firstActive: firstActive,
-                lastActive: lastActive
-              }
-            }
-          });
+  for (const { name, users } of fetchResults) {
+    for (const user of users) {
+      if (!user.email) continue;
+      const key = user.email.toLowerCase();
+      const existing = allUsersMap.get(key);
+      const lastActive = user.lastSignInTime || user.createdAt || '';
+      const firstActive = user.createdAt || user.lastSignInTime || '';
+      if (existing) {
+        if (!existing.projects.includes(name)) {
+          existing.projects.push(name);
         }
+        if (lastActive && (!existing.lastActive || lastActive > existing.lastActive)) {
+          existing.lastActive = lastActive;
+        }
+        if (firstActive && (!existing.firstActive || firstActive < existing.firstActive)) {
+          existing.firstActive = firstActive;
+        }
+        if (!existing.displayName && user.displayName) {
+          existing.displayName = user.displayName;
+        }
+        if (!existing.photoURL && user.photoURL) {
+          existing.photoURL = user.photoURL;
+        }
+        if (!existing.projectDetails) {
+          existing.projectDetails = {};
+        }
+        existing.projectDetails[name] = {
+          firstActive: firstActive,
+          lastActive: lastActive
+        };
+      } else {
+        allUsersMap.set(key, {
+          email: user.email,
+          displayName: user.displayName || user.email.split('@')[0],
+          photoURL: user.photoURL || '',
+          projects: [name],
+          lastActive: lastActive,
+          firstActive: firstActive,
+          projectDetails: {
+            [name]: {
+              firstActive: firstActive,
+              lastActive: lastActive
+            }
+          }
+        });
       }
     }
   }
@@ -1565,8 +1611,17 @@ async function fetchAllUsersAggregated(): Promise<Array<{
 
 app.get(['/users', '/api/users'], authenticateAdmin, async (req: express.Request, res: express.Response) => {
   try {
-    const aggregatedUsers = await fetchAllUsersAggregated();
-    res.json(aggregatedUsers);
+    const isRefresh = req.query.refresh === 'true';
+    const cached = !isRefresh ? await getUsersCache() : null;
+    if (cached && (Date.now() - cached.timestamp < 120000)) {
+      res.setHeader('X-Cache-Status', 'HIT');
+      res.json(cached.data);
+      return;
+    }
+    const fresh = await fetchAllUsersAggregated();
+    saveUsersCache(fresh).catch(e => console.warn('[UsersCache] Save error:', e));
+    res.setHeader('X-Cache-Status', 'MISS');
+    res.json(fresh);
   } catch (err) {
     console.error('[API] Unexpected error in /users endpoint:', err);
     res.status(500).json({ error: 'Internal Server Error', message: err instanceof Error ? err.message : String(err) });

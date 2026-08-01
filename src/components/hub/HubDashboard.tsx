@@ -274,7 +274,9 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
   }, [metrics, getRepoPath]);
 
   const fetchUsers = useCallback(async () => {
-    setLoadingUsers(true);
+    if (usersList.length === 0) {
+      setLoadingUsers(true);
+    }
     setUsersError(null);
     try {
       const idToken = await user.getIdToken();
@@ -293,7 +295,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
     } finally {
       setLoadingUsers(false);
     }
-  }, [user]);
+  }, [user, usersList.length]);
 
   const handleOpenUsersModal = useCallback((projectName = 'ALL') => {
     setSelectedProjectFilter(projectName);
@@ -1142,14 +1144,17 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
                     onChange={(e) => setSelectedProjectFilter(e.target.value)}
                     className="bg-transparent text-slate-200 font-mono text-xs focus:outline-none cursor-pointer border-0"
                   >
-                    <option value="ALL" className="bg-[#0f131a]">ALL PROJECTS ({usersList.length})</option>
+                    <option value="ALL" className="bg-[#0f131a]">
+                      ALL PROJECTS ({loadingUsers && usersList.length === 0 ? '...' : usersList.length})
+                    </option>
                     {metrics
                       .filter(m => m.type === 'SoftwareApplication' && m.applicationCategory !== 'UtilitiesApplication')
                       .map(proj => {
                         const count = usersList.filter(u => u.projects.includes(proj.name)).length;
+                        const countDisplay = loadingUsers && usersList.length === 0 ? '...' : count;
                         return (
                           <option key={proj.id} value={proj.name} className="bg-[#0f131a]">
-                            {proj.name.toUpperCase()} ({count})
+                            {proj.name.toUpperCase()} ({countDisplay})
                           </option>
                         );
                       })

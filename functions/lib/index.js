@@ -1318,10 +1318,50 @@ async function getAppUsers(app) {
         return [];
     }
 }
+let memoryUsersCache = null;
+async function getUsersCache() {
+    if (memoryUsersCache && (Date.now() - memoryUsersCache.timestamp < 120000)) {
+        return memoryUsersCache;
+    }
+    try {
+        const db = admin.firestore();
+        const doc = await db.collection('cache').doc('users').get();
+        if (doc.exists) {
+            const data = doc.data();
+            if (data && data.timestamp && Array.isArray(data.users)) {
+                memoryUsersCache = { timestamp: data.timestamp, data: data.users };
+                return memoryUsersCache;
+            }
+        }
+    }
+    catch (err) {
+        console.warn('[UsersCache] Failed to read users cache from Firestore:', err);
+    }
+    return null;
+}
+async function saveUsersCache(data) {
+    const timestamp = Date.now();
+    memoryUsersCache = { timestamp, data };
+    try {
+        const db = admin.firestore();
+        await db.collection('cache').doc('users').set({
+            timestamp,
+            users: data,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+    }
+    catch (err) {
+        console.warn('[UsersCache] Failed to save users cache to Firestore:', err);
+    }
+}
 async function getAppUsersViaCli(projectId) {
+    // Never execute blocking npx CLI shell commands in Cloud Functions runtime to avoid 8s timeouts
+    if (process.env.K_SERVICE || process.env.FUNCTION_TARGET || process.env.FIREBASE_CONFIG) {
+        return [];
+    }
     const tempFile = path.join(os.tmpdir(), `users-${projectId}-${Date.now()}.json`);
     try {
-        (0, child_process_1.execSync)(`npx firebase auth:export "${tempFile}" --format json --project ${projectId}`, { stdio: 'ignore', timeout: 8000 });
+        (0, child_process_1.execSync)(`npx firebase auth:export "${tempFile}" --format json --project ${projectId}`, { stdio: 'ignore', timeout: 2000 });
         if (fs.existsSync(tempFile)) {
             const content = fs.readFileSync(tempFile, 'utf8').trim();
             try {
@@ -1343,98 +1383,98 @@ async function getAppUsersViaCli(projectId) {
         }
     }
     catch (err) {
-        console.error(`[Local CLI Fallback] Failed to fetch users for project ${projectId}:`, err);
+        console.warn(`[Local CLI Fallback] Skipped CLI fetch for project ${projectId}`);
     }
     return [];
 }
 async function fetchAllUsersAggregated() {
     const initiatives = await getInitiativesFromSchema();
     const allUsersMap = new Map();
-    for (const item of initiatives) {
-        const type = item['@type'];
+    const softwareApps = initiatives.filter(item => item['@type'] === 'SoftwareApplication' && item.applicationCategory !== 'UtilitiesApplication');
+    const fetchResults = await Promise.all(softwareApps.map(async (item) => {
         const name = item.name;
-        if (type === 'SoftwareApplication' && item.applicationCategory !== 'UtilitiesApplication') {
-            const projectId = getProjectId(item);
-            const projectApp = getProjectApp(projectId);
-            let users = [];
-            if (projectApp) {
-                users = await getAppUsers(projectApp);
+        const projectId = getProjectId(item);
+        const projectApp = getProjectApp(projectId);
+        let users = [];
+        if (projectApp) {
+            users = await getAppUsers(projectApp);
+        }
+        else {
+            users = await getAppUsersViaCli(projectId);
+        }
+        if (users.length === 0) {
+            const workspaceDir = path.join(__dirname, '..', '..');
+            const normalizedName = name.toLowerCase();
+            const backupFileName = `${normalizedName}-users.json`;
+            const backupPath = path.join(workspaceDir, backupFileName);
+            if (fs.existsSync(backupPath)) {
+                try {
+                    const fileContent = fs.readFileSync(backupPath, 'utf8');
+                    const parsed = JSON.parse(fileContent);
+                    const backupUsers = parsed.users || [];
+                    users = backupUsers.map((u) => ({
+                        uid: u.localId || u.uid,
+                        email: u.email,
+                        displayName: u.displayName,
+                        photoURL: u.photoUrl || u.photoURL,
+                        lastSignInTime: u.lastSignedInAt ? (isFinite(Number(u.lastSignedInAt)) ? new Date(parseInt(u.lastSignedInAt, 10)).toISOString() : u.lastSignedInAt) : undefined,
+                        createdAt: u.createdAt ? (isFinite(Number(u.createdAt)) ? new Date(parseInt(u.createdAt, 10)).toISOString() : u.createdAt) : undefined,
+                    }));
+                }
+                catch (err) {
+                    console.error(`[Backup Fallback] Failed to read backup file for ${name}:`, err);
+                }
+            }
+        }
+        return { name, users };
+    }));
+    for (const { name, users } of fetchResults) {
+        for (const user of users) {
+            if (!user.email)
+                continue;
+            const key = user.email.toLowerCase();
+            const existing = allUsersMap.get(key);
+            const lastActive = user.lastSignInTime || user.createdAt || '';
+            const firstActive = user.createdAt || user.lastSignInTime || '';
+            if (existing) {
+                if (!existing.projects.includes(name)) {
+                    existing.projects.push(name);
+                }
+                if (lastActive && (!existing.lastActive || lastActive > existing.lastActive)) {
+                    existing.lastActive = lastActive;
+                }
+                if (firstActive && (!existing.firstActive || firstActive < existing.firstActive)) {
+                    existing.firstActive = firstActive;
+                }
+                if (!existing.displayName && user.displayName) {
+                    existing.displayName = user.displayName;
+                }
+                if (!existing.photoURL && user.photoURL) {
+                    existing.photoURL = user.photoURL;
+                }
+                if (!existing.projectDetails) {
+                    existing.projectDetails = {};
+                }
+                existing.projectDetails[name] = {
+                    firstActive: firstActive,
+                    lastActive: lastActive
+                };
             }
             else {
-                users = await getAppUsersViaCli(projectId);
-            }
-            // Local workspace backup file fallback (e.g. chessverse-users.json, scribo-users.json, etc.)
-            if (users.length === 0) {
-                const workspaceDir = path.join(__dirname, '..', '..');
-                const normalizedName = name.toLowerCase();
-                const backupFileName = `${normalizedName}-users.json`;
-                const backupPath = path.join(workspaceDir, backupFileName);
-                if (fs.existsSync(backupPath)) {
-                    try {
-                        const fileContent = fs.readFileSync(backupPath, 'utf8');
-                        const parsed = JSON.parse(fileContent);
-                        const backupUsers = parsed.users || [];
-                        users = backupUsers.map((u) => ({
-                            uid: u.localId || u.uid,
-                            email: u.email,
-                            displayName: u.displayName,
-                            photoURL: u.photoUrl || u.photoURL,
-                            lastSignInTime: u.lastSignedInAt ? (isFinite(Number(u.lastSignedInAt)) ? new Date(parseInt(u.lastSignedInAt, 10)).toISOString() : u.lastSignedInAt) : undefined,
-                            createdAt: u.createdAt ? (isFinite(Number(u.createdAt)) ? new Date(parseInt(u.createdAt, 10)).toISOString() : u.createdAt) : undefined,
-                        }));
-                    }
-                    catch (err) {
-                        console.error(`[Backup Fallback] Failed to read backup file for ${name}:`, err);
-                    }
-                }
-            }
-            for (const user of users) {
-                if (!user.email)
-                    continue;
-                const key = user.email.toLowerCase();
-                const existing = allUsersMap.get(key);
-                const lastActive = user.lastSignInTime || user.createdAt || '';
-                const firstActive = user.createdAt || user.lastSignInTime || '';
-                if (existing) {
-                    if (!existing.projects.includes(name)) {
-                        existing.projects.push(name);
-                    }
-                    if (lastActive && (!existing.lastActive || lastActive > existing.lastActive)) {
-                        existing.lastActive = lastActive;
-                    }
-                    if (firstActive && (!existing.firstActive || firstActive < existing.firstActive)) {
-                        existing.firstActive = firstActive;
-                    }
-                    if (!existing.displayName && user.displayName) {
-                        existing.displayName = user.displayName;
-                    }
-                    if (!existing.photoURL && user.photoURL) {
-                        existing.photoURL = user.photoURL;
-                    }
-                    if (!existing.projectDetails) {
-                        existing.projectDetails = {};
-                    }
-                    existing.projectDetails[name] = {
-                        firstActive: firstActive,
-                        lastActive: lastActive
-                    };
-                }
-                else {
-                    allUsersMap.set(key, {
-                        email: user.email,
-                        displayName: user.displayName || user.email.split('@')[0],
-                        photoURL: user.photoURL || '',
-                        projects: [name],
-                        lastActive: lastActive,
-                        firstActive: firstActive,
-                        projectDetails: {
-                            [name]: {
-                                firstActive: firstActive,
-                                lastActive: lastActive
-                            }
+                allUsersMap.set(key, {
+                    email: user.email,
+                    displayName: user.displayName || user.email.split('@')[0],
+                    photoURL: user.photoURL || '',
+                    projects: [name],
+                    lastActive: lastActive,
+                    firstActive: firstActive,
+                    projectDetails: {
+                        [name]: {
+                            firstActive: firstActive,
+                            lastActive: lastActive
                         }
-                    });
-                }
+                    }
+                });
             }
         }
     }
@@ -1531,8 +1571,17 @@ async function fetchAllUsersAggregated() {
 }
 app.get(['/users', '/api/users'], authenticateAdmin, async (req, res) => {
     try {
-        const aggregatedUsers = await fetchAllUsersAggregated();
-        res.json(aggregatedUsers);
+        const isRefresh = req.query.refresh === 'true';
+        const cached = !isRefresh ? await getUsersCache() : null;
+        if (cached && (Date.now() - cached.timestamp < 120000)) {
+            res.setHeader('X-Cache-Status', 'HIT');
+            res.json(cached.data);
+            return;
+        }
+        const fresh = await fetchAllUsersAggregated();
+        saveUsersCache(fresh).catch(e => console.warn('[UsersCache] Save error:', e));
+        res.setHeader('X-Cache-Status', 'MISS');
+        res.json(fresh);
     }
     catch (err) {
         console.error('[API] Unexpected error in /users endpoint:', err);
