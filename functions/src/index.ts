@@ -1491,9 +1491,26 @@ async function fetchAllUsersAggregated(): Promise<Array<{
         for (const doc of snapshot.docs) {
           const data = doc.data();
           if (!data.email) continue;
+          const rawProject = data.project || (sourceLabel === 'waitlist' ? 'Rutinas' : 'Rosa');
+          const projectName = rawProject.charAt(0).toUpperCase() + rawProject.slice(1);
+
+          const regVal = data.registeredAt || data.timestamp || data.createdAt;
+          let registeredAt = '';
+          if (regVal) {
+            if (typeof regVal.toDate === 'function') {
+              registeredAt = regVal.toDate().toISOString();
+            } else if (typeof regVal === 'object' && regVal._seconds !== undefined) {
+              registeredAt = new Date(regVal._seconds * 1000).toISOString();
+            } else if (typeof regVal === 'object' && regVal.seconds !== undefined) {
+              registeredAt = new Date(regVal.seconds * 1000).toISOString();
+            } else if (typeof regVal === 'string') {
+              registeredAt = regVal;
+            } else if (typeof regVal === 'number') {
+              registeredAt = new Date(regVal).toISOString();
+            }
+          }
+          if (!registeredAt) registeredAt = new Date().toISOString();
           const key = data.email.toLowerCase();
-          const projectName = data.project || 'Unknown';
-          const registeredAt = data.registeredAt || data.timestamp || '';
           const existing = allUsersMap.get(key);
 
           if (existing) {
@@ -1769,6 +1786,11 @@ app.post('/api/social/import', authenticateAdmin, async (req: express.Request, r
  */
 export const ssrHandler = functions.https.onRequest(async (req: express.Request, res: express.Response) => {
   try {
+    // Do not serve HTML for static assets (JS, CSS, images, fonts, etc.)
+    if (/\.(js|css|png|jpg|jpeg|gif|svg|ico|json|woff2?|ttf|map)$/i.test(req.path) || req.path.startsWith('/assets/')) {
+      res.status(404).send('Not Found');
+      return;
+    }
     const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString().toLowerCase();
     const pathname = (req.path || '').toLowerCase();
 
@@ -1837,21 +1859,14 @@ export const ssrHandler = functions.https.onRequest(async (req: express.Request,
       .replace(/<title>[\s\S]*?<\/title>/gi, `<title>${title}</title>`)
       .replace(/<link\s+rel="icon"[\s\S]*?\/?>/gi, `<link rel="icon" type="image/png" href="${projectLogo}" />`)
       .replace(/<link\s+rel="apple-touch-icon"[\s\S]*?\/?>/gi, `<link rel="apple-touch-icon" href="${projectLogo}">`)
+      .replace(/<meta\s+name="apple-mobile-web-app-title"[\s\S]*?\/?>/gi, `<meta name="apple-mobile-web-app-title" content="${projectTitleName}" />`)
+      .replace(/<meta\s+name="application-name"[\s\S]*?\/?>/gi, `<meta name="application-name" content="${projectTitleName}" />`)
+      .replace(/<meta\s+property="og:site_name"[\s\S]*?\/?>/gi, `<meta property="og:site_name" content="${projectTitleName}" />`)
       .replace(/<meta\s+property="og:title"[\s\S]*?\/?>/gi, `<meta property="og:title" content="${title}" />`)
       .replace(/<meta\s+property="og:description"[\s\S]*?\/?>/gi, `<meta property="og:description" content="${description}" />`)
       .replace(/<meta\s+property="og:image"[\s\S]*?\/?>/gi, `<meta property="og:image" content="${ogImage}" />`)
       .replace(/<meta\s+property="og:url"[\s\S]*?\/?>/gi, `<meta property="og:url" content="${url}" />`)
       .replace(/<meta\s+name="description"[\s\S]*?\/?>/gi, `<meta name="description" id="meta-description" content="${description}" />`);
-
-    if (!html.includes('apple-mobile-web-app-title')) {
-      html = html.replace('</head>', `  <meta name="apple-mobile-web-app-title" content="${projectTitleName}" />\n  <meta name="application-name" content="${projectTitleName}" />\n</head>`);
-    }
-
-    if (!html.includes('og:site_name')) {
-      html = html.replace('</head>', `  <meta property="og:site_name" content="${projectTitleName}" />\n</head>`);
-    } else {
-      html = html.replace(/<meta\s+property="og:site_name"[\s\S]*?\/?>/gi, `<meta property="og:site_name" content="${projectTitleName}" />`);
-    }
 
     if (!html.includes('twitter:image')) {
       html = html.replace('</head>', `  <meta name="twitter:card" content="summary_large_image" />\n  <meta name="twitter:title" content="${title}" />\n  <meta name="twitter:description" content="${description}" />\n  <meta name="twitter:image" content="${ogImage}" />\n</head>`);

@@ -59,7 +59,7 @@ export const RutinasLandingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#070a12] text-slate-100 selection:bg-amber-500/30 overflow-x-hidden font-sans">
+    <div className="min-h-screen flex flex-col justify-between bg-[#070a12] text-slate-100 selection:bg-amber-500/30 overflow-x-hidden font-sans">
       {/* Dynamic Human Connections Network Background */}
       <HumanConnectionsBackground />
 
@@ -69,7 +69,8 @@ export const RutinasLandingPage: React.FC = () => {
         <div className="absolute inset-0 bg-[radial-gradient(#d97706_1px,transparent_1px)] [background-size:36px_36px] opacity-15" />
       </div>
 
-      {/* Navigation Header */}
+      <main className="flex-grow">
+        {/* Navigation Header */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#070a12]/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.location.href = '/'}>
@@ -273,9 +274,10 @@ export const RutinasLandingPage: React.FC = () => {
           </div>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
-      <footer className="py-12 px-6 relative z-10 border-t border-white/5 text-center text-xs text-slate-500">
+      <footer className="mt-auto py-12 px-6 relative z-10 border-t border-white/5 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <a href="https://bervos.org" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity flex items-center">

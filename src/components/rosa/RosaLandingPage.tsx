@@ -62,14 +62,15 @@ export const RosaLandingPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#080b12] text-slate-100 selection:bg-vinotinto/40 overflow-x-hidden font-sans">
+    <div className="min-h-screen flex flex-col justify-between bg-[#080b12] text-slate-100 selection:bg-vinotinto/40 overflow-x-hidden font-sans">
       {/* Background Decorative Grids & Time Series */}
       <div className="fixed inset-0 pointer-events-none z-0 opacity-15">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-to-b from-vinotinto/40 via-vinotinto-dark/20 to-transparent blur-[120px]" />
         <div className="absolute inset-0 bg-[radial-gradient(#960117_1px,transparent_1px)] [background-size:32px_32px] opacity-25" />
       </div>
 
-      {/* Navigation Header */}
+      <main className="flex-grow">
+        {/* Navigation Header */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#080b12]/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.location.href = '/'}>
@@ -422,9 +423,10 @@ export const RosaLandingPage: React.FC = () => {
           </div>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
-      <footer className="py-12 px-6 relative z-10 border-t border-white/5 text-center text-xs text-slate-500">
+      <footer className="mt-auto py-12 px-6 relative z-10 border-t border-white/5 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <a href="https://bervos.org" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity flex items-center">

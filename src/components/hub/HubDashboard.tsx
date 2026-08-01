@@ -1250,14 +1250,20 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
                       );
                     }
 
-                    const formatDate = (dateStr?: string) => {
+                    const formatDate = (dateStr?: any) => {
                       if (!dateStr) return 'N/A';
                       try {
-                        const d = new Date(dateStr);
-                        if (isNaN(d.getTime())) return dateStr;
+                        let dateObj = dateStr;
+                        if (typeof dateStr === 'object') {
+                          if (dateStr._seconds) dateObj = new Date(dateStr._seconds * 1000);
+                          else if (dateStr.seconds) dateObj = new Date(dateStr.seconds * 1000);
+                          else if (typeof dateStr.toDate === 'function') dateObj = dateStr.toDate();
+                        }
+                        const d = new Date(dateObj);
+                        if (isNaN(d.getTime())) return typeof dateStr === 'string' ? dateStr : 'N/A';
                         return d.toISOString().split('T')[0];
                       } catch (e) {
-                        return dateStr;
+                        return typeof dateStr === 'string' ? dateStr : 'N/A';
                       }
                     };
 
@@ -1494,10 +1500,17 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
                       );
                     }
 
-                    const formatDate = (dateStr: string) => {
+                    const formatDate = (dateStr: any) => {
+                      if (!dateStr) return 'N/A';
                       try {
-                        const d = new Date(dateStr);
-                        if (isNaN(d.getTime())) return dateStr;
+                        let dateObj = dateStr;
+                        if (typeof dateStr === 'object') {
+                          if (dateStr._seconds) dateObj = new Date(dateStr._seconds * 1000);
+                          else if (dateStr.seconds) dateObj = new Date(dateStr.seconds * 1000);
+                          else if (typeof dateStr.toDate === 'function') dateObj = dateStr.toDate();
+                        }
+                        const d = new Date(dateObj);
+                        if (isNaN(d.getTime())) return typeof dateStr === 'string' ? dateStr : 'N/A';
                         
                         const yyyy = d.getFullYear();
                         const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -1508,23 +1521,28 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
                         
                         return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
                       } catch (e) {
-                        return dateStr;
+                        return typeof dateStr === 'string' ? dateStr : 'N/A';
                       }
                     };
 
-                    const formatRelativeTime = (dateStr: string) => {
+                    const formatRelativeTime = (dateStr: any) => {
+                      if (!dateStr) return '';
                       try {
-                        const d = new Date(dateStr);
+                        let dateObj = dateStr;
+                        if (typeof dateStr === 'object') {
+                          if (dateStr._seconds) dateObj = new Date(dateStr._seconds * 1000);
+                          else if (dateStr.seconds) dateObj = new Date(dateStr.seconds * 1000);
+                          else if (typeof dateStr.toDate === 'function') dateObj = dateStr.toDate();
+                        }
+                        const d = new Date(dateObj);
                         if (isNaN(d.getTime())) return '';
                         const diffMs = Date.now() - d.getTime();
                         const diffMin = Math.floor(diffMs / 60000);
-                        const diffHrs = Math.floor(diffMin / 60);
-                        const diffDays = Math.floor(diffHrs / 24);
-
                         if (diffMin < 1) return 'just now';
                         if (diffMin < 60) return `${diffMin}m ago`;
-                        if (diffHrs < 24) return `${diffHrs}h ago`;
-                        if (diffDays === 1) return 'yesterday';
+                        const diffHours = Math.floor(diffMin / 60);
+                        if (diffHours < 24) return `${diffHours}h ago`;
+                        const diffDays = Math.floor(diffHours / 24);
                         return `${diffDays}d ago`;
                       } catch (e) {
                         return '';

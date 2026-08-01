@@ -113,8 +113,10 @@ Add a new JSON object entry under the `"projects"` array:
 1. **Modular Folder**:
    Create `src/components/<projectkey>/<Project>LandingPage.tsx`.
 
-2. **Dynamic Favicon & DOM Meta Tags**:
-   Set 1:1 ratio square favicon (`public/<projectkey>-favicon.png`) and DOM meta tags on mount, restoring defaults on unmount.
+2. **Dynamic Favicon, iOS Home Screen App Name & DOM Meta Tags**:
+   - Set 1:1 ratio square favicon (`public/<projectkey>-favicon.png`) and DOM meta tags on mount using `updatePageMetadata()`.
+   - **iOS Home Screen Title**: Ensure `appName` parameter is passed to `updatePageMetadata()` (e.g. `appName: "Rutinas"`, `appName: "Rosa"`). This updates `<meta name="apple-mobile-web-app-title">` and `<meta name="application-name">` dynamically so that when users tap "Add to Home Screen" on iPhone/iPad, the app title defaults to the project name rather than "BERVOS".
+   - **SSR Replacement**: Ensure `ssrHandler` in `functions/src/index.ts` regex-replaces `<meta name="apple-mobile-web-app-title">` and `<meta name="application-name">` with `projectTitleName`.
 
 3. **Subdomain Routing & DNS**:
    - `src/App.tsx`: Route `window.location.hostname.includes('projectkey')`.
