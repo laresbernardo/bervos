@@ -90,10 +90,10 @@ export const RutinasLandingPage: React.FC = () => {
 
             <button
               onClick={() => setIsPreorderOpen(true)}
-              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs rounded-lg transition-all shadow-lg shadow-amber-500/20 flex items-center gap-2"
+              title={lang === 'ES' ? 'Lista de Espera' : 'Waitlist'}
+              className="p-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-lg transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center hover:scale-105 active:scale-95"
             >
-              <Bookmark size={14} />
-              {lang === 'ES' ? 'LISTA DE ESPERA' : 'WAITLIST'}
+              <Bookmark size={18} className="fill-slate-950" />
             </button>
           </div>
         </div>
@@ -177,6 +177,12 @@ export const RutinasLandingPage: React.FC = () => {
               transition={{ delay: 0.2, duration: 0.8 }}
               className="relative w-full max-w-xs sm:max-w-sm lg:max-w-[340px] group"
             >
+              {/* 2026 Launch Badge Overlay on Book Cover */}
+              <div className="absolute -top-3 -right-3 sm:-top-4 sm:-right-4 z-20 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 font-extrabold font-mono text-[11px] uppercase tracking-wider shadow-lg shadow-amber-500/30 flex items-center gap-1.5 ring-2 ring-[#070a12]">
+                <span className="w-2 h-2 rounded-full bg-slate-950 animate-ping" />
+                <span>{lang === 'ES' ? 'LANZAMIENTO 2026' : 'LAUNCHING 2026'}</span>
+              </div>
+
               <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/40 via-orange-500/20 to-amber-600/30 rounded-2xl blur-3xl opacity-70 group-hover:opacity-90 transition-opacity" />
               <div className="relative rounded-2xl overflow-hidden border border-amber-500/30 shadow-2xl shadow-amber-500/20 max-h-[480px] flex items-center justify-center bg-[#0d121f]">
                 <img
