@@ -1510,24 +1510,35 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
               ) : (
                 <>
                   {(() => {
-                    const filteredLogs = logsList.filter(log => {
-                      const matchesSearch =
-                        log.project.toLowerCase().includes(logsSearch.toLowerCase()) ||
-                        (log.userEmail && log.userEmail.toLowerCase().includes(logsSearch.toLowerCase())) ||
-                        (log.userDisplayName && log.userDisplayName.toLowerCase().includes(logsSearch.toLowerCase())) ||
-                        (log.tool && log.tool.toLowerCase().includes(logsSearch.toLowerCase())) ||
-                        (log.os && log.os.toLowerCase().includes(logsSearch.toLowerCase()));
+                    const filteredLogs = logsList
+                      .filter(log => {
+                        const matchesSearch =
+                          log.project.toLowerCase().includes(logsSearch.toLowerCase()) ||
+                          (log.userEmail && log.userEmail.toLowerCase().includes(logsSearch.toLowerCase())) ||
+                          (log.userDisplayName && log.userDisplayName.toLowerCase().includes(logsSearch.toLowerCase())) ||
+                          (log.tool && log.tool.toLowerCase().includes(logsSearch.toLowerCase())) ||
+                          (log.os && log.os.toLowerCase().includes(logsSearch.toLowerCase()));
 
-                      const matchesType =
-                        selectedLogsTypeFilter === 'ALL' ||
-                        log.type === selectedLogsTypeFilter;
+                        const matchesType =
+                          selectedLogsTypeFilter === 'ALL' ||
+                          log.type === selectedLogsTypeFilter;
 
-                      const matchesProject =
-                        selectedLogsProjectFilter === 'ALL' ||
-                        log.project.toLowerCase() === selectedLogsProjectFilter.toLowerCase();
+                        const matchesProject =
+                          selectedLogsProjectFilter === 'ALL' ||
+                          log.project.toLowerCase() === selectedLogsProjectFilter.toLowerCase();
 
-                      return matchesSearch && matchesType && matchesProject;
-                    });
+                        return matchesSearch && matchesType && matchesProject;
+                      })
+                      .sort((a, b) => {
+                        const parseTime = (val?: string) => {
+                          if (!val) return 0;
+                          let t = Date.parse(val);
+                          if (!isNaN(t)) return t;
+                          if (/^\d+$/.test(val)) return parseInt(val, 10);
+                          return 0;
+                        };
+                        return parseTime(b.timestamp) - parseTime(a.timestamp);
+                      });
 
                     if (filteredLogs.length === 0) {
                       return (

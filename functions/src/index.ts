@@ -3466,9 +3466,16 @@ app.get(['/logs', '/api/logs'], authenticateAdmin, async (req: express.Request, 
       }
     }
 
-    // 6. Combine and sort all logs
+    // 6. Combine and sort all logs chronologically descending (newest first)
+    const parseLogTime = (val?: string) => {
+      if (!val) return 0;
+      let t = Date.parse(val);
+      if (!isNaN(t)) return t;
+      if (/^\d+$/.test(val)) return parseInt(val, 10);
+      return 0;
+    };
     const allLogs = [...userJoinLogs, ...downloadLogs, ...socialLogs].sort((a, b) =>
-      b.timestamp.localeCompare(a.timestamp)
+      parseLogTime(b.timestamp) - parseLogTime(a.timestamp)
     );
 
     res.json(allLogs);
