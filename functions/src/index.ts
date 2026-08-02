@@ -847,23 +847,82 @@ async function getRepoCommits(projectName: string, repoUrl: string, limit = 15):
 /**
  * Fetches the list of repository collaborators/access list via GitHub API.
  */
-async function getRepoCollaboratorList(owner: string, repo: string): Promise<Array<{ login: string; email: string; avatarUrl: string }>> {
+async function getRepoCollaboratorList(owner: string, repo: string): Promise<Array<{ login: string; email: string; avatarUrl: string; joinedAt?: string }>> {
   const headers: Record<string, string> = { 'User-Agent': 'bervos-hub' };
   const token = process.env.GITHUB_TOKEN;
   if (token) {
     headers['Authorization'] = `token ${token}`;
   }
 
+  const authorFirstCommit = new Map<string, string>();
+
+  // Fetch commits to get exact earliest commit date per author
+  try {
+    const commitsRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=100`, { headers });
+    if (commitsRes.ok) {
+      const commits = await commitsRes.json();
+      if (Array.isArray(commits)) {
+        for (const c of commits) {
+          const login = c.author?.login || c.commit?.author?.name;
+          const date = c.commit?.author?.date;
+          if (login && date) {
+            const key = login.toLowerCase();
+            const existing = authorFirstCommit.get(key);
+            if (!existing || date < existing) {
+              authorFirstCommit.set(key, date);
+            }
+          }
+        }
+      }
+    }
+  } catch (e) { }
+
+  // 2. Read stored collaborator firstSeenAt dates from Firestore
+  const storedCollaborators = new Map<string, string>();
+  try {
+    const db = admin.firestore();
+    const snap = await db.collection('repo_collaborators').get();
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      if (data && data.firstSeenAt) {
+        storedCollaborators.set(doc.id.toLowerCase(), data.firstSeenAt);
+      }
+    }
+  } catch (e) {}
+
+  const result: Array<{ login: string; email: string; avatarUrl: string; joinedAt: string }> = [];
+
   try {
     const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/collaborators?per_page=100`, { headers });
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
-        return data.map((u: any) => ({
-          login: u.login,
-          email: u.email || `${u.login}@github.com`,
-          avatarUrl: u.avatar_url || ''
-        }));
+        const db = admin.firestore();
+        for (const u of data) {
+          const login = u.login;
+          const key = login.toLowerCase();
+          let joinedAt = authorFirstCommit.get(key) || storedCollaborators.get(key);
+
+          if (!joinedAt) {
+            // First time BERVOS detects this collaborator without commits: capture current ISO date ONCE and lock it into Firestore
+            joinedAt = repo.toLowerCase() === 'rosa' ? '2026-03-20T00:00:00.000Z' : new Date().toISOString();
+            db.collection('repo_collaborators').doc(key).set({
+              login,
+              email: u.email || `${login}@github.com`,
+              repo,
+              firstSeenAt: joinedAt,
+              createdAt: new Date().toISOString()
+            }, { merge: true }).catch(() => {});
+          }
+
+          result.push({
+            login,
+            email: u.email || `${login}@github.com`,
+            avatarUrl: u.avatar_url || '',
+            joinedAt
+          });
+        }
+        return result;
       }
     }
   } catch (e) {
@@ -875,14 +934,19 @@ async function getRepoCollaboratorList(owner: string, repo: string): Promise<Arr
     const parentDir = path.join(__dirname, '..', '..', '..', '..');
     const folderPath = path.join(parentDir, repo);
     if (fs.existsSync(path.join(folderPath, '.git'))) {
-      const authors = execSync('git log --format="%aN|%aE" | sort -u', { cwd: folderPath, encoding: 'utf8', timeout: 1000 }).trim();
-      if (authors) {
-        return authors.split('\n').filter(Boolean).map(line => {
-          const parts = line.split('|');
-          const name = parts[0] || parts[1];
-          const email = parts[1] || `${name}@github.com`;
-          return { login: name, email, avatarUrl: '' };
-        });
+      const logOut = execSync('git log --format="%aN|%aE|%aI" | sort -u', { cwd: folderPath, encoding: 'utf8', timeout: 1000 }).trim();
+      if (logOut) {
+        const map = new Map<string, { login: string; email: string; joinedAt: string }>();
+        for (const line of logOut.split('\n').filter(Boolean)) {
+          const [name, email, date] = line.split('|');
+          const login = name || email.split('@')[0];
+          const key = (email || login).toLowerCase();
+          const existing = map.get(key);
+          if (!existing || (date && date < existing.joinedAt)) {
+            map.set(key, { login, email: email || `${login}@github.com`, joinedAt: date || '2026-03-20T00:00:00.000Z' });
+          }
+        }
+        return Array.from(map.values()).map(u => ({ ...u, avatarUrl: '' }));
       }
     }
   } catch (e) {}
@@ -1583,11 +1647,12 @@ async function fetchAllUsersAggregated(): Promise<Array<{
   // ── Merge GitHub Repo Collaborators for Rosa ──
   try {
     const rosaCollabs = await getRepoCollaboratorList('laresbernardo', 'Rosa');
-    const nowIso = new Date().toISOString();
+    const fallbackJoinedAt = '2026-03-20T00:00:00.000Z';
     for (const collab of rosaCollabs) {
       if (!collab.email) continue;
       const key = collab.email.toLowerCase();
       const existing = allUsersMap.get(key);
+      const joinedAt = collab.joinedAt || fallbackJoinedAt;
 
       if (existing) {
         if (!existing.projects.includes('Rosa')) existing.projects.push('Rosa');
@@ -1596,8 +1661,8 @@ async function fetchAllUsersAggregated(): Promise<Array<{
         if (!existing.projectDetails) existing.projectDetails = {};
         if (!existing.projectDetails['Rosa']) {
           existing.projectDetails['Rosa'] = {
-            firstActive: nowIso,
-            lastActive: nowIso,
+            firstActive: joinedAt,
+            lastActive: joinedAt,
             channel: 'Repo Access',
             channels: ['Repo Access']
           };
@@ -1606,6 +1671,9 @@ async function fetchAllUsersAggregated(): Promise<Array<{
           if (!existing.projectDetails['Rosa'].channels.includes('Repo Access')) {
             existing.projectDetails['Rosa'].channels.push('Repo Access');
           }
+          if (joinedAt && (!existing.projectDetails['Rosa'].firstActive || joinedAt < existing.projectDetails['Rosa'].firstActive)) {
+            existing.projectDetails['Rosa'].firstActive = joinedAt;
+          }
         }
       } else {
         allUsersMap.set(key, {
@@ -1613,12 +1681,12 @@ async function fetchAllUsersAggregated(): Promise<Array<{
           displayName: collab.login,
           photoURL: collab.avatarUrl || '',
           projects: ['Rosa'],
-          lastActive: nowIso,
-          firstActive: nowIso,
+          lastActive: joinedAt,
+          firstActive: joinedAt,
           projectDetails: {
             'Rosa': {
-              firstActive: nowIso,
-              lastActive: nowIso,
+              firstActive: joinedAt,
+              lastActive: joinedAt,
               channel: 'Repo Access',
               channels: ['Repo Access']
             }
