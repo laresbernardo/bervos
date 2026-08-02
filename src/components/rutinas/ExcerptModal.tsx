@@ -165,6 +165,13 @@ export const ExcerptModal: React.FC<ExcerptModalProps> = ({ isOpen, onClose, lan
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (isOpen) {
+      const randomIndex = Math.floor(Math.random() * SAMPLE_STORIES.length);
+      setSelectedIndex(randomIndex);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
