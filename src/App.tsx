@@ -1092,14 +1092,24 @@ function App() {
     return <RosaLandingPage />;
   }
 
-  const isRutinas = window.location.pathname === '/rutinas' || window.location.hostname.includes('rutinas');
-  if (isRutinas) {
-    if (window.location.hostname === 'rutinas.bervos.org') {
-      window.location.href = 'https://rutinas-bervos.web.app';
-    } else {
-      window.location.href = 'https://rutinas.bervos.org';
-    }
+  const isRutinasPath = window.location.pathname === '/rutinas';
+  if (isRutinasPath) {
+    window.location.href = 'https://rutinas.bervos.org';
     return null;
+  }
+
+  // If DNS hasn't propagated yet, rutinas.bervos.org will still hit this old repo.
+  // Show a message instead of redirecting to avoid infinite loops or .web.app
+  if (window.location.hostname.includes('rutinas')) {
+    return (
+      <div style={{ backgroundColor: '#070a12', color: 'white', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
+        <div style={{ textAlign: 'center', padding: '20px' }}>
+          <h1 style={{ fontSize: '24px', marginBottom: '10px' }}>Actualizando DNS...</h1>
+          <p>El dominio rutinas.bervos.org se está conectando a los nuevos servidores.</p>
+          <p>Este proceso automático puede tardar un par de horas.</p>
+        </div>
+      </div>
+    );
   }
 
   const isHub = window.location.pathname === '/hub' || window.location.pathname === '/social';
