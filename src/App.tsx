@@ -1094,7 +1094,7 @@ function App() {
 
   const isRutinas = window.location.pathname === '/rutinas' || window.location.hostname.includes('rutinas');
   if (isRutinas) {
-    window.location.href = 'https://rutinas-bervos.web.app';
+    window.location.href = 'https://rutinas.bervos.org';
     return null;
   }
 
