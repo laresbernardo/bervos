@@ -14,7 +14,6 @@ import { HubDashboard } from './components/hub/HubDashboard';
 import { HubAccessDenied } from './components/hub/HubAccessDenied';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { RosaLandingPage } from './components/rosa/RosaLandingPage';
-import { RutinasLandingPage } from './components/rutinas/RutinasLandingPage';
 
 declare global {
   interface Window {
@@ -1095,7 +1094,8 @@ function App() {
 
   const isRutinas = window.location.pathname === '/rutinas' || window.location.hostname.includes('rutinas');
   if (isRutinas) {
-    return <RutinasLandingPage />;
+    window.location.href = 'https://rutinas-bervos.web.app';
+    return null;
   }
 
   const isHub = window.location.pathname === '/hub' || window.location.pathname === '/social';
