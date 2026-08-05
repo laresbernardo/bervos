@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080b12;
+      --card-bg: #0c121d;
+      --indigo: #6366f1;
+      --indigo-light: #818cf8;
+      --cyan: #06b6d4;
+      --sky: #38bdf8;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --mono-text: #a5b4fc;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 1584px;
+      height: 396px;
+      overflow: hidden;
+      background-color: var(--bg);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .banner {
+      width: 1584px;
+      height: 396px;
+      position: relative;
+      background-color: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4rem 0 0;
+      
+      /* Web Grid Background matching bervos.org */
+      background-image: 
+        linear-gradient(rgba(79, 70, 229, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 70, 229, 0.04) 1px, transparent 1px),
+        linear-gradient(rgba(79, 70, 229, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 70, 229, 0.015) 1px, transparent 1px);
+      background-size: 80px 80px, 80px 80px, 20px 20px, 20px 20px;
+      background-position: center center;
+    }
+
+    /* Top Accent Line */
+    .banner::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 0%, rgba(99, 102, 241, 0.6) 30%, rgba(6, 182, 212, 0.6) 70%, transparent 100%);
+      z-index: 20;
+    }
+
+    /* Sleek Corner HUD Brackets */
+    .hud-corner {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      pointer-events: none;
+      z-index: 15;
+    }
+    .hud-tl { top: 16px; left: 20px; border-top: 2px solid rgba(99, 102, 241, 0.4); border-left: 2px solid rgba(99, 102, 241, 0.4); }
+    .hud-tr { top: 16px; right: 20px; border-top: 2px solid rgba(99, 102, 241, 0.4); border-right: 2px solid rgba(99, 102, 241, 0.4); }
+    .hud-bl { bottom: 16px; left: 20px; border-bottom: 2px solid rgba(99, 102, 241, 0.4); border-left: 2px solid rgba(99, 102, 241, 0.4); }
+    .hud-br { bottom: 16px; right: 20px; border-bottom: 2px solid rgba(99, 102, 241, 0.4); border-right: 2px solid rgba(99, 102, 241, 0.4); }
+
+    /* Ambient Glows */
+    .glow-indigo {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 750px;
+      height: 380px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .glow-cyan {
+      position: absolute;
+      top: 50%;
+      right: 5%;
+      transform: translate(30%, -50%);
+      width: 500px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Left Avatar Safe Zone (Left 410px reserved for profile avatar) */
+    .safe-spacer {
+      width: 410px;
+      height: 100%;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    /* Content Area */
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      z-index: 5;
+      padding-left: 0.5rem;
+    }
+
+    /* HUD Badge Pill */
+    .hud-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 6px;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--mono-text);
+      margin-bottom: 0.95rem;
+      width: fit-content;
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 8px #34d399;
+    }
+
+    /* Main Headline */
+    .headline {
+      font-family: 'Outfit', 'Inter', sans-serif;
+      font-size: 3.9rem;
+      font-weight: 900;
+      line-height: 0.92;
+      text-transform: uppercase;
+      letter-spacing: -0.035em;
+      color: var(--text);
+      margin-bottom: 0.95rem;
+      text-shadow: 0 0 35px rgba(79, 70, 229, 0.3);
+    }
+
+    .headline .gradient-text {
+      background: linear-gradient(135deg, #818cf8 0%, #38bdf8 55%, #22d3ee 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.4));
+    }
+
+    /* Subtitle Description */
+    .subtitle {
+      font-size: 1.08rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      line-height: 1.45;
+      border-left: 3px solid rgba(99, 102, 241, 0.4);
+      padding-left: 1.15rem;
+      max-width: 640px;
+    }
+
+    /* Clean Corner Brand Link (Bottom Right) */
+    .corner-brand-link {
+      position: absolute;
+      bottom: 20px;
+      right: 48px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: rgba(165, 180, 252, 0.85);
+      z-index: 15;
+    }
+
+    /* Logo Right Reticle Section */
+    .logo-section {
+      width: 270px;
+      height: 270px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      z-index: 5;
+    }
+
+    .orbit-ring-outer {
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 50%;
+    }
+
+    .orbit-ring-inner {
+      position: absolute;
+      inset: 26px;
+      border: 1px dashed rgba(6, 182, 212, 0.25);
+      border-radius: 50%;
+    }
+
+    .logo-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    .logo-halo {
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .logo-icon {
+      width: 160px;
+      height: 160px;
+      position: relative;
+      z-index: 2;
+      filter: drop-shadow(0 4px 16px rgba(0,0,0,0.5));
+    }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <!-- HUD Corner Brackets -->
+    <div class="hud-corner hud-tl"></div>
+    <div class="hud-corner hud-tr"></div>
+    <div class="hud-corner hud-bl"></div>
+    <div class="hud-corner hud-br"></div>
+
+    <!-- Ambient Glows -->
+    <div class="glow-indigo"></div>
+    <div class="glow-cyan"></div>
+
+    <!-- Left Safe Zone Spacer -->
+    <div class="safe-spacer"></div>
+
+    <!-- Center Main Content -->
+    <div class="content">
+      <div class="hud-pill">
+        <div class="pulse-dot"></div>
+        <span>Innovation & Practicality &nbsp;//&nbsp; bervos.org</span>
+      </div>
+
+      <h1 class="headline">
+        Building <br />
+        <span class="gradient-text">fuller</span> <br />
+        experiences.
+      </h1>
+
+      <p class="subtitle">
+        BERVOS. A family of flexible digital solutions <br />engineered to learn and drive true action.
+      </p>
+    </div>
+
+    <!-- Right BERVOS Logo (Crisp clean vector) -->
+    <div class="logo-section">
+      <div class="orbit-ring-outer"></div>
+      <div class="orbit-ring-inner"></div>
+      <div class="logo-container">
+        <div class="logo-halo"></div>
+        <img class="logo-icon" src="../../public/logo.svg" alt="BERVOS" />
+      </div>
+    </div>
+
+    <!-- Clean Corner Brand Link -->
+    <div class="corner-brand-link">bervos.org</div>
+  </div>
+</body>
+</html>

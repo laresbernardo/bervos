@@ -34,3 +34,7 @@ temp_users.json
 .env
 .env.local
 .env.*.local
+
+# Intermediate directories
+.tmp/
+
