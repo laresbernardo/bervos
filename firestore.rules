@@ -1,0 +1,107 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // User profiles: Only the owner can read/write their own profile
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // User monthly token usage
+      match /tokenUsage/{usageId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // Projects: Owners and shared users can read/write. Only owners can delete.
+    match /projects/{projectId} {
+      // Allow creation if the user is authenticated and sets themselves as owner
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      
+      // Allow read if owner, shared user, or if publicReadOnly is true
+      allow read: if resource.data.get('publicReadOnly', false) == true || (
+        request.auth != null && (
+          resource.data.get('ownerId', null) == request.auth.uid || 
+          request.auth.uid in resource.data.get('sharedWith', []) ||
+          ('email' in request.auth.token && request.auth.token.email in resource.data.get('sharedWithEmails', []))
+        )
+      );
+
+      // Allow update for owner or shared users
+      allow update: if request.auth != null && (
+        resource.data.get('ownerId', null) == request.auth.uid || 
+        request.auth.uid in resource.data.get('sharedWith', []) ||
+        ('email' in request.auth.token && request.auth.token.email in resource.data.get('sharedWithEmails', []))
+      );
+      
+      // Only owner can delete
+      allow delete: if request.auth != null && resource.data.get('ownerId', null) == request.auth.uid;
+      
+      // Nested messages collection
+      match /messages/{messageId} {
+        allow read, write: if request.auth != null && (
+          get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid ||
+          (get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWith != null && 
+           request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWith) ||
+          (get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWithEmails != null && 
+           request.auth.token.email in get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWithEmails)
+        );
+      }
+      
+      // Nested versions collection
+      match /versions/{versionId} {
+        allow read, write: if request.auth != null && (
+          get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid ||
+          (get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWith != null && 
+           request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWith) ||
+          (get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWithEmails != null && 
+           request.auth.token.email in get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWithEmails)
+        );
+      }
+
+      // Nested attachments collection
+      match /attachments/{attachmentId} {
+        allow read: if resource == null || (
+          request.auth != null && (
+            get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid ||
+            (get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWith != null && 
+             request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWith) ||
+            (get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWithEmails != null && 
+             request.auth.token.email in get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWithEmails)
+          )
+        ) || get(/databases/$(database)/documents/projects/$(projectId)).data.get('publicReadOnly', false) == true;
+
+        allow write: if request.auth != null && (
+          get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid ||
+          (get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWith != null && 
+           request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWith) ||
+          (get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWithEmails != null && 
+           request.auth.token.email in get(/databases/$(database)/documents/projects/$(projectId)).data.sharedWithEmails)
+        );
+      }
+    }
+
+    // Location cache: Everyone can read, only auth users can write
+    match /location_cache/{query} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Route cache: Everyone can read, only auth users can write
+    match /route_cache/{routeId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Waitlist & Demo Lead signups: Public create allowed, reads restricted to admin/authenticated users
+    match /waitlist_users/{docId} {
+      allow create: if request.resource.data.email is string && request.resource.data.email.size() > 0;
+      allow read: if request.auth != null;
+    }
+    match /demo_leads/{docId} {
+      allow create: if request.resource.data.email is string && request.resource.data.email.size() > 0;
+      allow read: if request.auth != null;
+    }
+  }
+}
