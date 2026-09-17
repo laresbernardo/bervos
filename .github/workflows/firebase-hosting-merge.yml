@@ -19,10 +19,10 @@ jobs:
           cache: 'npm'
       
       - name: Build frontend
-        run: npm ci && npm run build
+        run: (npm ci || npm install) && npm run build
       
       - name: Build Cloud Functions
-        run: cd functions && npm ci && npm run build
+        run: cd functions && (npm ci || npm install) && npm run build
       
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
