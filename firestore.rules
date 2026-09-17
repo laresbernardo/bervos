@@ -103,5 +103,10 @@ service cloud.firestore {
       allow create: if request.resource.data.email is string && request.resource.data.email.size() > 0;
       allow read: if request.auth != null;
     }
+
+    // Short Links: Authenticated admin only
+    match /short_links/{linkId} {
+      allow read, write: if request.auth != null && request.auth.token.email == 'laresbernardo@gmail.com';
+    }
   }
 }

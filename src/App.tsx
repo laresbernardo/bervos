@@ -343,18 +343,24 @@ function HomePage() {
   const [liveMetrics, setLiveMetrics] = useState<Record<string, { lastUpdated?: string; stars?: number; version?: string; uptime?: boolean }>>({});
 
   const getProjectUpdateDate = useCallback((p: any) => {
-    const live = liveMetrics[p.title.toLowerCase()]?.lastUpdated;
+    const titleKey = p.title ? p.title.toLowerCase() : '';
+    const nameKey = p.name ? p.name.toLowerCase() : '';
+    const live = liveMetrics[titleKey]?.lastUpdated || liveMetrics[nameKey]?.lastUpdated;
     return live || p.updated || '';
   }, [liveMetrics]);
 
   const getProjectVersion = useCallback((p: any) => {
-    const live = liveMetrics[p.title.toLowerCase()]?.version;
+    const titleKey = p.title ? p.title.toLowerCase() : '';
+    const nameKey = p.name ? p.name.toLowerCase() : '';
+    const live = liveMetrics[titleKey]?.version || liveMetrics[nameKey]?.version;
     const rawVersion = (live && live !== '0.0.0') ? live : (p.version || '1.0.0');
     return rawVersion.replace(/^v+/i, '');
   }, [liveMetrics]);
 
   const getProjectUptime = useCallback((p: any) => {
-    const live = liveMetrics[p.title.toLowerCase()]?.uptime;
+    const titleKey = p.title ? p.title.toLowerCase() : '';
+    const nameKey = p.name ? p.name.toLowerCase() : '';
+    const live = liveMetrics[titleKey]?.uptime ?? liveMetrics[nameKey]?.uptime;
     return live !== undefined ? live : true;
   }, [liveMetrics]);
 
@@ -367,12 +373,16 @@ function HomePage() {
           const metricsMap: Record<string, { lastUpdated?: string; stars?: number; version?: string; uptime?: boolean }> = {};
           if (Array.isArray(data)) {
             for (const item of data) {
-              metricsMap[item.name.toLowerCase()] = {
+              const key = (item.name || '').toLowerCase();
+              if (!key) continue;
+              metricsMap[key] = {
                 lastUpdated: item.lastUpdated,
                 stars: item.stars,
                 version: item.version,
                 uptime: item.uptime
               };
+              if (key === 'rutinas') metricsMap['sonder'] = metricsMap[key];
+              if (key === 'sonder') metricsMap['rutinas'] = metricsMap[key];
             }
             setLiveMetrics(metricsMap);
           }
@@ -516,7 +526,7 @@ function HomePage() {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            onClick={() => { window.location.href = window.location.pathname === '/social' ? '/social' : '/hub'; }}
+            onClick={() => { window.location.href = window.location.pathname === '/social' ? '/social' : window.location.pathname === '/links' ? '/links' : '/hub'; }}
             className="flex items-center gap-3 group cursor-pointer"
           >
             <img src="/logo.svg" alt="BERVOS" className="h-8 w-auto brightness-200" />
@@ -1092,27 +1102,27 @@ function App() {
     return <RosaLandingPage />;
   }
 
-  const isRutinasPath = window.location.pathname === '/rutinas';
-  if (isRutinasPath) {
-    window.location.href = 'https://rutinas.bervos.org';
+  const isSonderPath = window.location.pathname === '/sonder' || window.location.pathname === '/rutinas';
+  if (isSonderPath) {
+    window.location.href = 'https://sonder.bervos.org';
     return null;
   }
 
-  // If DNS hasn't propagated yet, rutinas.bervos.org will still hit this old repo.
+  // If DNS hasn't propagated yet, sonder/rutinas.bervos.org will still hit this repo.
   // Show a message instead of redirecting to avoid infinite loops or .web.app
-  if (window.location.hostname.includes('rutinas')) {
+  if (window.location.hostname.includes('sonder') || window.location.hostname.includes('rutinas')) {
     return (
       <div style={{ backgroundColor: '#070a12', color: 'white', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
         <div style={{ textAlign: 'center', padding: '20px' }}>
           <h1 style={{ fontSize: '24px', marginBottom: '10px' }}>Actualizando DNS...</h1>
-          <p>El dominio rutinas.bervos.org se está conectando a los nuevos servidores.</p>
+          <p>El dominio sonder.bervos.org se está conectando a los nuevos servidores.</p>
           <p>Este proceso automático puede tardar un par de horas.</p>
         </div>
       </div>
     );
   }
 
-  const isHub = window.location.pathname === '/hub' || window.location.pathname === '/social';
+  const isHub = window.location.pathname === '/hub' || window.location.pathname === '/social' || window.location.pathname === '/links';
 
   if (isHub) {
     if (loadingAuth) {
@@ -1133,7 +1143,13 @@ function App() {
       <ErrorBoundary>
         <HubDashboard
           user={user}
-          initialSection={window.location.pathname === '/social' ? 'social' : 'projects'}
+          initialSection={
+            window.location.pathname === '/social'
+              ? 'social'
+              : window.location.pathname === '/links'
+              ? 'links'
+              : 'projects'
+          }
         />
       </ErrorBoundary>
     );

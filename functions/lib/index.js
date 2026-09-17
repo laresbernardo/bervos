@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onScheduleSocialPipeline = exports.refreshInstagramToken = exports.triggerScheduledPosts = exports.hubApi = exports.ssrHandler = void 0;
+exports.updateMetricsCache = exports.onScheduleSocialPipeline = exports.refreshInstagramToken = exports.triggerScheduledPosts = exports.hubApi = exports.ssrHandler = exports.SHORT_SLUG_REGEX = exports.RESERVED_SLUGS = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
@@ -55,6 +55,24 @@ app.use((0, cors_1.default)({ origin: true }));
 app.use(express_1.default.json());
 // In-memory registry of dynamic Firebase Admin apps to avoid duplication
 const initializedApps = new Map();
+/**
+ * Reserved slugs that cannot be used as custom short links
+ */
+exports.RESERVED_SLUGS = new Set([
+    'api', 'hub', 'social', 'links', 'shortlinks', 'short-links',
+    'rosa', 'sonder', 'rutinas', 'assets', 'public', 'dist',
+    'favicon', 'favicon.ico', 'robots.txt', 'sitemap.xml', 'logo.svg', 'llms.txt', 'cname',
+    'billio', 'aura', 'pinmage', 'tripitdown', 'chessverse', 'scribo', 'tonaly', 'yt2mp3', 'laresdj'
+]);
+exports.SHORT_SLUG_REGEX = /^[a-z0-9-_]{2,60}$/;
+function generateRandomSlug(length = 5) {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
 /**
  * Gets or initializes a Firebase Admin App for a specific project.
  */
@@ -656,33 +674,57 @@ async function pingServer(url) {
     }
 }
 /**
+ * Dynamically resolves sibling project folders across various local environments
+ * (e.g. /Documents, /Antigravity, local worktrees, or parent workspaces).
+ */
+function findProjectFolderPath(projectName) {
+    const normalizedName = projectName.toLowerCase();
+    const directoryNames = {
+        'billio': ['Billio'],
+        'chessverse': ['Chessverse'],
+        'tripitdown': ['tripitdown'],
+        'aura': ['Aura'],
+        'scribo': ['Scribo'],
+        'laresdj': ['LaresDJ.com', 'LaresDJ'],
+        'pinmage': ['Pinmage'],
+        'tonaly': ['tonaly', 'Tonaly'],
+        'yt2mp3': ['YT2MP3'],
+        'rosa': ['Rosa'],
+        'sonder': ['Rutinas', 'Sonder'],
+        'rutinas': ['Rutinas', 'Sonder'],
+        'bervos': ['BERVOS', 'BERVOS.org', 'BERVOS/BERVOS.org']
+    };
+    const folderCandidates = directoryNames[normalizedName] || [projectName];
+    const candidateParents = [
+        path.join(__dirname, '..', '..', '..'), // /Documents (when __dirname is functions/lib)
+        path.join(__dirname, '..', '..', '..', '..'), // Antigravity (when nested in BERVOS.org)
+        path.resolve(process.cwd(), '..'), // Sibling of current working directory
+        path.resolve(process.cwd(), '../..'),
+        path.join(__dirname, '..', '..') // Workspace root itself
+    ];
+    for (const parent of candidateParents) {
+        for (const folder of folderCandidates) {
+            const p = path.join(parent, folder);
+            if (fs.existsSync(p)) {
+                return p;
+            }
+        }
+    }
+    return null;
+}
+/**
  * Helper to dynamically scan sibling folders for actual package.json versions.
  */
 function getLocalProjectVersion(projectName) {
     const normalizedName = projectName.toLowerCase();
-    const parentDir = path.join(__dirname, '..', '..', '..', '..');
-    const directoryNames = {
-        'billio': 'Billio',
-        'chessverse': 'Chessverse',
-        'tripitdown': 'tripitdown',
-        'aura': 'Aura',
-        'scribo': 'Scribo',
-        'laresdj': 'LaresDJ.com',
-        'pinmage': 'Pinmage',
-        'tonaly': 'Tonaly',
-        'yt2mp3': 'YT2MP3',
-        'rosa': 'Rosa',
-        'rutinas': 'Rutinas',
-        'bervos': 'BERVOS.org'
-    };
-    const folderName = directoryNames[normalizedName] || projectName;
-    const projectFolderPath = path.join(parentDir, folderName);
-    if (!fs.existsSync(projectFolderPath)) {
+    const projectFolderPath = findProjectFolderPath(projectName);
+    if (!projectFolderPath || !fs.existsSync(projectFolderPath)) {
         return null;
     }
     const packagePaths = [
-        path.join(projectFolderPath, 'src', 'version.json'),
         path.join(projectFolderPath, 'package.json'),
+        path.join(projectFolderPath, 'website', 'package.json'),
+        path.join(projectFolderPath, 'src', 'version.json'),
         path.join(projectFolderPath, 'web', 'src', 'version.json'),
         path.join(projectFolderPath, 'web', 'package.json'),
         path.join(projectFolderPath, 'frontend', 'src', 'version.json'),
@@ -732,30 +774,14 @@ function getLocalProjectVersion(projectName) {
     return null;
 }
 /**
- * Resolves the last 3 commits for a project.
+ * Resolves the last commits for a project.
  * If running locally and the sibling directory exists, reads from local git log.
  * Otherwise, fetches from the GitHub API if it is a public GitHub repository.
  */
 async function getRepoCommits(projectName, repoUrl, limit = 15) {
     const normalizedName = projectName.toLowerCase();
-    const parentDir = path.join(__dirname, '..', '..', '..', '..');
-    const directoryNames = {
-        'billio': 'Billio',
-        'chessverse': 'Chessverse',
-        'tripitdown': 'tripitdown',
-        'aura': 'Aura',
-        'scribo': 'Scribo',
-        'laresdj': 'LaresDJ',
-        'pinmage': 'Pinmage',
-        'tonaly': 'Tonaly',
-        'yt2mp3': 'YT2MP3',
-        'rosa': 'Rosa',
-        'rutinas': 'Rutinas',
-        'bervos': 'BERVOS/BERVOS.org'
-    };
-    const folderName = directoryNames[normalizedName] || projectName;
-    const projectFolderPath = path.join(parentDir, folderName);
-    if (fs.existsSync(path.join(projectFolderPath, '.git'))) {
+    const projectFolderPath = findProjectFolderPath(projectName);
+    if (projectFolderPath && fs.existsSync(path.join(projectFolderPath, '.git'))) {
         try {
             // Get remote URL to generate commit links
             let commitUrlBase = '';
@@ -808,6 +834,7 @@ async function getRepoCommits(projectName, repoUrl, limit = 15) {
             'tonaly': 'https://github.com/laresbernardo/tonaly',
             'yt2mp3': 'https://github.com/laresbernardo/YT2MP3.git',
             'rosa': 'https://github.com/laresbernardo/Rosa.git',
+            'sonder': 'https://github.com/laresbernardo/rutinas.git',
             'rutinas': 'https://github.com/laresbernardo/rutinas.git',
             'bervos': 'https://github.com/laresbernardo/bervos.git'
         };
@@ -932,9 +959,8 @@ async function getRepoCollaboratorList(owner, repo) {
     }
     // Local git authors fallback if sibling repo exists
     try {
-        const parentDir = path.join(__dirname, '..', '..', '..', '..');
-        const folderPath = path.join(parentDir, repo);
-        if (fs.existsSync(path.join(folderPath, '.git'))) {
+        const folderPath = findProjectFolderPath(repo);
+        if (folderPath && fs.existsSync(path.join(folderPath, '.git'))) {
             const logOut = (0, child_process_1.execSync)('git log --format="%aN|%aE|%aI" | sort -u', { cwd: folderPath, encoding: 'utf8', timeout: 1000 }).trim();
             if (logOut) {
                 const map = new Map();
@@ -1048,6 +1074,7 @@ async function fetchInitiativeMetrics(item) {
                 'tonaly': 'https://github.com/laresbernardo/tonaly',
                 'yt2mp3': 'https://github.com/laresbernardo/YT2MP3.git',
                 'rosa': 'https://github.com/laresbernardo/Rosa.git',
+                'sonder': 'https://github.com/laresbernardo/rutinas.git',
                 'rutinas': 'https://github.com/laresbernardo/rutinas.git',
                 'bervos': 'https://github.com/laresbernardo/bervos.git'
             };
@@ -1071,14 +1098,17 @@ async function fetchInitiativeMetrics(item) {
             }
         }
         const normalizedName = name.toLowerCase();
-        if (normalizedName === 'rutinas' || item.applicationCategory === 'EducationalApplication') {
-            // Rutinas / Educational: count waitlist signups from Firestore
+        if (normalizedName === 'sonder' || normalizedName === 'rutinas' || item.applicationCategory === 'EducationalApplication') {
+            // Sonder / Rutinas / Educational: count waitlist signups from Firestore
             try {
                 const bervosDb = admin.firestore();
+                const projectFilter = (normalizedName === 'sonder' || normalizedName === 'rutinas')
+                    ? ['Sonder', 'Rutinas']
+                    : [name];
                 const waitlistSnap = await bervosDb.collection('waitlist_users')
-                    .where('project', '==', name).get();
+                    .where('project', 'in', projectFilter).get();
                 const demoLeadsSnap = await bervosDb.collection('demo_leads')
-                    .where('project', '==', name).get();
+                    .where('project', 'in', projectFilter).get();
                 const totalWaitlist = waitlistSnap.size + demoLeadsSnap.size;
                 metrics.totalUsers = totalWaitlist > 0 ? totalWaitlist : (item.totalUsers || 0);
                 metrics.active30d = totalWaitlist > 0 ? totalWaitlist : (item.active30d || 0);
@@ -1142,6 +1172,9 @@ async function fetchInitiativeMetrics(item) {
     if (metrics.commits && metrics.commits.length > 0) {
         metrics.lastUpdated = metrics.commits[0].date;
     }
+    else if (!metrics.lastUpdated) {
+        metrics.lastUpdated = item.updated || '';
+    }
     // Fetch BACKLOG.md count and content from GitHub repo
     const extractOwnerRepo = (u) => {
         if (!u || !u.includes('github.com'))
@@ -1163,6 +1196,8 @@ async function fetchInitiativeMetrics(item) {
             'tonaly': 'https://github.com/laresbernardo/tonaly',
             'yt2mp3': 'https://github.com/laresbernardo/YT2MP3.git',
             'rosa': 'https://github.com/laresbernardo/Rosa.git',
+            'sonder': 'https://github.com/laresbernardo/rutinas.git',
+            'rutinas': 'https://github.com/laresbernardo/rutinas.git',
             'bervos': 'https://github.com/laresbernardo/bervos.git'
         };
         gh = extractOwnerRepo(backlogGitUrlMap[n]);
@@ -1352,19 +1387,43 @@ app.get(['/metrics', '/api/metrics'], authenticateAdmin, async (req, res) => {
 app.get(['/public-metrics', '/api/public-metrics'], async (req, res) => {
     try {
         const cached = await getCache();
+        const twelveHours = 12 * 60 * 60 * 1000;
+        const formatPublicData = (data) => data.map((m) => ({
+            name: m.name,
+            version: m.version || '1.0.0',
+            stars: m.stars || 0,
+            lastUpdated: m.lastUpdated || '',
+            uptime: m.uptime !== undefined ? m.uptime : true
+        }));
         if (cached && cached.data && Array.isArray(cached.data)) {
-            const publicData = cached.data.map((m) => ({
-                name: m.name,
-                version: m.version || '1.0.0',
-                stars: m.stars || 0,
-                lastUpdated: m.lastUpdated || '',
-                uptime: m.uptime !== undefined ? m.uptime : true
-            }));
-            res.setHeader('X-Cache-Status', 'HIT');
-            res.json(publicData);
+            const isExpired = Date.now() - cached.timestamp >= twelveHours;
+            if (!isExpired) {
+                res.setHeader('X-Cache-Status', 'HIT');
+                res.json(formatPublicData(cached.data));
+                return;
+            }
+            // Stale cache: return immediately to client, trigger background refresh
+            res.setHeader('X-Cache-Status', 'STALE');
+            res.json(formatPublicData(cached.data));
+            setTimeout(async () => {
+                try {
+                    console.log('[SWR] Public metrics background update triggered...');
+                    const fresh = await fetchFreshMetrics();
+                    await saveCache(fresh);
+                    console.log('[SWR] Public metrics background update completed.');
+                }
+                catch (err) {
+                    console.error('[SWR] Public metrics background update failed:', err);
+                }
+            }, 0);
             return;
         }
-        res.json([]);
+        // No cache exists: fetch synchronously
+        console.log('[SWR] No cache found for public metrics. Fetching synchronously...');
+        const fresh = await fetchFreshMetrics();
+        await saveCache(fresh);
+        res.setHeader('X-Cache-Status', 'MISS');
+        res.json(formatPublicData(fresh));
     }
     catch (err) {
         console.error('[API] Unexpected error in /public-metrics endpoint:', err);
@@ -1668,7 +1727,9 @@ async function fetchAllUsersAggregated() {
                     const data = doc.data();
                     if (!data.email)
                         continue;
-                    const rawProject = data.project || (sourceLabel === 'waitlist' ? 'Rutinas' : 'Rosa');
+                    let rawProject = data.project || (sourceLabel === 'waitlist' ? 'Sonder' : 'Rosa');
+                    if (rawProject.toLowerCase() === 'rutinas')
+                        rawProject = 'Sonder';
                     const projectName = rawProject.charAt(0).toUpperCase() + rawProject.slice(1);
                     let userChannel = 'Signup / Lead';
                     if (data.type === 'watch_video' || data.source === 'watch_video_modal') {
@@ -1799,15 +1860,16 @@ app.post('/api/waitlist', async (req, res) => {
         }
         const db = admin.firestore();
         const waitlistRef = db.collection('waitlist_users');
+        const defaultProject = (project && project.toLowerCase() === 'rutinas') ? 'Sonder' : (project || 'Sonder');
         const existing = await waitlistRef
             .where('email', '==', email.toLowerCase())
-            .where('project', '==', project || 'Rutinas')
+            .where('project', 'in', [defaultProject, 'Sonder', 'Rutinas'])
             .get();
         if (existing.empty) {
             await waitlistRef.add({
                 name: name || '',
                 email: email.toLowerCase(),
-                project: project || 'Rutinas',
+                project: defaultProject,
                 lang: lang || 'ES',
                 comment: comment || '',
                 registeredAt: new Date().toISOString(),
@@ -1993,6 +2055,47 @@ exports.ssrHandler = functions.https.onRequest(async (req, res) => {
         }
         const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString().toLowerCase();
         const pathname = (req.path || '').toLowerCase();
+        // Short link lookup (bervos.org/xxxx)
+        const slugMatch = req.path.match(/^\/([a-z0-9-_]{2,60})\/?$/i);
+        if (slugMatch) {
+            const candidateSlug = slugMatch[1].toLowerCase();
+            if (!exports.RESERVED_SLUGS.has(candidateSlug)) {
+                try {
+                    const db = admin.firestore();
+                    const linkDoc = await db.collection('short_links').doc(candidateSlug).get();
+                    if (linkDoc.exists) {
+                        const linkData = linkDoc.data();
+                        if (linkData) {
+                            if (linkData.isActive === false) {
+                                res.status(403).send(`<!doctype html><html><head><meta charset="utf-8"><title>Link Inactive | BERVOS</title><style>body{margin:0;background:#080b12;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center}a{color:#818cf8;text-decoration:none;margin-top:20px;display:inline-block;padding:8px 16px;border:1px solid rgba(255,255,255,0.1);border-radius:8px}</style></head><body><div><h1>Link Inactive</h1><p>This short link has been paused by the owner.</p><a href="/">Visit BERVOS</a></div></body></html>`);
+                                return;
+                            }
+                            const destinationUrl = linkData.destinationUrl;
+                            if (destinationUrl) {
+                                const userAgent = (req.headers['user-agent'] || '').toString().toLowerCase();
+                                const isPreviewBot = /bot|facebookexternalhit|whatsapp|telegram|twitterbot|slackbot|discordbot|linkedinbot|embedly|quora link preview|pinterest|applebot/i.test(userAgent);
+                                if (!isPreviewBot) {
+                                    const nowIso = new Date().toISOString();
+                                    const updates = {
+                                        clickCount: admin.firestore.FieldValue.increment(1),
+                                        lastClickedAt: nowIso
+                                    };
+                                    if (!linkData.firstClickedAt) {
+                                        updates.firstClickedAt = nowIso;
+                                    }
+                                    linkDoc.ref.update(updates).catch((e) => console.warn('[ShortLink] Failed to record click analytics:', e));
+                                }
+                                res.redirect(302, destinationUrl);
+                                return;
+                            }
+                        }
+                    }
+                }
+                catch (linkErr) {
+                    console.warn('[ShortLink] Error resolving slug:', linkErr);
+                }
+            }
+        }
         let indexPath = path.join(__dirname, 'index.html');
         if (!fs.existsSync(indexPath)) {
             indexPath = path.join(__dirname, '..', 'index.html');
@@ -2030,7 +2133,8 @@ exports.ssrHandler = functions.https.onRequest(async (req, res) => {
                 const match = projects.find((p) => {
                     const key = (p.title || '').toLowerCase();
                     const linkHost = (p.link || '').toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
-                    return (key && host.includes(key)) || (linkHost && host.includes(linkHost)) || (key && pathname.startsWith(`/${key}`));
+                    const isLegacyRutinas = (key === 'sonder' || key === 'rutinas') && (host.includes('rutinas') || pathname.startsWith('/rutinas'));
+                    return (key && host.includes(key)) || (linkHost && host.includes(linkHost)) || (key && pathname.startsWith(`/${key}`)) || isLegacyRutinas;
                 });
                 if (match) {
                     title = match.metaTitle || match.title;
@@ -2088,7 +2192,7 @@ const REPOS_FOR_PIPELINE = [
     { name: 'YT2MP3', repo: 'laresbernardo/YT2MP3' },
     { name: 'LaresDJ', repo: 'laresbernardo/LaresDJ' },
     { name: 'WAme', repo: 'laresbernardo/WAme' },
-    { name: 'Rutinas', repo: 'laresbernardo/rutinas' },
+    { name: 'Sonder', repo: 'laresbernardo/rutinas' },
     { name: 'Rosa', repo: 'laresbernardo/Rosa' },
     { name: 'BERVOS Hub', repo: 'laresbernardo/bervos' }
 ];
@@ -3419,6 +3523,164 @@ app.get(['/logs', '/api/logs'], authenticateAdmin, async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error', message: err instanceof Error ? err.message : String(err) });
     }
 });
+/**
+ * GET /api/links — Retrieve all registered short links
+ */
+app.get('/api/links', authenticateAdmin, async (_req, res) => {
+    try {
+        const db = admin.firestore();
+        const snapshot = await db.collection('short_links').get();
+        const links = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                slug: data.slug || doc.id,
+                destinationUrl: data.destinationUrl || '',
+                title: data.title || '',
+                clickCount: typeof data.clickCount === 'number' ? data.clickCount : 0,
+                createdAt: data.createdAt || new Date().toISOString(),
+                firstClickedAt: data.firstClickedAt || null,
+                lastClickedAt: data.lastClickedAt || null,
+                isActive: data.isActive !== false,
+                createdBy: data.createdBy || '',
+                updatedAt: data.updatedAt || data.createdAt || new Date().toISOString()
+            };
+        });
+        links.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        res.json({ links });
+    }
+    catch (err) {
+        console.error('[Links API] Failed to fetch short links:', err);
+        res.status(500).json({ error: 'Failed to retrieve short links', message: err.message });
+    }
+});
+/**
+ * POST /api/links — Create a new short link
+ */
+app.post('/api/links', authenticateAdmin, async (req, res) => {
+    try {
+        const db = admin.firestore();
+        let { destinationUrl, slug, title } = req.body || {};
+        if (!destinationUrl || typeof destinationUrl !== 'string') {
+            res.status(400).json({ error: 'destinationUrl is required and must be a string' });
+            return;
+        }
+        destinationUrl = destinationUrl.trim();
+        if (!/^https?:\/\//i.test(destinationUrl)) {
+            destinationUrl = 'https://' + destinationUrl;
+        }
+        let cleanSlug = (slug || '').toString().trim().toLowerCase();
+        if (!cleanSlug) {
+            // Auto-generate random slug (check for collision)
+            let attempts = 0;
+            do {
+                cleanSlug = generateRandomSlug(5);
+                attempts++;
+            } while ((exports.RESERVED_SLUGS.has(cleanSlug) || (await db.collection('short_links').doc(cleanSlug).get()).exists) && attempts < 10);
+        }
+        else {
+            if (!exports.SHORT_SLUG_REGEX.test(cleanSlug)) {
+                res.status(400).json({
+                    error: 'Slug must be between 2 and 60 alphanumeric characters, hyphens, or underscores.'
+                });
+                return;
+            }
+            if (exports.RESERVED_SLUGS.has(cleanSlug)) {
+                res.status(400).json({
+                    error: `The slug "${cleanSlug}" is a reserved BERVOS system route and cannot be used.`
+                });
+                return;
+            }
+            const existingDoc = await db.collection('short_links').doc(cleanSlug).get();
+            if (existingDoc.exists) {
+                res.status(409).json({
+                    error: `The slug "${cleanSlug}" is already in use. Please choose a different one.`
+                });
+                return;
+            }
+        }
+        const now = new Date().toISOString();
+        const linkDoc = {
+            id: cleanSlug,
+            slug: cleanSlug,
+            destinationUrl,
+            title: (title || '').toString().trim(),
+            clickCount: 0,
+            createdAt: now,
+            firstClickedAt: null,
+            lastClickedAt: null,
+            isActive: true,
+            createdBy: req.user?.email || 'laresbernardo@gmail.com',
+            updatedAt: now
+        };
+        await db.collection('short_links').doc(cleanSlug).set(linkDoc);
+        res.status(201).json({ link: linkDoc });
+    }
+    catch (err) {
+        console.error('[Links API] Failed to create short link:', err);
+        res.status(500).json({ error: 'Failed to create short link', message: err.message });
+    }
+});
+/**
+ * PUT /api/links/:id — Update short link destination, title, or active status
+ */
+app.put('/api/links/:id', authenticateAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const cleanId = (id || '').toLowerCase().trim();
+        const db = admin.firestore();
+        const docRef = db.collection('short_links').doc(cleanId);
+        const docSnap = await docRef.get();
+        if (!docSnap.exists) {
+            res.status(404).json({ error: 'Short link not found' });
+            return;
+        }
+        const { destinationUrl, title, isActive } = req.body || {};
+        const updates = { updatedAt: new Date().toISOString() };
+        if (typeof destinationUrl === 'string' && destinationUrl.trim()) {
+            let cleanUrl = destinationUrl.trim();
+            if (!/^https?:\/\//i.test(cleanUrl)) {
+                cleanUrl = 'https://' + cleanUrl;
+            }
+            updates.destinationUrl = cleanUrl;
+        }
+        if (typeof title === 'string') {
+            updates.title = title.trim();
+        }
+        if (typeof isActive === 'boolean') {
+            updates.isActive = isActive;
+        }
+        await docRef.update(updates);
+        const updatedSnap = await docRef.get();
+        res.json({ link: { id: cleanId, ...updatedSnap.data() } });
+    }
+    catch (err) {
+        console.error('[Links API] Failed to update short link:', err);
+        res.status(500).json({ error: 'Failed to update short link', message: err.message });
+    }
+});
+/**
+ * DELETE /api/links/:id — Delete a short link
+ */
+app.delete('/api/links/:id', authenticateAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const cleanId = (id || '').toLowerCase().trim();
+        const db = admin.firestore();
+        const docRef = db.collection('short_links').doc(cleanId);
+        const docSnap = await docRef.get();
+        if (!docSnap.exists) {
+            res.status(404).json({ error: 'Short link not found' });
+            return;
+        }
+        await docRef.delete();
+        res.json({ success: true, id: cleanId });
+    }
+    catch (err) {
+        console.error('[Links API] Failed to delete short link:', err);
+        res.status(500).json({ error: 'Failed to delete short link', message: err.message });
+    }
+});
 // Export Cloud Function
 exports.hubApi = functions.https.onRequest(app);
 /**
@@ -3516,6 +3778,23 @@ exports.onScheduleSocialPipeline = functions.pubsub
     }
     catch (err) {
         console.error('[Scheduler] Error running bi-weekly social pipeline:', err);
+    }
+    return null;
+});
+/**
+ * Cron trigger running every 12 hours to keep public metrics and timestamps warm in Firestore.
+ */
+exports.updateMetricsCache = functions.pubsub
+    .schedule('every 12 hours')
+    .onRun(async (_context) => {
+    console.log('[Scheduler] Running 12-hour metrics cache update...');
+    try {
+        const fresh = await fetchFreshMetrics();
+        await saveCache(fresh);
+        console.log(`[Scheduler] 12-hour metrics cache update completed. Updated ${fresh.length} initiatives.`);
+    }
+    catch (err) {
+        console.error('[Scheduler] Error running updateMetricsCache:', err);
     }
     return null;
 });

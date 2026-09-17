@@ -26,8 +26,8 @@
       "logo": "/billio-logo.png",
       "category": "productivity",
       "applicationCategory": "FinanceApplication",
-      "updated": "2026-07-06",
-      "version": "2.4.0"
+      "updated": "2026-09-15",
+      "version": "2.6.25"
     },
     {
       "title": "Chessverse",
@@ -60,8 +60,8 @@
       "logo": "/tripitdown-logo.png",
       "category": "productivity",
       "applicationCategory": "TravelApplication",
-      "updated": "2026-06-28",
-      "version": "0.1.90"
+      "updated": "2026-08-04",
+      "version": "0.2.1"
     },
     {
       "title": "Aura",
@@ -125,7 +125,7 @@
       "logo": "/pinmage-logo.png",
       "category": "productivity",
       "applicationCategory": "UtilitiesApplication",
-      "updated": "2026-07-04",
+      "updated": "2026-07-07",
       "version": "1.1.0"
     },
     {
@@ -142,7 +142,7 @@
       "category": "leisure",
       "applicationCategory": "EducationalApplication",
       "updated": "2026-06-11",
-      "version": "0.1.8"
+      "version": "0.1.7"
     },
     {
       "title": "YT2MP3",
@@ -179,10 +179,10 @@
       "version": "1.1.0"
     },
     {
-      "title": "Rutinas",
-      "metaTitle": "RUTINAS, Atlas Íntimo de la Humanidad",
-      "description": "Un viaje íntimo a través de rutinas cotidianas y actuales de 196 culturas. Libro en español co-creado con IA, a publicarse durante el 2026.",
-      "link": "https://rutinas.bervos.org/",
+      "title": "Sonder",
+      "metaTitle": "SONDER, Atlas Íntimo de la Humanidad",
+      "description": "Un viaje íntimo a través de relatos de 196 culturas actuales. Un libro para conectar y asombrarse con las vidas de otros.",
+      "link": "https://sonder.bervos.org/",
       "codeRepository": "https://github.com/laresbernardo/rutinas",
       "tags": [
         "Libro",
@@ -191,11 +191,11 @@
         "Culturas",
         "Literatura"
       ],
-      "logo": "/rutinas-logo.png",
+      "logo": "/sonder-logo.png",
       "category": "leisure",
       "applicationCategory": "EducationalApplication",
-      "updated": "2026-08-01",
-      "version": "0.1.0"
+      "updated": "2026-09-14",
+      "version": "0.1.1"
     },
     {
       "title": "BERVOS",
@@ -209,8 +209,8 @@
       "logo": "/logo.svg",
       "category": "productivity",
       "applicationCategory": "WebApplication",
-      "updated": "2026-07-20",
-      "version": "1.0.5"
+      "updated": "2026-09-17",
+      "version": "1.0.6"
     }
   ],
   "openSource": [
@@ -221,7 +221,8 @@
       "forks": "430",
       "downloads": "137k",
       "contributors": "33",
-      "link": "https://github.com/facebookexperimental/Robyn"
+      "link": "https://github.com/facebookexperimental/Robyn",
+      "updated": "2026-01-26"
     },
     {
       "name": "lares",
@@ -230,7 +231,8 @@
       "forks": "50",
       "downloads": "213k",
       "contributors": "6",
-      "link": "https://github.com/laresbernardo/lares"
+      "link": "https://github.com/laresbernardo/lares",
+      "updated": "2026-08-28"
     }
   ]
 }

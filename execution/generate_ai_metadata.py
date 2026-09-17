@@ -15,15 +15,220 @@ import os
 import re
 from datetime import datetime
 
+import subprocess
+import urllib.request
+
 # Setup absolute paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 DATA_FILE = os.path.join(PROJECT_ROOT, 'src', 'data', 'ecosystem.json')
+FUNCTIONS_DATA_FILE = os.path.join(PROJECT_ROOT, 'functions', 'ecosystem.json')
+FUNCTIONS_LIB_DATA_FILE = os.path.join(PROJECT_ROOT, 'functions', 'lib', 'ecosystem.json')
 HTML_FILE = os.path.join(PROJECT_ROOT, 'index.html')
 ROBOTS_FILE = os.path.join(PROJECT_ROOT, 'public', 'robots.txt')
 SITEMAP_FILE = os.path.join(PROJECT_ROOT, 'public', 'sitemap.xml')
 LLMS_TXT_FILE = os.path.join(PROJECT_ROOT, 'public', 'llms.txt')
 LLMS_FULL_TXT_FILE = os.path.join(PROJECT_ROOT, 'public', 'llms-full.txt')
+
+FOLDER_MAP = {
+    'billio': 'Billio',
+    'chessverse': 'Chessverse',
+    'tripitdown': 'tripitdown',
+    'aura': 'Aura',
+    'scribo': 'Scribo',
+    'laresdj': 'LaresDJ',
+    'pinmage': 'Pinmage',
+    'tonaly': 'tonaly',
+    'yt2mp3': 'YT2MP3',
+    'rosa': 'Rosa',
+    'sonder': 'Rutinas',
+    'rutinas': 'Rutinas',
+    'bervos': 'BERVOS',
+}
+
+GITHUB_REPO_MAP = {
+    'billio': 'laresbernardo/Billio',
+    'chessverse': 'laresbernardo/Chessverse',
+    'tripitdown': 'laresbernardo/tripitdown',
+    'aura': 'laresbernardo/aura',
+    'scribo': 'laresbernardo/Scribo',
+    'laresdj': 'laresbernardo/laresdj.com',
+    'pinmage': 'laresbernardo/pinmage',
+    'tonaly': 'laresbernardo/tonaly',
+    'yt2mp3': 'laresbernardo/YT2MP3',
+    'rosa': 'laresbernardo/Rosa',
+    'sonder': 'laresbernardo/rutinas',
+    'rutinas': 'laresbernardo/rutinas',
+    'bervos': 'laresbernardo/bervos',
+    'robyn': 'facebookexperimental/Robyn',
+    'lares': 'laresbernardo/lares',
+}
+
+def get_candidate_parent_dirs():
+    return [
+        os.path.dirname(PROJECT_ROOT),
+        os.path.dirname(os.path.dirname(PROJECT_ROOT)),
+        os.path.abspath(os.path.join(PROJECT_ROOT, '..')),
+        os.path.abspath(os.path.join(PROJECT_ROOT, '../..')),
+    ]
+
+def find_local_project_dir(folder_name):
+    for parent in get_candidate_parent_dirs():
+        candidate = os.path.join(parent, folder_name)
+        if os.path.isdir(candidate):
+            return candidate
+    return None
+
+def get_local_git_date(project_dir):
+    if not project_dir or not os.path.isdir(os.path.join(project_dir, '.git')):
+        return None
+    try:
+        res = subprocess.run(
+            ['git', 'log', '-1', '--format=%cs'],
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            return res.stdout.strip()
+    except Exception:
+        pass
+    return None
+
+def get_local_project_version(project_dir):
+    if not project_dir:
+        return None
+    pkg_paths = [
+        os.path.join(project_dir, 'package.json'),
+        os.path.join(project_dir, 'website', 'package.json'),
+        os.path.join(project_dir, 'src', 'version.json'),
+        os.path.join(project_dir, 'web', 'package.json'),
+        os.path.join(project_dir, 'frontend', 'package.json'),
+    ]
+    for p in pkg_paths:
+        if os.path.isfile(p):
+            try:
+                with open(p, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    if data.get('version'):
+                        return str(data['version']).lstrip('v')
+            except Exception:
+                pass
+    desc_paths = [
+        os.path.join(project_dir, 'DESCRIPTION'),
+        os.path.join(project_dir, 'R', 'DESCRIPTION'),
+    ]
+    for p in desc_paths:
+        if os.path.isfile(p):
+            try:
+                with open(p, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    m = re.search(r'^Version:\s*(\S+)', content, re.MULTILINE)
+                    if m:
+                        return m.group(1).lstrip('v')
+            except Exception:
+                pass
+    for plist in [os.path.join(project_dir, 'AuraApp', 'Info.plist'), os.path.join(project_dir, 'PinmageApp', 'Info.plist')]:
+        if os.path.isfile(plist):
+            try:
+                with open(plist, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    m = re.search(r'<key>CFBundleShortVersionString</key>\s*<string>([^<]+)</string>', content)
+                    if m:
+                        return m.group(1).lstrip('v')
+            except Exception:
+                pass
+    return None
+
+def get_remote_github_pushed_date(repo_full_name):
+    if not repo_full_name:
+        return None
+    try:
+        url = f"https://api.github.com/repos/{repo_full_name}"
+        headers = {'User-Agent': 'bervos-metadata-sync'}
+        token = os.environ.get('GITHUB_TOKEN')
+        if token:
+            headers['Authorization'] = f"token {token}"
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            data = json.load(resp)
+            pushed = data.get('pushed_at')
+            if pushed and 'T' in pushed:
+                return pushed.split('T')[0]
+    except Exception:
+        pass
+    return None
+
+def sync_ecosystem_timestamps(data):
+    """
+    Scans local sibling directories and GitHub repositories to dynamically update
+    'updated' timestamps and 'version' properties before generating AI metadata.
+    """
+    updated_count = 0
+    projects = data.get('projects', [])
+    for p in projects:
+        key = p.get('title', '').strip().lower()
+        folder_name = FOLDER_MAP.get(key, p.get('title', ''))
+        
+        # 1. Check local directory
+        local_dir = PROJECT_ROOT if key == 'bervos' else find_local_project_dir(folder_name)
+        local_date = get_local_git_date(local_dir)
+        local_version = get_local_project_version(local_dir)
+        
+        # 2. Check remote GitHub repo if local date unavailable
+        remote_date = None
+        repo_slug = GITHUB_REPO_MAP.get(key)
+        if not repo_slug and p.get('codeRepository'):
+            m = re.search(r'github\.com/([^/]+/[^/]+?)(?:\.git|/|$)', p['codeRepository'])
+            if m:
+                repo_slug = m.group(1)
+        if not local_date and repo_slug:
+            remote_date = get_remote_github_pushed_date(repo_slug)
+            
+        best_date = local_date or remote_date
+        current_date = p.get('updated', '')
+        
+        if best_date and best_date > current_date:
+            print(f"  [Auto-Sync] {p['title']}: updated timestamp changed from {current_date} -> {best_date}")
+            p['updated'] = best_date
+            updated_count += 1
+            
+        if local_version and local_version != p.get('version'):
+            print(f"  [Auto-Sync] {p['title']}: version updated from {p.get('version')} -> {local_version}")
+            p['version'] = local_version
+            updated_count += 1
+
+    # Also check open-source packages
+    open_source = data.get('openSource', [])
+    for pkg in open_source:
+        key = pkg.get('name', '').strip().lower()
+        repo_slug = GITHUB_REPO_MAP.get(key)
+        if not repo_slug and pkg.get('link'):
+            m = re.search(r'github\.com/([^/]+/[^/]+?)(?:\.git|/|$)', pkg['link'])
+            if m:
+                repo_slug = m.group(1)
+        if repo_slug:
+            remote_date = get_remote_github_pushed_date(repo_slug)
+            if remote_date:
+                pkg['updated'] = remote_date
+
+    # Persist updated ecosystem data if changes occurred
+    with open(DATA_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.write('\n')
+        
+    for mirror_path in [FUNCTIONS_DATA_FILE, FUNCTIONS_LIB_DATA_FILE]:
+        if os.path.exists(os.path.dirname(mirror_path)):
+            try:
+                with open(mirror_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                    f.write('\n')
+            except Exception:
+                pass
+                
+    print(f"✓ Dynamic ecosystem sync complete ({updated_count} updates applied)")
+    return data
 
 def load_ecosystem_data():
     if not os.path.exists(DATA_FILE):
@@ -312,6 +517,7 @@ def main():
     print("Starting AI/GEO metadata generation...")
     try:
         data = load_ecosystem_data()
+        data = sync_ecosystem_timestamps(data)
         schema_data = generate_json_ld(data)
         inject_json_ld(schema_data)
         generate_llms_txt(data)

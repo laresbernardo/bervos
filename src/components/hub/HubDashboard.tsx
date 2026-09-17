@@ -4,9 +4,10 @@ import type { User } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { InitiativeCard } from '../ui/InitiativeCard';
 import type { InitiativeMetric } from '../ui/InitiativeCard';
-import { RefreshCw, LogOut, Users, Download, ShieldAlert, Star, FolderGit, X, Search, Loader2, List, Sparkles, Wrench, FileText, GitBranch, Settings, GitCommit, Share2, Activity, UserPlus } from 'lucide-react';
+import { RefreshCw, LogOut, Users, Download, ShieldAlert, Star, FolderGit, X, Search, Loader2, List, Sparkles, Wrench, FileText, GitBranch, Settings, GitCommit, Share2, Activity, UserPlus, Link2 } from 'lucide-react';
 import ecosystem from '../../data/ecosystem.json';
 import { SocialManager } from '../social/SocialManager';
+import { LinksManager } from './LinksManager';
 
 const UserAvatar: React.FC<{ src?: string; name: string; email: string }> = ({ src, name, email }) => {
   const [error, setError] = useState(false);
@@ -79,7 +80,7 @@ const getStaticMetrics = (): InitiativeMetric[] => {
 
 interface HubDashboardProps {
   user: User;
-  initialSection?: 'projects' | 'social';
+  initialSection?: 'projects' | 'social' | 'links';
 }
 
 export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection = 'projects' }) => {
@@ -208,6 +209,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
     'tonaly': 'laresbernardo/tonaly',
     'yt2mp3': 'laresbernardo/YT2MP3',
     'rosa': 'laresbernardo/Rosa',
+    'sonder': 'laresbernardo/rutinas',
     'rutinas': 'laresbernardo/rutinas',
     'bervos': 'laresbernardo/bervos'
   };
@@ -522,10 +524,10 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('ALL');
   const [sortBy, setSortBy] = useState('LAST_UPDATED');
-  const [hubSection, setHubSection] = useState<'projects' | 'social'>(initialSection);
+  const [hubSection, setHubSection] = useState<'projects' | 'social' | 'links'>(initialSection);
 
   useEffect(() => {
-    const targetPath = hubSection === 'social' ? '/social' : '/hub';
+    const targetPath = hubSection === 'social' ? '/social' : hubSection === 'links' ? '/links' : '/hub';
     if (window.location.pathname !== targetPath) {
       window.history.pushState(null, '', targetPath);
     }
@@ -688,6 +690,13 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
               >
                 <Share2 size={13} /> Social
               </button>
+              <button
+                onClick={() => setHubSection('links')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer ${hubSection === 'links' ? 'bg-indigo-500 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <Link2 size={13} /> Links
+              </button>
             </div>
           </div>
 
@@ -806,6 +815,8 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
           </div>
         ) : hubSection === 'social' ? (
           <SocialManager user={user} />
+        ) : hubSection === 'links' ? (
+          <LinksManager user={user} />
         ) : (
           <div className="space-y-12">
 
