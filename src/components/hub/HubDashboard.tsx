@@ -8,6 +8,7 @@ import { RefreshCw, LogOut, Users, Download, ShieldAlert, Star, FolderGit, X, Se
 import ecosystem from '../../data/ecosystem.json';
 import { SocialManager } from '../social/SocialManager';
 import { LinksManager } from './LinksManager';
+import { TelemetryHUD } from './TelemetryHUD';
 
 const UserAvatar: React.FC<{ src?: string; name: string; email: string }> = ({ src, name, email }) => {
   const [error, setError] = useState(false);
@@ -109,16 +110,17 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
       return true;
     }
   });
+  const [refreshing, setRefreshing] = useState(false);
   const [loadingStepText, setLoadingStepText] = useState('Establishing connection with secure gateway...');
   const [loadingProgress, setLoadingProgress] = useState(10);
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && !refreshing) {
       setLoadingProgress(100);
       return;
     }
     setLoadingProgress(15);
-    setLoadingStepText('Initializing secure session gateway...');
+    setLoadingStepText(refreshing ? 'Syncing live telemetry & project metrics...' : 'Initializing secure session gateway...');
 
     const steps = [
       { text: 'Resolving BERVOS Hub configuration...', progress: 30 },
@@ -140,7 +142,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
     }, 1200);
 
     return () => clearInterval(interval);
-  }, [loading]);
+  }, [loading, refreshing]);
   const [error, setError] = useState<string | null>(null);
   const [cacheStatus, setCacheStatus] = useState<string | null>(() => {
     try {
@@ -149,7 +151,6 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
       return null;
     }
   });
-  const [refreshing, setRefreshing] = useState(false);
   const [refreshingProjectIds, setRefreshingProjectIds] = useState<Record<string, boolean>>({});
   const [isUsersModalOpen, setIsUsersModalOpen] = useState(false);
   const [usersList, setUsersList] = useState<Array<{
@@ -197,6 +198,15 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
   const [selectedLogsTypeFilter, setSelectedLogsTypeFilter] = useState<'ALL' | 'USER_JOIN' | 'DOWNLOAD' | 'SOCIAL_PUBLISH' | 'SOCIAL_ERROR'>('ALL');
   const [selectedLogsProjectFilter, setSelectedLogsProjectFilter] = useState('ALL');
   const [unreadLogsCount, setUnreadLogsCount] = useState(0);
+
+  const usersListRef = useRef(usersList);
+  usersListRef.current = usersList;
+
+  const logsListRef = useRef(logsList);
+  logsListRef.current = logsList;
+
+  const initializedRef = useRef(false);
+  const swrTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const GIT_REPO_MAP: Record<string, string> = {
     'billio': 'laresbernardo/Billio',
@@ -276,7 +286,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
   }, [metrics, getRepoPath]);
 
   const fetchUsers = useCallback(async (isRefresh = false) => {
-    if (usersList.length === 0 || isRefresh) {
+    if (usersListRef.current.length === 0 || isRefresh) {
       setLoadingUsers(true);
     }
     setUsersError(null);
@@ -298,7 +308,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
     } finally {
       setLoadingUsers(false);
     }
-  }, [user, usersList.length]);
+  }, [user]);
 
   const handleOpenUsersModal = useCallback((projectName = 'ALL') => {
     setSelectedProjectFilter(projectName);
@@ -315,7 +325,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
   };
 
   const fetchLogs = useCallback(async (isRefresh = false) => {
-    if (logsList.length === 0 || isRefresh) {
+    if (logsListRef.current.length === 0 || isRefresh) {
       setLoadingLogs(true);
     }
     setLogsError(null);
@@ -346,7 +356,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
     } finally {
       setLoadingLogs(false);
     }
-  }, [user, logsList.length]);
+  }, [user]);
 
   const handleOpenLogsModal = useCallback(() => {
     setIsLogsModalOpen(true);
@@ -439,7 +449,8 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
       // Re-fetch after 4 seconds to get the newly generated data.
       if (cache === 'STALE') {
         console.log('[SWR] Cache is stale. Scheduling a re-fetch in 4 seconds...');
-        setTimeout(async () => {
+        if (swrTimeoutRef.current) clearTimeout(swrTimeoutRef.current);
+        swrTimeoutRef.current = setTimeout(async () => {
           try {
             const freshToken = await user.getIdToken();
             const freshRes = await fetch('/api/metrics', {
@@ -461,6 +472,8 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
             }
           } catch (e) {
             console.error('[SWR] Re-fetch failed:', e);
+          } finally {
+            swrTimeoutRef.current = null;
           }
         }, 4000);
       }
@@ -509,13 +522,21 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
   }, [user, metrics]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchMetrics();
-      fetchUsers();
-      fetchLogs();
-    }, 0);
-    return () => clearTimeout(timer);
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    fetchMetrics();
+    fetchUsers();
+    fetchLogs();
   }, [fetchMetrics, fetchUsers, fetchLogs]);
+
+  useEffect(() => {
+    return () => {
+      if (swrTimeoutRef.current) {
+        clearTimeout(swrTimeoutRef.current);
+        swrTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const handleSignOut = () => {
     if (auth) signOut(auth);
@@ -655,7 +676,7 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
       <div className="max-w-7xl mx-auto space-y-8">
 
         {/* Navigation / Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-5">
+        <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-5">
           <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
             <div className="flex items-center gap-3">
               <a
@@ -733,29 +754,24 @@ export const HubDashboard: React.FC<HubDashboardProps> = ({ user, initialSection
 
             </button>
           </div>
+
+          {/* Subtle Header Accent Bar during Sync */}
+          {(loading || refreshing) && (
+            <div className="absolute -bottom-[1px] left-0 right-0 h-[2px] overflow-hidden pointer-events-none">
+              <div
+                className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 shadow-[0_0_8px_rgba(99,102,241,0.8)] transition-all duration-300"
+                style={{ width: `${loadingProgress}%` }}
+              />
+            </div>
+          )}
         </div>
 
-        {/* Telemetry Handshake Status (Progress Log) */}
-        {loading && (
-          <div className="tech-card border-indigo-500/20 bg-indigo-500/[0.01] p-4.5 font-mono text-xs text-indigo-300 flex items-center gap-3">
-            <Loader2 size={16} className="animate-spin text-indigo-400 shrink-0" />
-            <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-indigo-500">//</span>
-                <span className="text-slate-200">{loadingStepText}</span>
-              </div>
-              <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
-                <span className="text-[10px] text-indigo-400/80">{loadingProgress}%</span>
-                <div className="w-full sm:w-48 bg-white/5 border border-white/10 h-1.5 rounded-full overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500 h-full rounded-full transition-all duration-300"
-                    style={{ width: `${loadingProgress}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Ambient Telemetry HUD & Top Nano Progress (Zero Layout Shift) */}
+        <TelemetryHUD
+          isSyncing={loading || refreshing}
+          progress={loadingProgress}
+          stepText={loadingStepText}
+        />
 
         {/* Loading / Error States */}
         {error && !hasTelemetry && (
