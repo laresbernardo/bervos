@@ -25,9 +25,8 @@ const initializedApps = new Map<string, admin.app.App>();
  */
 export const RESERVED_SLUGS = new Set([
   'api', 'hub', 'social', 'links', 'shortlinks', 'short-links',
-  'rosa', 'sonder', 'rutinas', 'assets', 'public', 'dist',
-  'favicon', 'favicon.ico', 'robots.txt', 'sitemap.xml', 'logo.svg', 'llms.txt', 'cname',
-  'billio', 'aura', 'pinmage', 'tripitdown', 'chessverse', 'scribo', 'tonaly', 'yt2mp3', 'laresdj'
+  'assets', 'public', 'dist',
+  'favicon', 'favicon.ico', 'robots.txt', 'sitemap.xml', 'logo.svg', 'llms.txt', 'cname'
 ]);
 
 export const SHORT_SLUG_REGEX = /^[a-z0-9-_]{2,60}$/;

@@ -161,7 +161,7 @@ function localLinksDevPlugin() {
         const slugMatch = pathname.match(/^\/([a-z0-9-_]{2,60})\/?$/i)
         if (slugMatch) {
           const candidateSlug = slugMatch[1].toLowerCase()
-          const reserved = new Set(['api', 'hub', 'social', 'links', 'rosa', 'rutinas', 'assets', 'public', 'dist', '@vite', '@fs', '@id'])
+          const reserved = new Set(['api', 'hub', 'social', 'links', 'assets', 'public', 'dist', '@vite', '@fs', '@id'])
           if (!reserved.has(candidateSlug)) {
             const links = loadLinks()
             const found = links.find((l: any) => l.slug === candidateSlug)
