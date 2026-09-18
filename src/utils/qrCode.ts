@@ -7,6 +7,7 @@ export const BERVOS_LOGO_PATH =
 export interface GenerateQrCodeOptions {
   size?: number; // Canvas size, default 1024
   margin?: number; // Quiet zone modules, default 3
+  includeLogo?: boolean; // Center BERVOS logo, default true
 }
 
 /**
@@ -24,7 +25,7 @@ function createSvgImage(svgString: string): Promise<HTMLImageElement> {
 
 /**
  * Generates an HTMLCanvasElement containing the Level-H QR code
- * with a centered black BERVOS logo resting on a circular white cushion.
+ * with an optional centered black BERVOS logo resting on a circular white cushion.
  */
 export async function generateQrCanvas(
   url: string,
@@ -51,43 +52,45 @@ export async function generateQrCanvas(
   const ctx = canvas.getContext('2d');
   if (!ctx) return canvas;
 
-  // 2. Draw centered circular badge cushion (diameter ~23% of total size)
-  const center = size / 2;
-  const badgeRadius = Math.round(size * 0.115); // ~23% diameter
+  // 2. Draw centered circular badge cushion and BERVOS logo if enabled (default true)
+  if (options.includeLogo !== false) {
+    const center = size / 2;
+    const badgeRadius = Math.round(size * 0.115); // ~23% diameter
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(center, center, badgeRadius, 0, Math.PI * 2);
-  ctx.fillStyle = '#ffffff';
-  ctx.fill();
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(center, center, badgeRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
 
-  // Subtle border for sharp separation
-  ctx.lineWidth = Math.max(2, Math.round(size * 0.005));
-  ctx.strokeStyle = '#ffffff';
-  ctx.stroke();
-  ctx.restore();
+    // Subtle border for sharp separation
+    ctx.lineWidth = Math.max(2, Math.round(size * 0.005));
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+    ctx.restore();
 
-  // 3. Draw black BERVOS logo in the center of the badge
-  // Logo diameter ~15% of total size (well within badgeRadius)
-  const logoSize = Math.round(size * 0.15);
-  const logoTopLeft = center - logoSize / 2;
+    // 3. Draw black BERVOS logo in the center of the badge
+    // Logo diameter ~15% of total size (well within badgeRadius)
+    const logoSize = Math.round(size * 0.15);
+    const logoTopLeft = center - logoSize / 2;
 
-  const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${logoSize}" height="${logoSize}" viewBox="0 0 578 578">
-    <path d="${BERVOS_LOGO_PATH}" fill="#000000"/>
-  </svg>`;
+    const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${logoSize}" height="${logoSize}" viewBox="0 0 578 578">
+      <path d="${BERVOS_LOGO_PATH}" fill="#000000"/>
+    </svg>`;
 
-  try {
-    const logoImg = await createSvgImage(logoSvg);
-    ctx.drawImage(logoImg, logoTopLeft, logoTopLeft, logoSize, logoSize);
-  } catch (err) {
-    console.warn('[QRCode] Fallback canvas rendering for logo:', err);
+    try {
+      const logoImg = await createSvgImage(logoSvg);
+      ctx.drawImage(logoImg, logoTopLeft, logoTopLeft, logoSize, logoSize);
+    } catch (err) {
+      console.warn('[QRCode] Fallback canvas rendering for logo:', err);
+    }
   }
 
   return canvas;
 }
 
 /**
- * Generates an SVG string of the QR code with the centered black BERVOS logo
+ * Generates an SVG string of the QR code with an optional centered black BERVOS logo
  */
 export async function generateQrSvg(
   url: string,
@@ -105,6 +108,11 @@ export async function generateQrSvg(
       light: '#ffffff',
     },
   });
+
+  // If logo is omitted, return the clean raw SVG
+  if (options.includeLogo === false) {
+    return rawSvg;
+  }
 
   // Parse viewBox from raw SVG (e.g. viewBox="0 0 37 37")
   const viewBoxMatch = rawSvg.match(/viewBox="([0-9\s.-]+)"/);

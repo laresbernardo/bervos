@@ -98,6 +98,7 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [copiedQrImage, setCopiedQrImage] = useState(false);
   const [copyImageError, setCopyImageError] = useState<string | null>(null);
+  const [qrIncludeLogo, setQrIncludeLogo] = useState<boolean>(true);
 
   // Clipboard copy feedback
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
@@ -132,20 +133,10 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
     let ignore = false;
     async function load() {
       try {
-        const token = await user.getIdToken();
-        const res = await fetch('/api/links', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!res.ok) throw new Error(`Failed to load links (${res.status})`);
-        const data = await res.json();
+        await fetchLinks();
+      } catch (err) {
         if (!ignore) {
-          setLinks(data.links || []);
-          setLoading(false);
-        }
-      } catch (err: unknown) {
-        if (!ignore) {
-          setError(err instanceof Error ? err.message : 'Failed to retrieve links');
-          setLoading(false);
+          console.error('[LinksManager] Initial fetch failed:', err);
         }
       }
     }
@@ -155,7 +146,7 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
     };
   }, [user]);
 
-  // Handle QR preview render when modal opens
+  // Handle QR preview render when modal opens or logo option changes
   useEffect(() => {
     if (!qrModalLink) {
       setQrDataUrl(null);
@@ -165,14 +156,14 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
     }
     const fullUrl = `https://bervos.org/${qrModalLink.slug}`;
 
-    generateQrCanvas(fullUrl, { size: 512, margin: 3 })
+    generateQrCanvas(fullUrl, { size: 512, margin: 3, includeLogo: qrIncludeLogo })
       .then((canvas) => {
         setQrDataUrl(canvas.toDataURL('image/png'));
       })
       .catch((err) => {
         console.error('[LinksManager] QR preview generation failed:', err);
       });
-  }, [qrModalLink]);
+  }, [qrModalLink, qrIncludeLogo]);
 
   // Copy QR Image to clipboard
   const handleCopyQrImage = async () => {
@@ -384,7 +375,8 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
     try {
       await downloadQrPng(
         `https://bervos.org/${qrModalLink.slug}`,
-        `bervos-${qrModalLink.slug}-qr.png`
+        `bervos-${qrModalLink.slug}-qr.png`,
+        { includeLogo: qrIncludeLogo }
       );
     } catch (err) {
       console.error('[LinksManager] PNG download failed:', err);
@@ -399,7 +391,8 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
     try {
       await downloadQrSvg(
         `https://bervos.org/${qrModalLink.slug}`,
-        `bervos-${qrModalLink.slug}-qr.svg`
+        `bervos-${qrModalLink.slug}-qr.svg`,
+        { includeLogo: qrIncludeLogo }
       );
     } catch (err) {
       console.error('[LinksManager] SVG download failed:', err);
@@ -648,7 +641,10 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
 
                 {/* QR Code trigger */}
                 <button
-                  onClick={() => setQrModalLink(link)}
+                  onClick={() => {
+                    setQrIncludeLogo(true);
+                    setQrModalLink(link);
+                  }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 text-xs font-mono transition-colors cursor-pointer"
                   title="View & download QR code"
                 >
@@ -976,14 +972,32 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
               </span>
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center justify-center gap-1.5 text-xs font-mono text-emerald-400">
-                <CheckCircle2 size={14} />
-                <span>Level-H 30% Error Recovery</span>
+            {/* Logo Toggle Option */}
+            <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10">
+              <div className="text-left">
+                <span className="text-xs font-semibold text-slate-200 block font-mono">
+                  BERVOS Logo
+                </span>
+                <span className="text-[11px] text-slate-400 block font-mono">
+                  {qrIncludeLogo ? 'Centred brand emblem' : 'Standard clean QR matrix'}
+                </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-mono">
-                Centered black BERVOS logo with quiet safety zone.
-              </p>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={qrIncludeLogo}
+                onClick={() => setQrIncludeLogo(!qrIncludeLogo)}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  qrIncludeLogo ? 'bg-indigo-600' : 'bg-slate-700'
+                }`}
+                title={qrIncludeLogo ? 'Remove BERVOS logo' : 'Include BERVOS logo'}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                    qrIncludeLogo ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
             </div>
 
             {/* Action Row: Copy QR Image + Downloads */}
