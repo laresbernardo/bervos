@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
 import {
   Link2,
@@ -56,7 +56,8 @@ function formatDate(isoString: string | null | undefined): string {
     const day = pad(d.getDate());
     const hours = pad(d.getHours());
     const minutes = pad(d.getMinutes());
-    return `${year}-${month}-${day} ${hours}:${minutes}`;
+    const seconds = pad(d.getSeconds());
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   } catch {
     return 'Not yet clicked';
   }
@@ -94,7 +95,9 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
   // QR Modal state
   const [qrModalLink, setQrModalLink] = useState<ShortLink | null>(null);
   const [qrDownloading, setQrDownloading] = useState<'png' | 'svg' | null>(null);
-  const qrCanvasContainerRef = useRef<HTMLDivElement>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [copiedQrImage, setCopiedQrImage] = useState(false);
+  const [copyImageError, setCopyImageError] = useState<string | null>(null);
 
   // Clipboard copy feedback
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
@@ -154,22 +157,44 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
 
   // Handle QR preview render when modal opens
   useEffect(() => {
-    if (!qrModalLink || !qrCanvasContainerRef.current) return;
+    if (!qrModalLink) {
+      setQrDataUrl(null);
+      setCopiedQrImage(false);
+      setCopyImageError(null);
+      return;
+    }
     const fullUrl = `https://bervos.org/${qrModalLink.slug}`;
-    const container = qrCanvasContainerRef.current;
-    container.innerHTML = '';
 
-    generateQrCanvas(fullUrl, { size: 360, margin: 3 })
+    generateQrCanvas(fullUrl, { size: 512, margin: 3 })
       .then((canvas) => {
-        canvas.style.width = '100%';
-        canvas.style.height = 'auto';
-        canvas.className = 'rounded-xl shadow-2xl border border-white/10';
-        container.appendChild(canvas);
+        setQrDataUrl(canvas.toDataURL('image/png'));
       })
       .catch((err) => {
         console.error('[LinksManager] QR preview generation failed:', err);
       });
   }, [qrModalLink]);
+
+  // Copy QR Image to clipboard
+  const handleCopyQrImage = async () => {
+    if (!qrDataUrl || !qrModalLink) return;
+    try {
+      setCopyImageError(null);
+      const res = await fetch(qrDataUrl);
+      const blob = await res.blob();
+      if (navigator.clipboard && typeof (window as any).ClipboardItem !== 'undefined') {
+        const item = new (window as any).ClipboardItem({ 'image/png': blob });
+        await navigator.clipboard.write([item]);
+        setCopiedQrImage(true);
+        setTimeout(() => setCopiedQrImage(false), 2500);
+      } else {
+        throw new Error('ClipboardItem API not supported');
+      }
+    } catch (e) {
+      console.warn('[LinksManager] Clipboard image write not supported:', e);
+      setCopyImageError('Long-press image to copy');
+      setTimeout(() => setCopyImageError(null), 3500);
+    }
+  };
 
   // Copy URL to clipboard
   const handleCopy = async (slugToCopy: string) => {
@@ -591,12 +616,24 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
                     <Calendar size={12} className="text-slate-500" />
                     <span>Created: <strong className="text-slate-300">{formatDate(link.createdAt)}</strong></span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <span>First Click: <strong className="text-slate-300">{formatDate(link.firstClickedAt)}</strong></span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span>Last Click: <strong className="text-slate-300">{formatDate(link.lastClickedAt)}</strong></span>
-                  </div>
+                  {link.clickCount === 0 || !link.firstClickedAt ? (
+                    <div className="flex items-center gap-1 text-slate-500">
+                      <span>• No clicks recorded yet</span>
+                    </div>
+                  ) : link.clickCount === 1 || link.firstClickedAt === link.lastClickedAt ? (
+                    <div className="flex items-center gap-1">
+                      <span>Clicked: <strong className="text-slate-300">{formatDate(link.lastClickedAt || link.firstClickedAt)}</strong></span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-1">
+                        <span>First Click: <strong className="text-slate-300">{formatDate(link.firstClickedAt)}</strong></span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span>Last Click: <strong className="text-slate-300">{formatDate(link.lastClickedAt)}</strong></span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -919,9 +956,24 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
               </button>
             </div>
 
-            {/* QR Canvas Container */}
-            <div className="p-4 bg-white rounded-2xl flex items-center justify-center shadow-inner">
-              <div ref={qrCanvasContainerRef} className="w-full max-w-[260px] aspect-square" />
+            {/* QR Image Container (Native <img> enables mobile long-press copy/save) */}
+            <div className="p-4 bg-white rounded-2xl flex flex-col items-center justify-center shadow-inner">
+              {qrDataUrl ? (
+                <img
+                  src={qrDataUrl}
+                  alt={`QR code for bervos.org/${qrModalLink.slug}`}
+                  className="w-full max-w-[260px] aspect-square rounded-xl shadow-md border border-slate-100 select-auto pointer-events-auto cursor-pointer"
+                  style={{ WebkitTouchCallout: 'default' }}
+                  title="Press and hold to copy or save on mobile"
+                />
+              ) : (
+                <div className="w-full max-w-[260px] aspect-square flex items-center justify-center">
+                  <Loader2 size={24} className="animate-spin text-indigo-500" />
+                </div>
+              )}
+              <span className="text-[10px] text-slate-400 font-mono mt-2 sm:hidden">
+                Tip: Long-press image to copy or save to Photos
+              </span>
             </div>
 
             <div className="space-y-1">
@@ -934,33 +986,58 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
               </p>
             </div>
 
-            {/* Download Actions */}
-            <div className="grid grid-cols-2 gap-3 pt-2">
+            {/* Action Row: Copy QR Image + Downloads */}
+            <div className="space-y-2.5 pt-1">
               <button
-                onClick={handleDownloadQrPng}
-                disabled={qrDownloading !== null}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
+                onClick={handleCopyQrImage}
+                disabled={!qrDataUrl}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
               >
-                {qrDownloading === 'png' ? (
-                  <Loader2 size={14} className="animate-spin" />
+                {copiedQrImage ? (
+                  <>
+                    <CheckCircle2 size={14} className="text-emerald-300" />
+                    <span>Copied QR Image to Clipboard!</span>
+                  </>
+                ) : copyImageError ? (
+                  <>
+                    <Copy size={14} />
+                    <span>{copyImageError}</span>
+                  </>
                 ) : (
-                  <Download size={14} />
+                  <>
+                    <Copy size={14} />
+                    <span>Copy QR Image</span>
+                  </>
                 )}
-                <span>PNG (1024px)</span>
               </button>
 
-              <button
-                onClick={handleDownloadQrSvg}
-                disabled={qrDownloading !== null}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-mono text-xs font-bold transition-all border border-white/10 cursor-pointer disabled:opacity-50"
-              >
-                {qrDownloading === 'svg' ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Download size={14} />
-                )}
-                <span>SVG Vector</span>
-              </button>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={handleDownloadQrPng}
+                  disabled={qrDownloading !== null}
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 font-mono text-xs transition-all border border-white/10 cursor-pointer disabled:opacity-50"
+                >
+                  {qrDownloading === 'png' ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Download size={13} />
+                  )}
+                  <span>PNG (1024px)</span>
+                </button>
+
+                <button
+                  onClick={handleDownloadQrSvg}
+                  disabled={qrDownloading !== null}
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/20 text-white font-mono text-xs transition-all border border-white/10 cursor-pointer disabled:opacity-50"
+                >
+                  {qrDownloading === 'svg' ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Download size={13} />
+                  )}
+                  <span>SVG Vector</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -172,11 +172,14 @@ function localLinksDevPlugin() {
                 res.end('<!doctype html><html><head><meta charset="utf-8"><title>Link Inactive | BERVOS</title><style>body{margin:0;background:#080b12;color:#f8fafc;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center}a{color:#818cf8;text-decoration:none;margin-top:20px;display:inline-block;padding:8px 16px;border:1px solid rgba(255,255,255,0.1);border-radius:8px}</style></head><body><div><h1>Link Inactive</h1><p>This short link is currently paused.</p><a href="/">Visit BERVOS</a></div></body></html>')
                 return
               }
-              found.clickCount = (found.clickCount || 0) + 1
-              const now = new Date().toISOString()
-              if (!found.firstClickedAt) found.firstClickedAt = now
-              found.lastClickedAt = now
-              saveLinks(links)
+              const isPrefetch = req.headers['purpose'] === 'prefetch' || req.headers['sec-purpose'] === 'prefetch' || req.headers['x-moz'] === 'prefetch';
+              if (!isPrefetch) {
+                found.clickCount = (found.clickCount || 0) + 1
+                const now = new Date().toISOString()
+                if (!found.firstClickedAt) found.firstClickedAt = now
+                found.lastClickedAt = now
+                saveLinks(links)
+              }
               res.statusCode = 302
               res.setHeader('Location', found.destinationUrl)
               res.end()

@@ -2134,8 +2134,12 @@ export const ssrHandler = functions.https.onRequest(async (req: express.Request,
               if (destinationUrl) {
                 const userAgent = (req.headers['user-agent'] || '').toString().toLowerCase();
                 const isPreviewBot = /bot|facebookexternalhit|whatsapp|telegram|twitterbot|slackbot|discordbot|linkedinbot|embedly|quora link preview|pinterest|applebot/i.test(userAgent);
+                const isPrefetch = req.headers['purpose'] === 'prefetch' ||
+                                   req.headers['sec-purpose'] === 'prefetch' ||
+                                   req.headers['x-purpose'] === 'preview' ||
+                                   req.headers['x-moz'] === 'prefetch';
 
-                if (!isPreviewBot) {
+                if (!isPreviewBot && !isPrefetch) {
                   const nowIso = new Date().toISOString();
                   const updates: any = {
                     clickCount: admin.firestore.FieldValue.increment(1),
