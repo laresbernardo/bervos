@@ -503,72 +503,70 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
 
   return (
     <div className="space-y-8">
-      {/* Top Banner & Quick Metrics */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/[0.02] border border-white/5 p-6 rounded-2xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
+      {/* Header with Stats & Actions */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 border-b border-white/5 pb-6">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="mono-label !text-emerald-400">System_Network // SHORT_LINKS</span>
           </div>
-          <h2 className="text-2xl font-bold glow-text tracking-tight">Custom Short Links & QR Hub</h2>
-          <p className="text-xs text-slate-400 font-mono">
-            Manage your bervos.org/xxxx redirections, human click analytics, and branded QR codes.
+          <h2 className="text-3xl font-black uppercase tracking-tighter glow-text">Short Links & QR Hub</h2>
+          <p className="text-slate-500 text-xs font-mono mt-1">
+            {links.length} links configured · {totalClicks} total clicks recorded
+            {lastRefreshedAt && (
+              <span className="text-slate-600"> · Synced {formatDate(lastRefreshedAt.toISOString()).split(' ')[1] || 'just now'}</span>
+            )}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-4 bg-white/5 px-4 py-2 rounded-xl border border-white/5">
-            <div>
-              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Total Links</div>
-              <div className="text-lg font-bold font-mono text-white">{links.length}</div>
+        {/* Stats HUD & Action Buttons */}
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-between lg:justify-end">
+          {/* Stats Boxes */}
+          <div className="flex items-center bg-white/[0.02] border border-white/5 px-2 py-1.5 rounded-xl">
+            <div className="px-3.5 py-1 text-center min-w-[70px]">
+              <span className="block text-[9px] font-mono text-slate-500 uppercase tracking-wider">Links</span>
+              <span className="text-sm font-bold text-white font-mono">{links.length}</span>
             </div>
-            <div className="h-6 w-px bg-white/10" />
-            <div>
-              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Total Clicks</div>
-              <div className="text-lg font-bold font-mono text-indigo-400">{totalClicks}</div>
+            <div className="h-6 w-px bg-white/5" />
+            <div className="px-3.5 py-1 text-center min-w-[70px]">
+              <span className="block text-[9px] font-mono text-slate-500 uppercase tracking-wider">Clicks</span>
+              <span className="text-sm font-bold text-indigo-400 font-mono">{totalClicks}</span>
             </div>
-            {lastRefreshedAt && (
-              <>
-                <div className="h-6 w-px bg-white/10" />
-                <div>
-                  <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Refreshed</div>
-                  <div className="text-xs font-bold font-mono text-slate-300">
-                    {formatDate(lastRefreshedAt.toISOString()).split(' ')[1] || 'Just now'}
-                  </div>
-                </div>
-              </>
-            )}
           </div>
 
-          <button
-            onClick={() => fetchLinks()}
-            disabled={refreshing}
-            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-colors cursor-pointer disabled:opacity-50"
-            title="Refresh link metrics"
-          >
-            <RefreshCw size={16} className={refreshing ? 'animate-spin text-indigo-400' : ''} />
-          </button>
-
-          {links.length > 0 && (
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => {
-                setResetError(null);
-                setShowResetAllModal(true);
-              }}
-              className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 font-mono text-xs font-bold transition-all cursor-pointer"
-              title="Reset all click counters to 0"
+              onClick={() => fetchLinks()}
+              disabled={refreshing}
+              className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 transition-all cursor-pointer disabled:opacity-50"
+              title={`Refresh metrics${lastRefreshedAt ? ` (last synced: ${formatDate(lastRefreshedAt.toISOString())})` : ''}`}
             >
-              <RotateCcw size={14} />
-              <span>Reset All</span>
+              <RefreshCw size={15} className={refreshing ? 'animate-spin text-indigo-400' : ''} />
             </button>
-          )}
 
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 cursor-pointer"
-          >
-            <Plus size={15} /> Create Short Link
-          </button>
+            {links.length > 0 && (
+              <button
+                onClick={() => {
+                  setResetError(null);
+                  setShowResetAllModal(true);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-amber-500/10 text-slate-400 hover:text-amber-400 border border-white/10 hover:border-amber-500/30 font-mono text-xs transition-all cursor-pointer group"
+                title="Reset all click counters to 0"
+              >
+                <RotateCcw size={13} className="text-slate-500 group-hover:text-amber-400 transition-colors" />
+                <span>Reset All</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-xs font-bold transition-all shadow-lg shadow-indigo-600/25 hover:shadow-indigo-600/40 hover:scale-[1.02] cursor-pointer"
+            >
+              <Plus size={15} />
+              <span>Create Short Link</span>
+            </button>
+          </div>
         </div>
       </div>
 
