@@ -72,6 +72,21 @@ function localLinksDevPlugin() {
           }
 
           if (req.method === 'POST') {
+            if (pathname === '/api/links/reset-all') {
+              const links = loadLinks()
+              const now = new Date().toISOString()
+              links.forEach((l: any) => {
+                l.clickCount = 0
+                l.firstClickedAt = null
+                l.lastClickedAt = null
+                l.lastResetAt = now
+                l.updatedAt = now
+              })
+              saveLinks(links)
+              res.end(JSON.stringify({ success: true, count: links.length, resetAt: now }))
+              return
+            }
+
             let body = ''
             req.on('data', (chunk: any) => (body += chunk))
             req.on('end', () => {
@@ -98,7 +113,8 @@ function localLinksDevPlugin() {
                   lastClickedAt: null,
                   isActive: true,
                   createdBy: 'laresbernardo@gmail.com',
-                  updatedAt: now
+                  updatedAt: now,
+                  lastResetAt: null
                 }
 
                 links.unshift(newLink)
@@ -126,6 +142,13 @@ function localLinksDevPlugin() {
                   res.statusCode = 404
                   res.end(JSON.stringify({ error: 'Not found' }))
                   return
+                }
+
+                if (parsed.resetCounters === true) {
+                  links[idx].clickCount = 0
+                  links[idx].firstClickedAt = null
+                  links[idx].lastClickedAt = null
+                  links[idx].lastResetAt = new Date().toISOString()
                 }
 
                 if (parsed.destinationUrl) {

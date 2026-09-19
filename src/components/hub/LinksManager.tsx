@@ -12,6 +12,7 @@ import {
   Trash2,
   Edit2,
   RefreshCw,
+  RotateCcw,
   Loader2,
   X,
   Calendar,
@@ -33,6 +34,7 @@ export interface ShortLink {
   isActive: boolean;
   createdBy: string;
   updatedAt: string;
+  lastResetAt?: string | null;
 }
 
 interface LinksManagerProps {
@@ -68,6 +70,7 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
 
   // Filter & Search
   const [search, setSearch] = useState('');
@@ -91,6 +94,12 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
   // Delete modal state
   const [deletingLink, setDeletingLink] = useState<ShortLink | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Reset modal state
+  const [resettingLink, setResettingLink] = useState<ShortLink | null>(null);
+  const [showResetAllModal, setShowResetAllModal] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   // QR Modal state
   const [qrModalLink, setQrModalLink] = useState<ShortLink | null>(null);
@@ -120,6 +129,7 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
 
       const data = await res.json();
       setLinks(data.links || []);
+      setLastRefreshedAt(new Date());
     } catch (err: unknown) {
       console.error('[LinksManager] Error fetching links:', err);
       setError(err instanceof Error ? err.message : 'Failed to retrieve links');
@@ -368,6 +378,79 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
     }
   };
 
+  // Reset single link counter
+  const handleConfirmResetLink = async () => {
+    if (!resettingLink) return;
+    setResetting(true);
+    setResetError(null);
+
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/links/${resettingLink.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ resetCounters: true })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to reset link counter');
+      }
+
+      setLinks((prev) =>
+        prev.map((l) => (l.id === resettingLink.id ? data.link : l))
+      );
+      setResettingLink(null);
+    } catch (err: unknown) {
+      console.error('[LinksManager] Reset counter failed:', err);
+      setResetError(err instanceof Error ? err.message : 'Failed to reset counter');
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  // Reset all links counters
+  const handleConfirmResetAll = async () => {
+    setResetting(true);
+    setResetError(null);
+
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/links/reset-all', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to reset all counters');
+      }
+
+      const resetTimestamp = data.resetAt || new Date().toISOString();
+      setLinks((prev) =>
+        prev.map((l) => ({
+          ...l,
+          clickCount: 0,
+          firstClickedAt: null,
+          lastClickedAt: null,
+          lastResetAt: resetTimestamp,
+          updatedAt: resetTimestamp
+        }))
+      );
+      setShowResetAllModal(false);
+    } catch (err: unknown) {
+      console.error('[LinksManager] Reset all counters failed:', err);
+      setResetError(err instanceof Error ? err.message : 'Failed to reset all counters');
+    } finally {
+      setResetting(false);
+    }
+  };
+
   // Download QR Handlers
   const handleDownloadQrPng = async () => {
     if (!qrModalLink) return;
@@ -444,6 +527,17 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
               <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Total Clicks</div>
               <div className="text-lg font-bold font-mono text-indigo-400">{totalClicks}</div>
             </div>
+            {lastRefreshedAt && (
+              <>
+                <div className="h-6 w-px bg-white/10" />
+                <div>
+                  <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Refreshed</div>
+                  <div className="text-xs font-bold font-mono text-slate-300">
+                    {formatDate(lastRefreshedAt.toISOString()).split(' ')[1] || 'Just now'}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <button
@@ -454,6 +548,20 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
           >
             <RefreshCw size={16} className={refreshing ? 'animate-spin text-indigo-400' : ''} />
           </button>
+
+          {links.length > 0 && (
+            <button
+              onClick={() => {
+                setResetError(null);
+                setShowResetAllModal(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 font-mono text-xs font-bold transition-all cursor-pointer"
+              title="Reset all click counters to 0"
+            >
+              <RotateCcw size={14} />
+              <span>Reset All</span>
+            </button>
+          )}
 
           <button
             onClick={() => setShowCreateModal(true)}
@@ -609,9 +717,17 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
                     <Calendar size={12} className="text-slate-500" />
                     <span>Created: <strong className="text-slate-300">{formatDate(link.createdAt)}</strong></span>
                   </div>
+
+                  {link.lastResetAt && (
+                    <div className="flex items-center gap-1">
+                      <RotateCcw size={11} className="text-amber-400/80" />
+                      <span>Reset: <strong className="text-amber-300/90">{formatDate(link.lastResetAt)}</strong></span>
+                    </div>
+                  )}
+
                   {link.clickCount === 0 || !link.firstClickedAt ? (
                     <div className="flex items-center gap-1 text-slate-500">
-                      <span>• No clicks recorded yet</span>
+                      <span>• {link.lastResetAt ? '0 clicks since reset' : 'No clicks recorded yet'}</span>
                     </div>
                   ) : link.clickCount === 1 || link.firstClickedAt === link.lastClickedAt ? (
                     <div className="flex items-center gap-1">
@@ -638,6 +754,18 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
                   <span className="font-bold text-sm text-white">{link.clickCount}</span>
                   <span className="text-slate-400 text-[10px] uppercase">Clicks</span>
                 </div>
+
+                {/* Reset Counter */}
+                <button
+                  onClick={() => {
+                    setResetError(null);
+                    setResettingLink(link);
+                  }}
+                  className="p-2 rounded-xl bg-white/5 hover:bg-amber-500/10 text-slate-400 hover:text-amber-300 hover:border-amber-500/30 border border-white/10 transition-colors cursor-pointer"
+                  title={`Reset counter for bervos.org/${link.slug} to 0`}
+                >
+                  <RotateCcw size={14} />
+                </button>
 
                 {/* QR Code trigger */}
                 <button
@@ -1052,6 +1180,157 @@ export const LinksManager: React.FC<LinksManagerProps> = ({ user }) => {
                   <span>SVG Vector</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* RESET LINK COUNTER CONFIRMATION MODAL */}
+      {resettingLink && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => !resetting && setResettingLink(null)}
+        >
+          <div
+            className="tech-card p-6 md:p-8 max-w-md w-full relative space-y-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="space-y-0.5">
+                <span className="mono-label !text-amber-400">Action // RESET_COUNTER</span>
+                <h3 className="text-xl font-bold text-white">Reset Clicks Counter</h3>
+              </div>
+              <button
+                onClick={() => !resetting && setResettingLink(null)}
+                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {resetError && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono">
+                {resetError}
+              </div>
+            )}
+
+            <div className="space-y-3 text-xs font-mono text-slate-300">
+              <p>
+                Are you sure you want to reset the clicks counter for{' '}
+                <strong className="text-indigo-400">bervos.org/{resettingLink.slug}</strong>?
+              </p>
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/10 space-y-1.5">
+                <div className="flex justify-between text-slate-400">
+                  <span>Current Clicks:</span>
+                  <span className="font-bold text-white">{resettingLink.clickCount}</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>New Clicks:</span>
+                  <span className="font-bold text-emerald-400">0</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Reset Timestamp:</span>
+                  <span className="text-amber-300 font-bold">Now</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                This will set the counter to 0, clear click history timestamps, and record the current refresh timestamp.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+              <button
+                type="button"
+                disabled={resetting}
+                onClick={() => setResettingLink(null)}
+                className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-mono text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={resetting}
+                onClick={handleConfirmResetLink}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-mono text-xs font-bold transition-all shadow-lg shadow-amber-600/20 cursor-pointer disabled:opacity-50"
+              >
+                {resetting && <Loader2 size={14} className="animate-spin" />}
+                {resetting ? 'Resetting...' : 'Reset to 0'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RESET ALL COUNTERS CONFIRMATION MODAL */}
+      {showResetAllModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => !resetting && setShowResetAllModal(false)}
+        >
+          <div
+            className="tech-card p-6 md:p-8 max-w-md w-full relative space-y-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="space-y-0.5">
+                <span className="mono-label !text-amber-400">Action // RESET_ALL_COUNTERS</span>
+                <h3 className="text-xl font-bold text-white">Reset All Link Counters</h3>
+              </div>
+              <button
+                onClick={() => !resetting && setShowResetAllModal(false)}
+                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {resetError && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono">
+                {resetError}
+              </div>
+            )}
+
+            <div className="space-y-3 text-xs font-mono text-slate-300">
+              <p>
+                Are you sure you want to reset click counters for all{' '}
+                <strong className="text-white">{links.length}</strong> short links?
+              </p>
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/10 space-y-1.5">
+                <div className="flex justify-between text-slate-400">
+                  <span>Total Links Affected:</span>
+                  <span className="font-bold text-white">{links.length}</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Total Clicks Reset:</span>
+                  <span className="font-bold text-white">{totalClicks} → 0</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Reset Timestamp:</span>
+                  <span className="text-amber-300 font-bold">Now</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                All short links will have their click counts set to 0 and their timestamps refreshed.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+              <button
+                type="button"
+                disabled={resetting}
+                onClick={() => setShowResetAllModal(false)}
+                className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-mono text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={resetting}
+                onClick={handleConfirmResetAll}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-mono text-xs font-bold transition-all shadow-lg shadow-amber-600/20 cursor-pointer disabled:opacity-50"
+              >
+                {resetting && <Loader2 size={14} className="animate-spin" />}
+                {resetting ? 'Resetting All...' : 'Reset All to 0'}
+              </button>
             </div>
           </div>
         </div>

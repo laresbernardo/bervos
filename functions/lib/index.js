@@ -3546,7 +3546,8 @@ app.get('/api/links', authenticateAdmin, async (_req, res) => {
                 lastClickedAt: data.lastClickedAt || null,
                 isActive: data.isActive !== false,
                 createdBy: data.createdBy || '',
-                updatedAt: data.updatedAt || data.createdAt || new Date().toISOString()
+                updatedAt: data.updatedAt || data.createdAt || new Date().toISOString(),
+                lastResetAt: data.lastResetAt || null
             };
         });
         links.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -3555,6 +3556,32 @@ app.get('/api/links', authenticateAdmin, async (_req, res) => {
     catch (err) {
         console.error('[Links API] Failed to fetch short links:', err);
         res.status(500).json({ error: 'Failed to retrieve short links', message: err.message });
+    }
+});
+/**
+ * POST /api/links/reset-all — Reset click counters and refresh timestamps for all short links
+ */
+app.post('/api/links/reset-all', authenticateAdmin, async (_req, res) => {
+    try {
+        const db = admin.firestore();
+        const snapshot = await db.collection('short_links').get();
+        const now = new Date().toISOString();
+        const batch = db.batch();
+        snapshot.docs.forEach(doc => {
+            batch.update(doc.ref, {
+                clickCount: 0,
+                firstClickedAt: null,
+                lastClickedAt: null,
+                lastResetAt: now,
+                updatedAt: now
+            });
+        });
+        await batch.commit();
+        res.json({ success: true, count: snapshot.docs.length, resetAt: now });
+    }
+    catch (err) {
+        console.error('[Links API] Failed to reset all counters:', err);
+        res.status(500).json({ error: 'Failed to reset short link counters', message: err.message });
     }
 });
 /**
@@ -3614,7 +3641,8 @@ app.post('/api/links', authenticateAdmin, async (req, res) => {
             lastClickedAt: null,
             isActive: true,
             createdBy: req.user?.email || 'laresbernardo@gmail.com',
-            updatedAt: now
+            updatedAt: now,
+            lastResetAt: null
         };
         await db.collection('short_links').doc(cleanSlug).set(linkDoc);
         res.status(201).json({ link: linkDoc });
@@ -3625,7 +3653,7 @@ app.post('/api/links', authenticateAdmin, async (req, res) => {
     }
 });
 /**
- * PUT /api/links/:id — Update short link destination, title, or active status
+ * PUT /api/links/:id — Update short link destination, title, active status, or reset counters
  */
 app.put('/api/links/:id', authenticateAdmin, async (req, res) => {
     try {
@@ -3638,8 +3666,15 @@ app.put('/api/links/:id', authenticateAdmin, async (req, res) => {
             res.status(404).json({ error: 'Short link not found' });
             return;
         }
-        const { destinationUrl, title, isActive } = req.body || {};
-        const updates = { updatedAt: new Date().toISOString() };
+        const { destinationUrl, title, isActive, resetCounters } = req.body || {};
+        const now = new Date().toISOString();
+        const updates = { updatedAt: now };
+        if (resetCounters === true) {
+            updates.clickCount = 0;
+            updates.firstClickedAt = null;
+            updates.lastClickedAt = null;
+            updates.lastResetAt = now;
+        }
         if (typeof destinationUrl === 'string' && destinationUrl.trim()) {
             let cleanUrl = destinationUrl.trim();
             if (!/^https?:\/\//i.test(cleanUrl)) {
